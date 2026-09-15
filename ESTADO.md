@@ -128,6 +128,20 @@ direcciones A/B/C fusionadas que se habían propuesto sin referencia (esas queda
   final — no bloquea, pero se necesitará producir el SVG/vector definitivo del logotipo "Raiz +
   hojita" antes de assets de producción (ícono de app, favicon, print).
 
+## Sesión 3 — Página de ventas — EN CURSO
+- FICHA-AVATAR.md aprobada · FICHA-MERCADO.md creada (precio $19.99/$29.99, prueba 7 días,
+  garantía 15 días — verificado > prueba contra los plazos reales de Hotmart 7/15/21/30).
+- Mecanismo bautizado: **la Memoria del Salón** (frase textual del documento maestro, sec. 6).
+- Next.js scaffolded en la raíz del proyecto (create-next-app, App Router, Tailwind v4,
+  Turbopack) — el kit de landing (`plantillas-codigo/landing/`) copiado a `components/landing/`,
+  tokens.css tematizado con FICHA-ARTE, copy marcado en `docs/copy/landing.md` (trazado a
+  FICHA-AVATAR), página compuesta en `app/page.tsx`.
+- Logo real: el PNG que el usuario compartió en chat se guardó automáticamente en
+  `public/brand/raiz-logo.png` — es el asset real, no una recreación en CSS.
+- Páginas legales creadas como borrador funcional (no lorem, contenido real pero pendiente de
+  revisión legal antes de lanzar): `/privacidad`, `/terminos`, `/reembolsos`, `/aviso-ia`.
+  `/onboarding` y `/entrar` son placeholders (se construyen en Sesión 4).
+
 ## Problemas conocidos
 - **Logo vectorial pendiente**: el logotipo "Raíz" (tilde-hojita, ícono squircle) está recreado en
   CSS/texto a partir de una imagen del usuario, no es un archivo vectorial de producción. No

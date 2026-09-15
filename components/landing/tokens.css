@@ -1,0 +1,51 @@
+/* ============================================================================
+   KIT DE LANDING — tokens.css (RAIZ)
+   Tematizado con FICHA-ARTE.md — Deep Teal / Warm Cream / Sage / Butter Yellow /
+   Soft Coral, Playfair Display + Plus Jakarta Sans.
+   ============================================================================ */
+
+:root {
+  /* ── SUPERFICIES (3 niveles: base / elevada / hundida) ── */
+  --bg: #F6F0E4;              /* Warm Cream */
+  --surface: #FBF7EE;         /* elevada */
+  --surface-2: #EFE7D5;       /* hundida */
+
+  /* ── TEXTO ── */
+  --text-primary: #1E3A3D;    /* teal-tinte oscuro, nunca negro puro */
+  --text-secondary: #5A6B62;
+  --text-tertiary: #6E6553;
+
+  /* ── MARCA ── */
+  --accent: #0D5C63;          /* Deep Teal */
+  --accent-2: #F28A7A;        /* Soft Coral — 2ª nota */
+
+  /* ── FORMA ── */
+  --radius-card: 18px;
+  --radius-button: 14px;
+
+  /* ── TIPOGRAFÍA ── */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+
+  /* ── SOMBRAS con tinte teal ── */
+  --shadow-1: 0 1px 2px rgb(13 92 99 / 0.08);
+  --shadow-2: 0 12px 32px -12px rgb(13 92 99 / 0.20);
+
+  /* ── DERIVADOS ── */
+  --chip-bg: color-mix(in oklab, var(--accent) 10%, transparent);
+}
+
+/* Base mínima que el kit asume (no tematizar) */
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
