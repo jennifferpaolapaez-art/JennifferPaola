@@ -96,22 +96,27 @@ descriptiva fuerte:
   pública, ángulos de ads en Meta Ads Library — pendientes para cuando se necesiten (Sesión 1
   completa / Sesión 8 adquisición).
 
-## Dirección de arte — 3 direcciones presentadas (artifact: direcciones-abc.html)
-Fusión de líderes reales (Brightwheel, Lillio/ex-HiMama, Learning Genie/Curriculum Genie,
-Bloomily) + Notion como gigante admirado por craft editorial cálido. Nunca combinación inventada.
-- **A — Cuaderno cálido:** Fraunces + Inter, crema/tinta/terracota. Editorial, "libreta de
-  maestra con oficio".
-- **B — Crecimiento orgánico:** Plus Jakarta Sans única, verdes-tierra, app-shell con nav
-  inferior. La más ligera/nativa de uso diario.
-- **C — Tierra contemporánea:** terracota como protagonista, Fraunces en negrita, más contraste.
-  Editorial-premium, "field guide impreso".
-Las 3 resaltan sutilmente "AI" dentro de R-AI-Z sin llamarse "RAIZ AI", cada una con su propio
-recurso (cursiva de color / subrayado / chip invertido).
-Pendiente: elección del usuario (o combinación/ajuste) → cerrar FICHA-ARTE.md + tokens CSS.
+## Dirección de arte — CERRADA (FICHA-ARTE.md aprobada, referencia-mandato del usuario)
+El usuario trajo su propio board de marca (imagen) → esto es CONTRATO, reemplaza las 3
+direcciones A/B/C fusionadas que se habían propuesto sin referencia (esas quedan descartadas).
+- Paleta (proporción 70/15/10/5/5): Warm Cream `#F6F0E4` (fondo) · Deep Teal `#0D5C63` (marca/
+  texto 1º) · Sage `#A8B9A5` (apoyo/tarjetas) · Butter Yellow `#F4C84A` (acento firma — hojita) ·
+  Soft Coral `#F28A7A` (acento cálido secundario).
+- Logotipo: "Raiz" en serif redondeada cálida (equivalente Google Fonts: **Fraunces**, eje soft
+  alto) con una hojita reemplazando el punto de la "í" — dispositivo ownable que se repite en
+  toda la UI (bullets, marcador de niño foco, favicon).
+- Body/UI (extendido, el board no lo definía): **Plus Jakarta Sans**.
+- Radio 18px cards/14px botones · sombras suaves de 1 nivel · modo claro derivado directamente
+  del board (Warm Cream de fondo).
+- Réplica fiel construida y aprobada: artifact `replica-fiel.html` (pantalla "Hoy" con el sistema
+  completo, board recreado al lado, test de fidelidad pasado).
+- ⚠️ Pendiente real: el logo del board parece boceto/concepto (probable IA), no archivo vectorial
+  final — no bloquea, pero se necesitará producir el SVG/vector definitivo del logotipo "Raiz +
+  hojita" antes de assets de producción (ícono de app, favicon, print).
 
 ## Próximos pasos
-1. Usuario elige/ajusta dirección visual → FICHA-ARTE.md + tokens CSS.
-2. Usuario aprueba FICHA-MODELO.md (Brightwheel como app modelo).
+1. Usuario aprueba FICHA-MODELO.md (Brightwheel como app modelo) y FICHA-ARTE.md (ya construida).
+2. Producir el logotipo vectorial final "Raiz + hojita" (pendiente marcado arriba).
 3. Presentar Plan Maestro completo (8 sesiones) y arrancar Sesión 1 formal (pricing con 02C +
    40-UNIT-ECONOMICS, arquitectura, base de datos, auth).
 
