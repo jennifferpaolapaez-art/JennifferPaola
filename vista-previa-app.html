@@ -1,0 +1,191 @@
+<title>RAIZ tour de la app</title>
+<style>
+  :root{
+    --cream:#F6F0E4; --surface:#FBF7EE; --sunken:#EFE7D5; --teal:#0D5C63; --ink:#1E3A3D;
+    --sage:#A8B9A5; --sage-deep:#5D7358; --butter:#F4C84A; --butter-deep:#8A6A17;
+    --coral:#F28A7A; --coral-deep:#A24735; --line:#E4D9C2;
+  }
+  *{box-sizing:border-box;}
+  body{background:#EFEAE0; color:#2B2621; font-family:'Plus Jakarta Sans',system-ui,sans-serif; margin:0; padding:32px 20px 56px;}
+  .wrap{max-width:1280px; margin:0 auto;}
+  header{margin-bottom:26px; text-align:center;}
+  .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#8A7E67; font-weight:600; margin:0 0 8px;}
+  h1{font-size:21px; font-weight:600; margin:0 0 6px; color:#2B2621;}
+  .sub{font-size:13.5px; color:#6E6553; max-width:64ch; margin:0 auto; line-height:1.6;}
+
+  .row{display:flex; gap:22px; flex-wrap:wrap; justify-content:center;}
+  .col{flex:1 1 250px; max-width:270px;}
+  .col-label{font-size:12px; font-weight:700; color:#8A7E67; text-align:center; margin:0 0 10px; text-transform:uppercase; letter-spacing:.04em;}
+
+  .phone{background:var(--cream); border-radius:24px; overflow:hidden; border:1px solid var(--line); box-shadow:0 6px 18px -8px rgba(13,92,99,.18); min-height:520px; display:flex; flex-direction:column;}
+
+  /* shared bits */
+  .word{font-family:'Fraunces',serif; font-weight:700; font-size:19px; color:var(--teal); margin:0; position:relative; display:inline-block;}
+  .word .leaf{position:absolute; top:-1px; font-size:9px; color:var(--butter);}
+  .label{font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:var(--sage-deep); font-weight:700;}
+
+  /* 1. ONBOARDING */
+  .ob{padding:26px 20px; text-align:center; flex:1; display:flex; flex-direction:column; justify-content:center;}
+  .ob .icon{width:52px; height:52px; border-radius:16px; background:var(--teal); color:var(--cream); font-family:'Fraunces',serif; font-weight:700; font-size:24px; display:flex; align-items:center; justify-content:center; margin:0 auto 18px; position:relative;}
+  .ob .icon .leaf{position:absolute; top:-4px; right:-2px; font-size:14px;}
+  .ob h2{font-family:'Fraunces',serif; font-size:18px; font-weight:600; color:var(--ink); margin:0 0 8px;}
+  .ob p{font-size:12.5px; color:#6E6553; line-height:1.55; margin:0 0 22px;}
+  .ob-opt{background:var(--surface); border-radius:14px; padding:12px 14px; margin-bottom:8px; text-align:left; font-size:12.5px; color:var(--ink); font-weight:600;}
+  .ob-opt span{display:block; font-weight:400; color:#7C7360; font-size:11px; margin-top:2px;}
+  .ob-dots{display:flex; gap:6px; justify-content:center; margin-top:18px;}
+  .ob-dots i{width:6px; height:6px; border-radius:50%; background:var(--line);}
+  .ob-dots i.on{background:var(--teal); width:16px; border-radius:4px;}
+
+  /* 2. PAYWALL */
+  .pw{padding:22px 18px; flex:1; display:flex; flex-direction:column;}
+  .pw h2{font-family:'Fraunces',serif; font-size:19px; font-weight:600; color:var(--ink); text-align:center; margin:8px 0 4px;}
+  .pw .tag{font-size:12px; color:#7C7360; text-align:center; margin:0 0 18px;}
+  .plan{background:var(--surface); border-radius:16px; padding:14px 14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;}
+  .plan.on{background:var(--teal); color:var(--cream);}
+  .plan b{font-size:13.5px;}
+  .plan small{display:block; font-size:10.5px; opacity:.75; margin-top:2px;}
+  .plan .price{font-family:'Fraunces',serif; font-weight:600; font-size:15px;}
+  .badge{position:absolute; background:var(--butter); color:var(--butter-deep); font-size:9px; font-weight:700; padding:2px 8px; border-radius:8px; margin-top:-24px; margin-left:14px;}
+  .cta{background:var(--coral); color:#4A231A; text-align:center; font-weight:700; font-size:13px; padding:13px 0; border-radius:14px; margin-top:auto;}
+  .fine{font-size:10px; color:#9C9280; text-align:center; margin-top:8px;}
+
+  /* 3. HOY (M0) */
+  .top{padding:22px 18px 12px;}
+  .top .tema{font-family:'Fraunces',serif; font-size:18px; font-weight:600; color:var(--ink); margin:4px 0 2px;}
+  .top .sub2{font-size:11.5px; color:#7C7360;}
+  .card{background:var(--surface); border-radius:16px; padding:14px 14px 12px; margin:0 18px 10px;}
+  .card h4{font-family:'Fraunces',serif; font-size:14px; font-weight:600; color:var(--ink); margin:0 0 8px;}
+  .levels{display:flex; gap:5px; flex-wrap:wrap; margin-bottom:8px;}
+  .lvl{font-size:9.5px; font-weight:600; padding:3px 8px; border-radius:12px; background:var(--sage); color:#2E3B2C;}
+  .row2{font-size:11px; color:var(--ink); line-height:1.5;}
+  .foco{background:var(--sunken); border-radius:16px; padding:12px 14px; margin:0 18px;}
+  .foco h4{font-family:'Fraunces',serif; font-size:12px; font-weight:600; color:var(--sage-deep); margin:0 0 8px;}
+  .kid{display:flex; align-items:center; gap:8px; font-size:11.5px; padding:5px 0; color:var(--ink);}
+  .kid .ld{font-size:12px;}
+  .kid b{font-weight:700;}
+  .kid span{color:#7C7360; margin-left:auto;}
+
+  /* 4. PLANEACION SEMANAL (mecanismo) */
+  .pl-head{padding:20px 18px 10px;}
+  .pl-head .tema{font-family:'Fraunces',serif; font-size:17px; font-weight:600; color:var(--ink); margin:4px 0 2px;}
+  .week{padding:0 18px; display:flex; flex-direction:column; gap:8px;}
+  .day{background:var(--surface); border-radius:14px; padding:10px 12px; display:flex; align-items:center; gap:10px;}
+  .day .d{font-family:'Fraunces',serif; font-weight:700; font-size:12px; color:var(--teal); width:34px; flex:none;}
+  .day .txt{font-size:11px; color:var(--ink); line-height:1.4;}
+  .day .txt b{font-weight:700;}
+  .day .txt small{display:block; color:#7C7360; font-size:10px;}
+  .day.hi{background:var(--sage); }
+  .day.hi .d{color:#2E3B2C;}
+
+  /* 5. PERFIL DEL NIÑO */
+  .pf-top{background:var(--teal); padding:22px 18px 30px; position:relative;}
+  .pf-avatar{width:48px; height:48px; border-radius:14px; background:var(--butter); color:var(--butter-deep); font-family:'Fraunces',serif; font-weight:700; font-size:19px; display:flex; align-items:center; justify-content:center; margin-bottom:10px;}
+  .pf-top h2{font-family:'Fraunces',serif; font-size:18px; font-weight:600; color:var(--cream); margin:0;}
+  .pf-top p{font-size:11px; color:#BFDAD9; margin:2px 0 0;}
+  .pf-body{padding:16px 18px; margin-top:-16px;}
+  .skill{background:var(--surface); border-radius:14px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; font-size:11.5px; color:var(--ink);}
+  .pill{font-size:9.5px; font-weight:700; padding:3px 9px; border-radius:10px;}
+  .pill.dom{background:var(--sage); color:#2E3B2C;}
+  .pill.dev{background:var(--butter); color:var(--butter-deep);}
+  .pill.new{background:var(--coral); color:var(--coral-deep);}
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,500,60;9..144,600,60;9..144,700,60&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">RAIZ — tour de la app</p>
+    <h1>5 vistas por dentro, con tu sistema de marca ya aplicado</h1>
+    <p class="sub">Onboarding → paywall → "Hoy" (el primer aha moment) → planeación semanal (el mecanismo diferenciador) → perfil del niño. Mismos 5 colores, misma hojita como firma en toda la app.</p>
+  </header>
+
+  <div class="row">
+
+    <div class="col">
+      <p class="col-label">1 · Onboarding</p>
+      <div class="phone">
+        <div class="ob">
+          <div class="icon">R<span class="leaf">🍃</span></div>
+          <h2>¿Cómo enseñas?</h2>
+          <p>RAIZ adapta todo a tu metodología — no te la impone.</p>
+          <div class="ob-opt">Montessori<span>o híbrido</span></div>
+          <div class="ob-opt">Play-based learning<span>con toques académicos</span></div>
+          <div class="ob-opt">Emergent curriculum<span>o combinación propia</span></div>
+          <div class="ob-dots"><i class="on"></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <p class="col-label">2 · Paywall</p>
+      <div class="phone">
+        <div class="pw">
+          <p class="word" style="text-align:center; display:block;">Raiz<span class="leaf" style="left:38px;">🍃</span></p>
+          <h2>Deja de cargar a todos tus niños en la cabeza</h2>
+          <p class="tag">RAIZ recuerda qué necesita cada uno.</p>
+          <div class="plan on"><div><b>Plan Base</b><small>facturado anual</small></div><span class="price">$19.99<small>/mes</small></span></div>
+          <div class="plan"><div><b>Plan Pro</b><small>centros e inventario</small></div><span class="price">$29.99<small>/mes</small></span></div>
+          <div class="cta">Empezar prueba de 7 días</div>
+          <p class="fine">Sin tarjeta ahora · cancela cuando quieras</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <p class="col-label">3 · Hoy (aha moment)</p>
+      <div class="phone">
+        <div class="top">
+          <p class="word">Raiz<span class="leaf" style="left:34px;">🍃</span></p>
+          <p class="label" style="margin-top:14px;">Hoy · semana 3</p>
+          <p class="tema">Mi cuerpo</p>
+          <p class="sub2">Mis emociones · head · arm · hand · leg</p>
+        </div>
+        <div class="card">
+          <h4>Body collage</h4>
+          <div class="levels"><span class="lvl">Infant</span><span class="lvl">Toddler</span><span class="lvl">Preschool</span><span class="lvl">Pre-K</span></div>
+          <p class="row2">Materiales listos en tu Science Center.</p>
+        </div>
+        <div class="foco">
+          <h4>Niños foco de hoy</h4>
+          <div class="kid"><span class="ld">🍃</span><b>Luca</b><span>tijeras</span></div>
+          <div class="kid"><span class="ld">🍃</span><b>Zayne</b><span>números 6–8</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <p class="col-label">4 · Planeación semanal</p>
+      <div class="phone">
+        <div class="pl-head">
+          <p class="label">Semana 3 · construir</p>
+          <p class="tema">Mi cuerpo</p>
+        </div>
+        <div class="week">
+          <div class="day hi"><span class="d">Lun</span><span class="txt"><b>Circle: partes del cuerpo</b><small>Foco: Luca — tijeras</small></span></div>
+          <div class="day"><span class="d">Mar</span><span class="txt"><b>Body collage</b><small>Foco: identidad</small></span></div>
+          <div class="day"><span class="d">Mié</span><span class="txt"><b>STEAM: espejos</b><small>Foco: Zayne — números</small></span></div>
+          <div class="day"><span class="d">Jue</span><span class="txt"><b>Dramatic: doctor</b><small>Foco: lenguaje</small></span></div>
+          <div class="day"><span class="d">Vie</span><span class="txt"><b>Math Center</b><small>Foco: Zayne — 6–8</small></span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <p class="col-label">5 · Perfil del niño</p>
+      <div class="phone">
+        <div class="pf-top">
+          <div class="pf-avatar">L</div>
+          <h2>Luca</h2>
+          <p>3 años 8 meses · Preschool</p>
+        </div>
+        <div class="pf-body">
+          <div class="skill">Tijeras <span class="pill dev">En desarrollo</span></div>
+          <div class="skill">Números 1–8 <span class="pill dom">Dominado</span></div>
+          <div class="skill">Reconoce colores <span class="pill dom">Dominado</span></div>
+          <div class="skill">Escritura de nombre <span class="pill new">Aún no observado</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

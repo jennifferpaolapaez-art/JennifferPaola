@@ -67,7 +67,9 @@
 - Réplica fiel: `replica-fiel.html` (Hoy screen con este sistema, board de referencia embebido al
   lado) · captura de referencia: la imagen del board compartida en chat (no guardada como archivo
   local — solo vista en conversación) · test de fidelidad: ver artifact
-- Tour de la app: pendiente — se hace en la Sesión de identidad visual completa (varias pantallas)
+- Tour de la app: `vista-previa-app.html` (raíz del proyecto) — 5 vistas: onboarding, paywall,
+  Hoy (aha moment), planeación semanal, perfil del niño. Screenshot en
+  `docs/revisiones/vista-previa-app.png`. Artifact: https://claude.ai/artifact/TF96ik4moNeGtGKEVwaLBb
 - Paleta derivada de: board de marca del usuario (CONTRATO — se toma tal cual, no se reinterpreta)
 - Registro anti-repetición: paleta Deep Teal/Warm Cream/Sage/Butter Yellow/Soft Coral + par
   Fraunces/Plus Jakarta Sans anotados en ESTADO.md → vetados para el próximo proyecto del SO

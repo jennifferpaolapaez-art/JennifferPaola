@@ -1,0 +1,185 @@
+<title>Direcciones RAIZ</title>
+<style>
+  :root{
+    --page-bg:#FAF7F1; --page-ink:#2B2621; --page-ink-soft:#6B6357; --page-line:#E6DFD1; --page-accent:#8C6B4F;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --page-bg:#1C1712; --page-ink:#EFE8DB; --page-ink-soft:#B7ACA0; --page-line:#3A322A; --page-accent:#C79A6F;
+    }
+  }
+  :root[data-theme="dark"]{
+    --page-bg:#1C1712; --page-ink:#EFE8DB; --page-ink-soft:#B7ACA0; --page-line:#3A322A; --page-accent:#C79A6F;
+  }
+  *{box-sizing:border-box;}
+  body{background:var(--page-bg); color:var(--page-ink); font-family:'Inter',system-ui,sans-serif; margin:0; padding:32px 20px 56px;}
+  .wrap{max-width:1180px; margin:0 auto;}
+  header{margin-bottom:28px;}
+  .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--page-accent); font-weight:600; margin:0 0 8px;}
+  h1{font-size:22px; font-weight:600; margin:0 0 6px; text-wrap:balance;}
+  .sub{font-size:14px; color:var(--page-ink-soft); max-width:60ch; line-height:1.6; margin:0;}
+  .row{display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start; justify-content:center;}
+  .col{flex:1 1 300px; max-width:340px;}
+  .col-label{display:flex; align-items:baseline; gap:8px; margin:0 0 6px; padding:0 4px;}
+  .col-letter{font-size:13px; font-weight:700; color:var(--page-accent);}
+  .col-name{font-size:14px; font-weight:600; color:var(--page-ink);}
+  .col-tag{font-size:11.5px; color:var(--page-ink-soft); margin:0 0 14px; padding:0 4px; line-height:1.5;}
+  .phone{border-radius:26px; overflow:hidden; border:1px solid var(--page-line); box-shadow:0 1px 2px rgba(0,0,0,.06);}
+
+  /* ============ DIRECCION A — Cuaderno calido ============ */
+  .dirA{ background:#F7F2E7; color:#2B2015; font-family:'Inter',sans-serif; padding:22px 18px 26px; min-height:480px;}
+  .dirA .word{font-family:'Fraunces',serif; font-size:26px; font-weight:500; letter-spacing:.01em; margin:0 0 22px;}
+  .dirA .word em{font-style:italic; font-weight:600; color:#B65C3A;}
+  .dirA .label{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:#8A7C63; font-weight:600;}
+  .dirA .tema{font-family:'Fraunces',serif; font-size:19px; font-weight:500; margin:4px 0 2px;}
+  .dirA .sub2{font-size:12.5px; color:#7C6F58; margin:0 0 16px;}
+  .dirA .card{background:#FFFDF8; border:1px solid #E9DEC7; border-radius:4px; border-left:3px solid #B65C3A; padding:14px 14px 12px; margin-bottom:12px;}
+  .dirA .card h4{font-family:'Fraunces',serif; font-size:15px; font-weight:600; margin:0 0 8px;}
+  .dirA .levels{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;}
+  .dirA .lvl{font-size:10.5px; padding:2px 8px; border:1px solid #DCCFB2; border-radius:2px; color:#5C523E;}
+  .dirA .row2{font-size:12px; color:#4A4130; line-height:1.5;}
+  .dirA .foco{background:#FFFDF8; border:1px solid #E9DEC7; border-radius:4px; padding:12px 14px;}
+  .dirA .foco h4{font-family:'Fraunces',serif; font-size:13px; font-weight:600; margin:0 0 8px; color:#5C523E;}
+  .dirA .kid{display:flex; justify-content:space-between; font-size:12.5px; padding:5px 0; border-top:1px dotted #E2D5B9;}
+  .dirA .kid:first-of-type{border-top:none;}
+  .dirA .kid b{font-weight:600;}
+  .dirA .kid span{color:#8A7C63;}
+
+  /* ============ DIRECCION B — Crecimiento organico ============ */
+  .dirB{ background:#F9F6EE; color:#2E3A29; font-family:'Plus Jakarta Sans',sans-serif; padding:0 0 60px; min-height:480px; display:flex; flex-direction:column;}
+  .dirB .top{padding:20px 18px 14px;}
+  .dirB .word{font-size:22px; font-weight:800; letter-spacing:-0.01em; margin:0 0 18px;}
+  .dirB .word .ai{color:#7E9470; text-decoration:underline; text-decoration-color:#C97B4A; text-decoration-thickness:2px; text-underline-offset:3px;}
+  .dirB .pill{display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.03em; background:#E7EEDF; color:#4C5C42; padding:3px 10px; border-radius:20px; margin-bottom:8px;}
+  .dirB .tema{font-size:18px; font-weight:800; margin:2px 0 3px;}
+  .dirB .sub2{font-size:12px; color:#6B7862; margin:0 0 14px;}
+  .dirB .card{background:#FFFFFF; border-radius:16px; padding:14px 14px 12px; margin:0 18px 10px; box-shadow:0 1px 0 rgba(46,58,41,.05);}
+  .dirB .card h4{font-size:14.5px; font-weight:700; margin:0 0 9px;}
+  .dirB .levels{display:flex; gap:5px; flex-wrap:wrap; margin-bottom:9px;}
+  .dirB .lvl{font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; background:#F1ECDD; color:#5A6350;}
+  .dirB .row2{font-size:11.5px; color:#485240; line-height:1.5;}
+  .dirB .foco{background:#EFE7D8; border-radius:16px; padding:12px 14px; margin:2px 18px 0;}
+  .dirB .foco h4{font-size:12.5px; font-weight:700; margin:0 0 8px; color:#5A6350;}
+  .dirB .kid{display:flex; align-items:center; gap:8px; font-size:12px; padding:5px 0;}
+  .dirB .dot{width:6px; height:6px; border-radius:50%; background:#C97B4A; flex:none;}
+  .dirB .kid span{color:#7C876F; margin-left:auto;}
+  .dirB .nav{margin-top:auto; display:flex; justify-content:space-around; padding:12px 0 14px; background:#FFFFFF; border-top:1px solid #EDE6D5;}
+  .dirB .navdot{width:20px; height:20px; border-radius:6px; background:#E7EEDF;}
+  .dirB .navdot.on{background:#7E9470;}
+
+  /* ============ DIRECCION C — Tierra contemporanea ============ */
+  .dirC{ background:#241C16; color:#F2E9DA; font-family:'Inter',sans-serif; padding:0; min-height:480px;}
+  .dirC .top{background:#B65C3A; padding:20px 18px 26px; position:relative;}
+  .dirC .word{font-family:'Fraunces',serif; font-size:24px; font-weight:700; color:#FBF3E7; margin:0 0 20px;}
+  .dirC .word .chip{background:#241C16; color:#F2A272; font-style:italic; padding:1px 6px; border-radius:3px; font-size:.85em;}
+  .dirC .label{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:#F6DCC7; font-weight:700;}
+  .dirC .tema{font-family:'Fraunces',serif; font-size:21px; font-weight:700; color:#FBF3E7; margin:4px 0 2px;}
+  .dirC .sub2{font-size:12px; color:#F6DCC7;}
+  .dirC .body{padding:16px 18px 20px; margin-top:-14px;}
+  .dirC .card{background:#2E251D; border-radius:10px; padding:14px 14px 12px; margin-bottom:10px; border:1px solid #40342A;}
+  .dirC .card h4{font-family:'Fraunces',serif; font-size:15px; font-weight:600; margin:0 0 9px; color:#FBF3E7;}
+  .dirC .levels{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:9px;}
+  .dirC .lvl{font-size:10px; font-weight:600; padding:3px 8px; border-radius:3px; background:#40342A; color:#F2A272;}
+  .dirC .row2{font-size:12px; color:#CBBBA6; line-height:1.5;}
+  .dirC .foco{background:#2E251D; border-radius:10px; padding:12px 14px; border:1px solid #40342A;}
+  .dirC .foco h4{font-family:'Fraunces',serif; font-size:13px; font-weight:600; margin:0 0 8px; color:#F2A272;}
+  .dirC .kid{display:flex; justify-content:space-between; font-size:12.5px; padding:6px 0; border-top:1px solid #3B3025;}
+  .dirC .kid:first-of-type{border-top:none;}
+  .dirC .kid b{font-weight:600; color:#FBF3E7;}
+  .dirC .kid span{color:#B39D85;}
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap">
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">RAIZ — dirección de arte</p>
+    <h1>3 fusiones de líderes del nicho, no una sola app clonada</h1>
+    <p class="sub">Cada dirección es una fusión distinta de apps que ya funcionan (Lillio/HiMama, Bloomily, Brightwheel, Learning Genie) más un gigante admirado por su craft (Notion) — nunca una combinación inventada. Misma pantalla — "Hoy" — para comparar en igualdad de condiciones.</p>
+  </header>
+
+  <div class="row">
+
+    <div class="col">
+      <div class="col-label"><span class="col-letter">A</span><span class="col-name">Cuaderno cálido</span></div>
+      <p class="col-tag">Notion (neutros cálidos + serif editorial) + Lillio (acento terracota) · arquetipo Sabio/Cuidador · sensación: libreta de planeación de una maestra con años de oficio.</p>
+      <div class="phone dirA">
+        <p class="word">R<em>ai</em>z</p>
+        <p class="label">Hoy · semana 3</p>
+        <p class="tema">Mi cuerpo</p>
+        <p class="sub2">Subtema: mis emociones · vocabulario: head, arm, hand, leg</p>
+        <div class="card">
+          <h4>Body collage</h4>
+          <div class="levels">
+            <span class="lvl">Infant: explorar formas</span>
+            <span class="lvl">Toddler: emparejar</span>
+            <span class="lvl">Preschool: nombrar</span>
+            <span class="lvl">Pre-K: clasificar</span>
+          </div>
+          <p class="row2">Materiales en tu Science Center — no necesitas comprar nada.</p>
+        </div>
+        <div class="foco">
+          <h4>Niños foco de hoy</h4>
+          <div class="kid"><b>Luca</b><span>tijeras — observa cortes consecutivos</span></div>
+          <div class="kid"><b>Zayne</b><span>números 6–8</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label"><span class="col-letter">B</span><span class="col-name">Crecimiento orgánico</span></div>
+      <p class="col-tag">Brightwheel (estructura app-shell, bottom nav) + Learning Genie (cards de skill) reteñidos en verdes/tierra · arquetipo Explorador · sensación: app nativa, ligera, de uso diario.</p>
+      <div class="phone dirB">
+        <div class="top">
+          <p class="word">R<span class="ai">ai</span>z</p>
+          <span class="pill">HOY · SEMANA 3</span>
+          <p class="tema">Mi cuerpo</p>
+          <p class="sub2">Mis emociones · head · arm · hand · leg</p>
+        </div>
+        <div class="card">
+          <h4>Body collage</h4>
+          <div class="levels">
+            <span class="lvl">Infant</span><span class="lvl">Toddler</span><span class="lvl">Preschool</span><span class="lvl">Pre-K</span>
+          </div>
+          <p class="row2">Ya tienes los materiales en Science Center.</p>
+        </div>
+        <div class="foco">
+          <h4>Niños foco de hoy</h4>
+          <div class="kid"><span class="dot"></span><b>Luca</b><span>tijeras</span></div>
+          <div class="kid"><span class="dot"></span><b>Zayne</b><span>números 6–8</span></div>
+        </div>
+        <div class="nav">
+          <div class="navdot on"></div><div class="navdot"></div><div class="navdot"></div><div class="navdot"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="col-label"><span class="col-letter">C</span><span class="col-name">Tierra contemporánea</span></div>
+      <p class="col-tag">Bloomily (SaaS premium simple) + Notion (neutros) con terracota como protagonista, no solo acento · arquetipo Gobernante/Sabio · sensación: editorial, con más carácter y contraste.</p>
+      <div class="phone dirC">
+        <div class="top">
+          <p class="word">R<span class="chip">ai</span>z</p>
+          <p class="label">Hoy · semana 3</p>
+          <p class="tema">Mi cuerpo</p>
+          <p class="sub2">Mis emociones · head · arm · hand · leg</p>
+        </div>
+        <div class="body">
+          <div class="card">
+            <h4>Body collage</h4>
+            <div class="levels">
+              <span class="lvl">Infant</span><span class="lvl">Toddler</span><span class="lvl">Preschool</span><span class="lvl">Pre-K</span>
+            </div>
+            <p class="row2">Materiales listos en tu Science Center.</p>
+          </div>
+          <div class="foco">
+            <h4>Niños foco de hoy</h4>
+            <div class="kid"><b>Luca</b><span>tijeras</span></div>
+            <div class="kid"><b>Zayne</b><span>números 6–8</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

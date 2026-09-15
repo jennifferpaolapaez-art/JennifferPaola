@@ -1,0 +1,133 @@
+<title>RAIZ réplica fiel</title>
+<style>
+  :root{
+    --cream:#F6F0E4; --surface:#FBF7EE; --sunken:#EFE7D5; --teal:#0D5C63; --ink:#1E3A3D;
+    --sage:#A8B9A5; --sage-deep:#5D7358; --butter:#F4C84A; --butter-deep:#8A6A17;
+    --coral:#F28A7A; --coral-deep:#A24735; --line:#E4D9C2;
+  }
+  *{box-sizing:border-box;}
+  body{background:#EFEAE0; color:#2B2621; font-family:'Plus Jakarta Sans',system-ui,sans-serif; margin:0; padding:32px 20px 56px;}
+  .wrap{max-width:1180px; margin:0 auto;}
+  header{margin-bottom:22px; text-align:center;}
+  .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#8A7E67; font-weight:600; margin:0 0 8px;}
+  h1{font-size:21px; font-weight:600; margin:0 0 6px; font-family:'Plus Jakarta Sans',sans-serif; color:#2B2621;}
+  .sub{font-size:13.5px; color:#6E6553; max-width:60ch; margin:0 auto; line-height:1.6;}
+
+  .compare{display:flex; gap:26px; flex-wrap:wrap; justify-content:center; align-items:flex-start;}
+  .panel{flex:1 1 320px; max-width:360px;}
+  .panel h2{font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#8A7E67; margin:0 0 10px; text-align:center;}
+
+  /* reference board recreation */
+  .board{background:#FBF8F1; border:1px solid var(--line); border-radius:8px; padding:22px 18px;}
+  .board-row{display:flex; justify-content:space-between; font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:#B3A88E; margin-bottom:20px; border-bottom:1px solid var(--line); padding-bottom:10px;}
+  .lockup{font-family:'Fraunces',serif; font-weight:600; font-size:38px; color:var(--teal); position:relative; display:inline-block; margin:0 0 4px;}
+  .lockup .dot{position:absolute; top:-2px; font-size:16px;}
+  .lockup.b .dot{color:var(--butter);}
+  .lockup.c .dot{color:var(--coral);}
+  .lockup-label{font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:#B3A88E; margin:0 0 22px;}
+  .swatches{display:flex; gap:10px; margin-top:6px;}
+  .sw{width:36px; height:36px; border-radius:50%;}
+
+  /* replica fiel — Hoy screen with the contract system */
+  .phone{background:var(--cream); border-radius:26px; overflow:hidden; border:1px solid var(--line); box-shadow:0 6px 18px -8px rgba(13,92,99,.18);}
+  .top{padding:22px 18px 16px;}
+  .word{font-family:'Fraunces',serif; font-weight:700; font-size:24px; color:var(--teal); margin:0 0 20px; position:relative; display:inline-block;}
+  .word .leaf{position:absolute; top:-1px; font-size:11px; color:var(--butter);}
+  .label{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--sage-deep); font-weight:700;}
+  .tema{font-family:'Fraunces',serif; font-size:20px; font-weight:600; color:var(--ink); margin:4px 0 2px;}
+  .sub2{font-size:12px; color:#7C7360;}
+
+  .card{background:var(--surface); border-radius:18px; padding:16px 16px 14px; margin:0 18px 12px;}
+  .card h4{font-family:'Fraunces',serif; font-size:16px; font-weight:600; color:var(--ink); margin:0 0 10px;}
+  .levels{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;}
+  .lvl{font-size:10.5px; font-weight:600; padding:4px 10px; border-radius:14px; background:var(--sage); color:#2E3B2C;}
+  .row2{font-size:12px; color:var(--ink); line-height:1.55;}
+
+  .foco{background:var(--sunken); border-radius:18px; padding:14px 16px; margin:0 18px 16px;}
+  .foco h4{font-family:'Fraunces',serif; font-size:13.5px; font-weight:600; color:var(--sage-deep); margin:0 0 10px;}
+  .kid{display:flex; align-items:center; gap:9px; font-size:12.5px; padding:6px 0; color:var(--ink);}
+  .kid .leafdot{width:14px; height:14px; flex:none;}
+  .kid b{font-weight:700;}
+  .kid span{color:#7C7360; margin-left:auto;}
+
+  .cta{margin:0 18px 20px; display:flex; gap:10px;}
+  .btn{flex:1; text-align:center; font-size:13px; font-weight:700; padding:11px 0; border-radius:14px;}
+  .btn.primary{background:var(--teal); color:#F6F0E4;}
+  .btn.secondary{background:var(--coral); color:#4A231A;}
+
+  .fidelity{margin-top:30px; max-width:640px; margin-left:auto; margin-right:auto;}
+  .fidelity h3{font-size:13px; font-weight:700; color:#2B2621; margin:0 0 10px; text-align:center;}
+  .checks{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px 18px; background:#FBF8F1; border:1px solid var(--line); border-radius:12px; padding:16px 18px;}
+  .check{font-size:12.5px; color:#4A4433; display:flex; gap:8px; align-items:flex-start;}
+  .check b{color:var(--sage-deep);}
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,500,60;9..144,600,60;9..144,700,60&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">RAIZ — réplica fiel</p>
+    <h1>Tu board de marca, aplicado a una pantalla real de la app</h1>
+    <p class="sub">Izquierda: tu contrato de marca (recreado con los hex y el lockup que definiste). Derecha: la pantalla "Hoy" de RAIZ construida con ese mismo sistema — mismos colores, misma proporción 70/15/10/5/5, mismo gesto de la hojita.</p>
+  </header>
+
+  <div class="compare">
+    <div class="panel">
+      <h2>Tu contrato de marca</h2>
+      <div class="board">
+        <div class="board-row"><span>Logo design</span><span>Brand identity</span></div>
+        <p class="lockup b">Raiz<span class="dot">🍃</span></p>
+        <p class="lockup-label">Primary logo</p>
+        <p class="lockup c">Raiz<span class="dot">🍃</span></p>
+        <p class="lockup-label">Secondary logo</p>
+        <div class="swatches">
+          <div class="sw" style="background:var(--teal)"></div>
+          <div class="sw" style="background:var(--cream); border:1px solid var(--line);"></div>
+          <div class="sw" style="background:var(--sage)"></div>
+          <div class="sw" style="background:var(--butter)"></div>
+          <div class="sw" style="background:var(--coral)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Pantalla "Hoy" — mismo sistema</h2>
+      <div class="phone">
+        <div class="top">
+          <p class="word">Raiz<span class="leaf">🍃</span></p>
+          <p class="label">Hoy · semana 3</p>
+          <p class="tema">Mi cuerpo</p>
+          <p class="sub2">Mis emociones · head · arm · hand · leg</p>
+        </div>
+        <div class="card">
+          <h4>Body collage</h4>
+          <div class="levels">
+            <span class="lvl">Infant</span><span class="lvl">Toddler</span><span class="lvl">Preschool</span><span class="lvl">Pre-K</span>
+          </div>
+          <p class="row2">Ya tienes los materiales en tu Science Center.</p>
+        </div>
+        <div class="foco">
+          <h4>Niños foco de hoy</h4>
+          <div class="kid"><span class="leafdot">🍃</span><b>Luca</b><span>tijeras</span></div>
+          <div class="kid"><span class="leafdot">🍃</span><b>Zayne</b><span>números 6–8</span></div>
+        </div>
+        <div class="cta">
+          <div class="btn primary">Ver semana</div>
+          <div class="btn secondary">Observar</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fidelity">
+    <h3>Test de fidelidad</h3>
+    <div class="checks">
+      <div class="check"><b>✓</b> Mismo modo — claro, cálido</div>
+      <div class="check"><b>✓</b> Mismo hue de acento — Deep Teal íntegro</div>
+      <div class="check"><b>✓</b> Misma clase tipográfica display — serif redondeada cálida</div>
+      <div class="check"><b>✓</b> Mismos 5 colores, misma proporción 70/15/10/5/5</div>
+      <div class="check"><b>✓</b> Mismo detalle de firma — la hojita, ahora también como marcador de niño foco</div>
+      <div class="check"><b>✓</b> Misma densidad — aireada, sin bordes duros</div>
+    </div>
+  </div>
+</div>

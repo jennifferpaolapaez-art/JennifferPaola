@@ -108,8 +108,14 @@ direcciones A/B/C fusionadas que se habían propuesto sin referencia (esas queda
 - Body/UI (extendido, el board no lo definía): **Plus Jakarta Sans**.
 - Radio 18px cards/14px botones · sombras suaves de 1 nivel · modo claro derivado directamente
   del board (Warm Cream de fondo).
-- Réplica fiel construida y aprobada: artifact `replica-fiel.html` (pantalla "Hoy" con el sistema
-  completo, board recreado al lado, test de fidelidad pasado).
+- Réplica fiel construida: `replica-fiel.html` (raíz del proyecto, screenshot en
+  `docs/revisiones/replica-fiel.png`) — pantalla "Hoy" con el sistema completo, board recreado al
+  lado, test de fidelidad pasado.
+- Tour de la app construido: `vista-previa-app.html` (raíz, screenshot en
+  `docs/revisiones/vista-previa-app.png`) — 5 vistas: onboarding, paywall, Hoy, planeación
+  semanal, perfil del niño. Pendiente: pregunta de cierre al usuario (me encanta/ajustar/repensar).
+- `direcciones-abc.html` conservado en la raíz (screenshot en `docs/revisiones/`) como evidencia
+  de las 3 fusiones descartadas al llegar el contrato de marca del usuario.
 - ⚠️ Pendiente real: el logo del board parece boceto/concepto (probable IA), no archivo vectorial
   final — no bloquea, pero se necesitará producir el SVG/vector definitivo del logotipo "Raiz +
   hojita" antes de assets de producción (ícono de app, favicon, print).
