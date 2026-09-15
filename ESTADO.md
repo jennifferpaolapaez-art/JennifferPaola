@@ -3,9 +3,9 @@
 > Memoria viva del proyecto. Se actualiza en cada hito.
 
 ## Fase actual
-Sesión 1 CERRADA (validación, constitución, app modelo, dirección de arte, precio, arquitectura,
-base de datos, auth). Siguiente: Sesión 3 — página de ventas (la Sesión 2 de identidad visual ya
-quedó resuelta dentro de la Sesión 1 por el contrato de marca del usuario).
+Sesión 1 CERRADA. Sesión 3 (landing) — v2 construida tras rechazo explícito de la v1 por el
+usuario (ver "Sesión 3 — revisión v2" abajo). Pendiente: aprobación del usuario ("Landing
+aprobada.") antes de arrancar Sesión 4.
 
 ## Fuente de verdad del producto
 `G:\My Drive\CLAUDE\Proyectos\App Creciendo Bilingue\Notas de trabajo.docx` — documento maestro de
@@ -128,25 +128,117 @@ direcciones A/B/C fusionadas que se habían propuesto sin referencia (esas queda
   final — no bloquea, pero se necesitará producir el SVG/vector definitivo del logotipo "Raiz +
   hojita" antes de assets de producción (ícono de app, favicon, print).
 
-## Sesión 3 — Página de ventas — EN CURSO
+## ⚠️ ENTORNO — dónde vive realmente el código (leer antes de tocar node/npm)
+El proyecto documental (ESTADO.md, fichas, docs/, este repo git) vive en
+`G:\My Drive\CLAUDE\Proyectos\RAIZ` — Google Drive. Pero **el código de la app (Next.js) se
+desarrolla y compila en `C:\dev\raiz-app`** (disco local), no aquí, porque G: es una unidad
+virtual de Google Drive (no NTFS real): `npm install` ahí se corrompe a medias (EPERM/EBADF,
+miles de archivos pequeños peleando con la sincronización en tiempo real) y ni siquiera admite
+symlinks/junctions para redirigir `node_modules`.
+- **Flujo de trabajo:** editar/instalar/compilar SIEMPRE en `C:\dev\raiz-app`. Al cerrar un hito,
+  sincronizar con `robocopy "C:\dev\raiz-app" "G:\My Drive\CLAUDE\Proyectos\RAIZ" /E /XD
+  node_modules .next /NFL /NDL /NJH` y copiar `package-lock.json` aparte.
+  **⚠️ CUIDADO DE DIRECCIÓN: el robocopy va SIEMPRE de C: → G:, nunca al revés.** Si se edita
+  ESTADO.md (o cualquier archivo) directo en G: y LUEGO se corre robocopy C:→G:, el archivo de
+  G: se pisa con la versión vieja de C: y el edit se pierde (pasó una vez en esta sesión — el
+  aviso de este mismo bloque desapareció así). Regla segura: cualquier archivo que se edite fuera
+  de `C:\dev\raiz-app` (como ESTADO.md casi siempre) se edita, y LUEGO se copia manualmente esa
+  misma edición también a `C:\dev\raiz-app` antes de la próxima sincronización — o mejor, editar
+  ESTADO.md siempre en AMBOS lados, o revisar el diff antes de sincronizar.
+  `C:\dev\raiz-app` NO tiene su propio `.git` — el repo real es el de G:.
+- Node.js está instalado pero no en el PATH por defecto de esta terminal:
+  `export PATH="/c/Program Files/nodejs:$PATH"` al abrir una sesión de bash nueva.
+- Si el usuario prefiere evitar este paso manual en el futuro, la solución de fondo es excluir
+  `node_modules`/`.next` de la sincronización de Google Drive (clic derecho → "Omitir estos
+  archivos" en la app de Drive) para poder trabajar directo en G: — pendiente de decidir con el
+  usuario, no bloqueante mientras tanto.
+- **Chrome headless local (CLI) no captura bien** ventanas angostas (<450px de ancho) ni
+  secciones con animación `whileInView` en una sola captura sin scroll real (se queda en
+  opacity:0 — no es bug de la app). Para evidencia visual: usar ventanas ≥500px de ancho, o el
+  navegador interactivo (mcp Claude_Browser) con scroll real + `wait` antes de cada screenshot.
+
+## Sesión 3 — Página de ventas — v2 construida, build verde, pendiente aprobación del usuario
+**v1 fue RECHAZADA explícitamente por el usuario** (mensaje: "NO apruebo todavía la landing").
+Pidió elevar dirección de arte, jerarquía, paleta, riqueza visual, sensación premium,
+escaneabilidad mobile y demostración visual del producto — SIN tocar la estructura de 10
+secciones ni el argumento de venta ya aprobado. v2 responde punto por punto:
 - FICHA-AVATAR.md aprobada · FICHA-MERCADO.md creada (precio $19.99/$29.99, prueba 7 días,
   garantía 15 días — verificado > prueba contra los plazos reales de Hotmart 7/15/21/30).
 - Mecanismo bautizado: **la Memoria del Salón** (frase textual del documento maestro, sec. 6).
-- Next.js scaffolded en la raíz del proyecto (create-next-app, App Router, Tailwind v4,
-  Turbopack) — el kit de landing (`plantillas-codigo/landing/`) copiado a `components/landing/`,
-  tokens.css tematizado con FICHA-ARTE, copy marcado en `docs/copy/landing.md` (trazado a
-  FICHA-AVATAR), página compuesta en `app/page.tsx`.
-- Logo real: el PNG que el usuario compartió en chat se guardó automáticamente en
-  `public/brand/raiz-logo.png` — es el asset real, no una recreación en CSS.
-- Páginas legales creadas como borrador funcional (no lorem, contenido real pero pendiente de
-  revisión legal antes de lanzar): `/privacidad`, `/terminos`, `/reembolsos`, `/aviso-ia`.
-  `/onboarding` y `/entrar` son placeholders (se construyen en Sesión 4).
+- Next.js scaffolded (create-next-app, App Router, Tailwind v4, Turbopack) — el kit de landing
+  (`plantillas-codigo/landing/`) copiado a `components/landing/`, tokens.css tematizado con
+  FICHA-ARTE, copy marcado en `docs/copy/landing.md` (trazado a FICHA-AVATAR), página compuesta
+  en `app/page.tsx`. `npm run build` pasa limpio.
+- **Logo real en el header y footer**: `<img src="/brand/raiz-logo.png">` — el PNG que el usuario
+  compartió en chat (se guardó solo en `public/brand/raiz-logo.png`), usado TAL CUAL, no
+  recreado en CSS/texto (instrucción explícita del usuario en el rechazo de v1).
+- **Headline nuevo**: "Deja de cargar a todos tus niños en la cabeza" (con acento en "en la
+  cabeza") — se evaluó contra 2 alternativas que el usuario propuso y contra el original; ganó
+  por ser la más corta, más emocional y la que mejor espeja el dolor #1 de FICHA-AVATAR. Subtítulo
+  corregido a una idea completa (antes se cortaba en "...con tu próxima").
+- **Visual del hero real**: ya no es el placeholder punteado — es un mockup construido con el
+  sistema de marca real (`public/mockups/hero.png`) mostrando la pantalla "Hoy": actividad Body
+  Collage, adaptación a los 4 niveles, foco individual de Luca/Zayne, materiales en Science
+  Center. Mismos mockups reutilizados como screenshots reales del carrusel (`public/mockups/
+  frame-*.png`) — ya no son cajas grises con nombre, son demos visuales del producto.
+- **Riqueza de color**: se agregó un helper `Tint` (en `app/page.tsx`, no toca el kit) que pinta
+  un fondo propio por bloque de secciones sin romper la doctrina "el kit no se reescribe a mano"
+  — Problema+Agitación en blush coral pálido, Mecanismo en sage pálido, Carrusel en butter cálido
+  pálido; Oferta/Garantía/FAQ se dejan en cream/blanco (para no saturar — máximo 3 tintes en toda
+  la página, tal como pidió el usuario). Cada tarjeta de "Problema" tiene su ícono en un color de
+  marca distinto (coral/sage/butter/teal) vía un campo `tint` nuevo agregado a `Problema.tsx`.
+- **Mecanismo ampliado a 4 pasos** ("el ciclo RAÍZ": Conoce → Planea → Observa → Avanza, cada uno
+  con su color) — se amplió `Solucion.tsx` de una tupla de 3 a una tupla de 4 pasos (única
+  modificación estructural al kit; documentada aquí per doctrina de "desviación justificada").
+  Corresponde 1:1 al núcleo Perfil→Planeación→Observación→Próximo paso de la Constitución.
+- **Franja de credibilidad de fundadora** rediseñada como badge con punto de acento (antes era
+  letra chica bajo el CTA que leía como disclaimer).
+- **Badge de oferta corregido**: "MÁS POPULAR" → "MEJOR VALOR" (el primero afirmaba una
+  preferencia social que no tenemos evidencia de tener; el segundo es objetivamente cierto por el
+  ahorro de 2 meses).
+- **CTA final**: copy nuevo "Cierra tu día sabiendo qué sigue mañana" (antes "Imagina tu domingo
+  sin planear" — el nuevo aterriza mejor en el beneficio diario, no solo dominical).
+- Verificado con el navegador interactivo a 375px, sección por sección con scroll real (no CLI
+  automatizado, por el bug de whileInView documentado arriba): hero, problema, mecanismo,
+  carrusel, oferta, garantía, CTA final y footer — todos renderizan correctamente. Screenshot del
+  hero guardado en `docs/revisiones/landing-v2-hero.png`.
+- **Fotografía**: el usuario pidió fotos cálidas y reales de educadoras con niños. NO se agregó
+  ninguna — el SO prohíbe fotos de stock/fabricadas y no hay ningún asset real disponible todavía.
+  Pendiente: el usuario provee fotos reales (suyas o con licencia) cuando las tenga.
+- Páginas legales como borrador funcional (no lorem, pendiente de revisión legal antes de
+  lanzar): `/privacidad`, `/terminos`, `/reembolsos`, `/aviso-ia`. `/onboarding` y `/entrar` son
+  placeholders (se construyen en Sesión 4).
+
+## Auditoría de conversión (`scripts/audit-conversion.sh`) — corrida y revisada en v1, no
+## re-corrida tras v2 (pendiente antes de declarar la landing 100% cerrada)
+En v1: 15 hallazgos críticos reportados; 2 eran reales y se corrigieron (h1 de `/onboarding` sin
+acento → agregado; PS del CTA final excedía 30 palabras → recortado). Los otros 13 eran FALSOS
+POSITIVOS de la heurística estática del script (confirmado leyendo el código fuente):
+- "0 hairlines degradé": el componente `<Hairline>` SÍ se usa en Oferta.tsx (plan Anual),
+  Garantia.tsx y Solucion.tsx — el script no lo detecta porque está encapsulado en `ui.tsx`.
+- "fondo plano sin profundidad": Hero.tsx SÍ tiene el mesh radial-gradient, en un atributo
+  `style={{...}}` de JS que el analizador de CSS estático no escanea.
+- "voseo detectado": 3 falsos positivos de la palabra `animate` (prop de Framer Motion).
+- Varios "presupuesto de copy excedido" apuntan a comentarios de código o strings internas del
+  propio kit sin modificar, no a copy real de venta.
+- "comparativa A/B/C >80% similar": correcto y ESPERADO — `direcciones-abc.html` documenta que,
+  por ser referencia-mandato, las 3 opciones son composiciones de la MISMA marca.
+- **Re-corrida sobre v2**: mismos falsos positivos que en v1 (hairlines/gradiente/voseo — ver
+  arriba, siguen siendo falsos positivos confirmados). 2 hallazgos reales nuevos, corregidos:
+  los h1 de `/onboarding` y `/entrar` usaban `style` inline para el acento en vez de una clase
+  CSS (el script busca clase, no estilo) → cambiados a `className="accent text-[var(--accent)]"`
+  + logo real agregado a ambas pantallas placeholder. `docs/copy/landing.md` estaba desactualizado
+  (con el copy de v1) → reescrito para reflejar el copy real de v2.
 
 ## Problemas conocidos
-- **Logo vectorial pendiente**: el logotipo "Raíz" (tilde-hojita, ícono squircle) está recreado en
-  CSS/texto a partir de una imagen del usuario, no es un archivo vectorial de producción. No
-  bloquea construcción — se resuelve al producir assets finales (ícono de app, favicon) más
-  adelante, ya sea generándolo en SVG limpio o si el usuario consigue el archivo original.
+- **Logo vectorial pendiente**: el header/footer ya usan el PNG real del usuario
+  (`public/brand/raiz-logo.png`), pero ese PNG parece boceto/concepto (probable IA), no archivo
+  vectorial de producción. No bloquea construcción — se necesitará un SVG/vector definitivo antes
+  de assets de producción (ícono de app nativo, favicon nítido a tamaños pequeños, print).
+- **Fotografía real pendiente**: ver nota en "Sesión 3 — v2" arriba — el usuario debe proveer
+  fotos reales de educadoras/salones cuando las tenga; no se fabricaron.
+- **Auditoría de conversión no re-corrida tras v2** — ver nota arriba, pendiente antes del cierre
+  100% de la landing.
 
 ## Sesión 1 — CERRADA (precio, arquitectura, base de datos, auth)
 

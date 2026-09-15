@@ -7,6 +7,7 @@
 // ELEVADO: abre el bloque problema+agitación (un solo movimiento visual, T1).
 
 import { motion } from 'motion/react';
+import type { CSSProperties } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { IconChip, SectionShell, useReveal, VIEWPORT_ONCE } from './ui';
 import { MarkedCopy, warnCopy, warnRango } from './MarkedCopy';
@@ -16,7 +17,16 @@ export interface PreguntaProblema {
   icon: LucideIcon;
   /** Copy MARCADO — pregunta directa al lector, máx 12 palabras. */
   textoMarked: string;
+  /** Nota de color de la paleta de marca (riqueza visual, FICHA-ARTE) — opcional. */
+  tint?: 'coral' | 'sage' | 'butter' | 'teal';
 }
+
+const TINT_HEX: Record<'coral' | 'sage' | 'butter' | 'teal', string> = {
+  coral: '#F28A7A',
+  sage: '#5D7358',
+  butter: '#B58A1E',
+  teal: '#0D5C63',
+};
 
 export interface ProblemaProps {
   /** Título opcional ("¿Te suena?") — o entrar directo a la primera pregunta. */
@@ -53,9 +63,10 @@ export function Problema({ titulo, preguntas, id }: ProblemaProps) {
             <motion.li
               key={i}
               variants={item}
+              style={p.tint ? ({ '--accent': TINT_HEX[p.tint] } as CSSProperties) : undefined}
               className="flex items-start gap-4 rounded-[var(--radius-card)] bg-[var(--bg)] p-4 shadow-[var(--shadow-1)]"
             >
-              <IconChip icon={p.icon} tone="muted" />
+              <IconChip icon={p.icon} tone={p.tint ? 'accent' : 'muted'} />
               <p className="pt-2 text-[17px] font-medium leading-snug text-[var(--text-primary)]">
                 <MarkedCopy text={p.textoMarked} />
               </p>

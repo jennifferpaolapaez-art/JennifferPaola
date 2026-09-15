@@ -16,7 +16,16 @@ export interface PasoMecanismo {
   titulo: string;
   /** UNA línea (warn a las 14 palabras). */
   detalle: string;
+  /** Nota de color de la paleta de marca por paso del ciclo (riqueza visual). */
+  tint?: 'teal' | 'butter' | 'coral' | 'sage';
 }
+
+const TINT_HEX: Record<'teal' | 'butter' | 'coral' | 'sage', string> = {
+  teal: '#0D5C63',
+  butter: '#B58A1E',
+  coral: '#C85D48',
+  sage: '#4F6249',
+};
 
 export interface SolucionProps {
   /** Kicker en acento — default "EL MECANISMO". */
@@ -27,8 +36,8 @@ export interface SolucionProps {
   mecanismo: string;
   /** Big Idea en 1-2 líneas, copy MARCADO. */
   bigIdeaMarked: string;
-  /** Los 3 pasos del mecanismo — la tupla obliga a que sean exactamente 3. */
-  pasos: [PasoMecanismo, PasoMecanismo, PasoMecanismo];
+  /** Los 4 pasos del ciclo RAÍZ — la tupla obliga a que sean exactamente 4. */
+  pasos: [PasoMecanismo, PasoMecanismo, PasoMecanismo, PasoMecanismo];
   /** Antes/después opcional: split 2 columnas, el "después" con acento sutil. */
   antesDespues?: {
     labelAntes: string;
@@ -82,22 +91,31 @@ export function Solucion({
           <MarkedCopy text={bigIdeaMarked} />
         </motion.p>
 
-        {/* 3 pasos: filas apiladas en mobile, 3 columnas en desktop */}
-        <ol className="mt-10 grid grid-cols-1 gap-6 md:grid-cols-3">
-          {pasos.map((p, i) => (
-            <motion.li key={i} variants={item} className="flex items-start gap-4 md:flex-col">
-              <span
-                aria-hidden="true"
-                className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-button)] border border-[color-mix(in_oklab,var(--accent)_22%,transparent)] bg-[var(--chip-bg)] text-[17px] font-bold tabular-nums text-[var(--accent)]"
-              >
-                {String(i + 1).padStart(2, '0')}
-              </span>
-              <div className="pt-1 md:pt-0">
-                <h3 className="text-[16px] font-semibold text-[var(--text-primary)]">{p.titulo}</h3>
-                <p className="mt-1 text-[15px] leading-snug text-[var(--text-secondary)]">{p.detalle}</p>
-              </div>
-            </motion.li>
-          ))}
+        {/* 4 pasos del ciclo RAÍZ: filas apiladas en mobile, 4 columnas en desktop,
+            conectados por una línea sutil (54 — dispositivo del ciclo, no diagrama técnico) */}
+        <ol className="relative mt-10 grid grid-cols-1 gap-6 md:grid-cols-4">
+          <div
+            aria-hidden="true"
+            className="absolute left-[22px] top-11 hidden h-[calc(100%-44px)] w-px bg-[color-mix(in_oklab,var(--text-tertiary)_18%,transparent)] md:top-[22px] md:left-11 md:h-px md:w-[calc(100%-44px)] md:block"
+          />
+          {pasos.map((p, i) => {
+            const hex = p.tint ? TINT_HEX[p.tint] : undefined;
+            return (
+              <motion.li key={i} variants={item} className="relative flex items-start gap-4 md:flex-col">
+                <span
+                  aria-hidden="true"
+                  style={hex ? { borderColor: `color-mix(in oklab, ${hex} 28%, transparent)`, background: `color-mix(in oklab, ${hex} 12%, var(--bg))`, color: hex } : undefined}
+                  className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-button)] border border-[color-mix(in_oklab,var(--accent)_22%,transparent)] bg-[var(--chip-bg)] text-[17px] font-bold tabular-nums text-[var(--accent)]"
+                >
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <div className="pt-1 md:pt-0">
+                  <h3 className="text-[16px] font-semibold text-[var(--text-primary)]">{p.titulo}</h3>
+                  <p className="mt-1 text-[15px] leading-snug text-[var(--text-secondary)]">{p.detalle}</p>
+                </div>
+              </motion.li>
+            );
+          })}
         </ol>
 
         {antesDespues && (

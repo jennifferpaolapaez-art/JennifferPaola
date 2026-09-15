@@ -3,7 +3,10 @@
 // Landing de RAIZ — compuesta desde el KIT CANÓNICO (plantillas-codigo/landing/).
 // Copy trazado a docs/copy/landing.md ← FICHA-AVATAR.md. Tokens en components/landing/tokens.css
 // ← FICHA-ARTE.md. Estructura de 10 secciones inmutable (19-PAGINA-DE-VENTAS.md).
+// v2 — elevación visual pedida por el usuario (dirección de arte, riqueza de color,
+// demo real del producto) tras rechazar la v1. Ver ESTADO.md "Sesión 3 — revisión v2".
 
+import type { CSSProperties, ReactNode } from 'react';
 import { Clock, Brain, Users, ImageOff } from 'lucide-react';
 import { Hero } from '@/components/landing/Hero';
 import { Problema } from '@/components/landing/Problema';
@@ -22,77 +25,139 @@ import { StickyCtaMobile } from '@/components/landing/ui';
 const CTA_HREF = '/onboarding';
 const CTA_LABEL = 'Crear mi primera semana gratis';
 
+/** Envuelve una sección con un fondo propio (riqueza de color pedida por el usuario:
+ * cada sección tiene identidad, sin volverse arcoíris — max 3 tintes en toda la página).
+ * Pinta un color REAL (no solo redefine variables) para que funcione tanto sobre
+ * secciones 'base' (transparentes) como 'elevada' (que pintan --surface encima). */
+function Tint({ bg, surface, children }: { bg: string; surface: string; children: ReactNode }) {
+  return (
+    <div style={{ '--bg': bg, '--surface': surface, background: 'var(--bg)' } as CSSProperties}>
+      {children}
+    </div>
+  );
+}
+
 export default function LandingRaiz() {
   return (
     <div className="min-h-dvh bg-[var(--bg)] text-[var(--text-primary)] [font-family:var(--font-body)]">
       {/* 1. HERO */}
       <Hero
-        appName="Raíz"
+        appName=""
+        logo={<img src="/brand/raiz-logo.png" alt="Raíz" className="h-8 w-auto md:h-9" />}
         loginHref="/entrar"
-        h1Marked="Tu semana ya sabe qué necesita [acento]cada uno de tus niños[/acento]"
-        subtitleMarked="La Memoria del Salón conecta lo que sabes de cada niño con [b]tu próxima planeación[/b]."
+        h1Marked="Deja de cargar a todos tus niños [acento]en la cabeza[/acento]"
+        subtitleMarked="La Memoria del Salón conecta lo que sabes de cada niño con tu planeación."
         ctaLabel={CTA_LABEL}
         ctaHref={CTA_HREF}
-        socialProof={<span>Creada por quien vivió el caos de planear cada semana en un salón real.</span>}
-        visualPlaceholderSugerencia="captura de la pantalla Hoy con la diferenciación por edad ya generada"
+        socialProof={
+          <span className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_oklab,var(--accent)_18%,transparent)] bg-[color-mix(in_oklab,var(--accent)_6%,transparent)] px-4 py-2 text-[13px] font-medium text-[var(--text-primary)]">
+            <span aria-hidden="true" className="inline-block size-[7px] rounded-full bg-[var(--accent-2)]" />
+            Creada desde un salón real, no desde una lista de features.
+          </span>
+        }
+        visual={
+          <img
+            src="/mockups/hero.png"
+            alt="Pantalla Hoy de RAIZ: la actividad Body Collage adaptada a Infant, Toddler, Preschool y Pre-K, con el foco individual de Luca en tijeras y Zayne en números, y los materiales ya disponibles en el Science Center."
+            className="h-auto w-full"
+          />
+        }
       />
 
-      {/* 2. PROBLEMA */}
-      <Problema
-        titulo="¿Te suena?"
-        preguntas={[
-          { icon: Clock, textoMarked: '¿Terminas el domingo planeando en vez de descansar?' },
-          { icon: Brain, textoMarked: '¿Sabes lo que necesita cada niño, pero no tienes dónde tenerlo todo junto?' },
-          { icon: Users, textoMarked: '¿Sientes que armas cuatro planeaciones distintas para un solo grupo de edades mixtas?' },
-          { icon: ImageOff, textoMarked: '¿Te preocupa que la próxima observación se pierda entre fotos y notas sueltas?' },
-        ]}
-      />
+      {/* 2. PROBLEMA + 3. AGITACIÓN — un solo movimiento visual, tinte blush coral suave */}
+      <Tint bg="#FDF4F1" surface="#FAEBE5">
+        <Problema
+          titulo="¿Te suena?"
+          preguntas={[
+            {
+              icon: Clock,
+              textoMarked: '¿Terminas planeando cuando ya deberías haber cerrado el día?',
+              tint: 'coral',
+            },
+            {
+              icon: Brain,
+              textoMarked: '¿Sabes lo que necesita cada niño, pero no puedes tenerlo todo en la cabeza?',
+              tint: 'sage',
+            },
+            {
+              icon: Users,
+              textoMarked: '¿Una actividad termina convertida en cuatro versiones distintas?',
+              tint: 'butter',
+            },
+            {
+              icon: ImageOff,
+              textoMarked: '¿Cuando llega el reporte ya intentas recordar qué pasó hace semanas?',
+              tint: 'teal',
+            },
+          ]}
+        />
+        <Agitacion
+          frases={[
+            'Cada semana pierdes horas de tu domingo reconstruyendo lo que ya sabías de memoria.',
+            'En seis meses eso suma [acento]decenas de horas[/acento] que no vuelven — y ningún niño recibe más seguimiento por eso.',
+            'Pinterest, TPT y ChatGPT te dan actividades sueltas: [b]ninguno recuerda a tu grupo[/b].',
+          ]}
+          contraste={{
+            labelHoy: 'Hoy',
+            hoy: 'Reconstruyes cada semana desde cero, con seis pestañas abiertas.',
+            labelFuturo: 'En 6 meses, si nada cambia',
+            futuro: 'El mismo domingo perdido — con seis meses menos.',
+          }}
+        />
+      </Tint>
 
-      {/* 3. AGITACIÓN */}
-      <Agitacion
-        frases={[
-          'Cada semana pierdes horas de tu domingo reconstruyendo lo que ya sabías de memoria.',
-          'En seis meses eso suma [acento]decenas de horas[/acento] que no vuelven — y ningún niño recibe más seguimiento por eso.',
-          'Pinterest, TPT y ChatGPT te dan actividades sueltas: [b]ninguno recuerda a tu grupo[/b].',
-        ]}
-        contraste={{
-          labelHoy: 'Hoy',
-          hoy: 'Reconstruyes cada semana desde cero, con seis pestañas abiertas.',
-          labelFuturo: 'En 6 meses, si nada cambia',
-          futuro: 'El mismo domingo perdido — con seis meses menos.',
-        }}
-      />
+      {/* 4. SOLUCIÓN — el ciclo RAÍZ (conoce → planea → observa → avanza), tinte sage pálido */}
+      <Tint bg="#EFF2E8" surface="#F5F7EF">
+        <Solucion
+          tituloMarked="Tu semana, [acento]adaptada a cada niño[/acento] antes de escribirla"
+          mecanismo="la Memoria del Salón"
+          bigIdeaMarked="No te falta dedicación — te falta una herramienta que recuerde. [b]La Memoria del Salón[/b] conecta lo que sabes de cada niño con lo que haces mañana."
+          pasos={[
+            { titulo: 'Conoce', detalle: 'Perfil, edades y skills de tu grupo, una sola vez.', tint: 'teal' },
+            { titulo: 'Planea', detalle: 'Cruza tu tema semanal con lo que cada niño necesita.', tint: 'butter' },
+            { titulo: 'Observa', detalle: 'Notas y evidencia del día, en segundos.', tint: 'coral' },
+            { titulo: 'Avanza', detalle: 'Cada observación mejora tu próxima planeación.', tint: 'sage' },
+          ]}
+          antesDespues={{
+            labelAntes: 'Antes',
+            antes: 'Una planeación genérica que adaptas tú sola, niño por niño.',
+            labelDespues: 'Con RAIZ',
+            despues: 'Una semana que ya trae la diferenciación y el foco de cada niño.',
+          }}
+        />
+      </Tint>
 
-      {/* 4. SOLUCIÓN */}
-      <Solucion
-        tituloMarked="Tu semana, [acento]adaptada a cada niño[/acento] antes de escribirla"
-        mecanismo="la Memoria del Salón"
-        bigIdeaMarked="No te falta dedicación — te falta una herramienta que recuerde. [b]La Memoria del Salón[/b] conecta lo que sabes de cada niño con lo que haces mañana."
-        pasos={[
-          { titulo: 'Cuéntale a RAIZ', detalle: 'Perfil, edades y skills de tu grupo, una sola vez.' },
-          { titulo: 'La Memoria decide', detalle: 'Cruza tu tema semanal con lo que cada niño necesita.' },
-          { titulo: 'Enseñas con foco', detalle: 'Plan diferenciado por edad, listo para tu salón.' },
-        ]}
-        antesDespues={{
-          labelAntes: 'Antes',
-          antes: 'Una planeación genérica que adaptas tú sola, niño por niño.',
-          labelDespues: 'Después',
-          despues: 'Una semana que ya trae la diferenciación y el foco de cada niño.',
-        }}
-      />
-
-      {/* 5. LA APP POR DENTRO — placeholders honestos (app interna aún no construida) */}
-      <AppPorDentro
-        tituloMarked="Tu salón, [acento]siempre a la vista[/acento]"
-        frames={[
-          { label: 'Configura tu programa y metodología', nombrePantalla: 'Onboarding' },
-          { label: 'Tu semana con foco por niño', nombrePantalla: 'Planeación semanal' },
-          { label: 'Lo que hoy toca enseñar', nombrePantalla: 'Hoy' },
-          { label: 'El perfil vivo de cada niño', nombrePantalla: 'Perfil del niño' },
-        ]}
-        ctaLabel={CTA_LABEL}
-        ctaHref={CTA_HREF}
-      />
+      {/* 5. LA APP POR DENTRO — demo real (mockups del sistema, no captura de producción
+          todavía), tinte butter cálido pendiente en ESTADO.md hasta tener screenshots reales */}
+      <Tint bg="#FBF2D9" surface="#FDF7E7">
+        <AppPorDentro
+          tituloMarked="Tu salón, [acento]siempre a la vista[/acento]"
+          frames={[
+            {
+              src: '/mockups/frame-hoy.png',
+              label: 'Una experiencia. Cuatro niveles.',
+              nombrePantalla: 'Hoy',
+            },
+            {
+              src: '/mockups/frame-foco.png',
+              label: 'Recuerda qué necesita cada niño.',
+              nombrePantalla: 'Niños foco',
+            },
+            {
+              src: '/mockups/frame-semana.png',
+              label: 'Lo de hoy mejora lo que planeas mañana.',
+              nombrePantalla: 'Planeación semanal',
+            },
+            {
+              src: '/mockups/frame-perfil.png',
+              label: 'Conoce a cada niño, no solo a su grupo.',
+              nombrePantalla: 'Perfil del niño',
+            },
+          ]}
+          ctaLabel={CTA_LABEL}
+          ctaHref={CTA_HREF}
+        />
+      </Tint>
 
       {/* 6. OFERTA — anual primero, trial 7 días en ambas */}
       <Oferta
@@ -109,7 +174,7 @@ export default function LandingRaiz() {
         }}
         anual={{
           nombre: 'Anual',
-          badge: 'MÁS POPULAR',
+          badge: 'MEJOR VALOR',
           precioMes: '$16.66',
           totalAnual: 'Se cobra $199.90/año',
           ahorro: '2 meses gratis (~17%)',
@@ -177,17 +242,18 @@ export default function LandingRaiz() {
 
       {/* 9. CTA FINAL EMOCIONAL */}
       <CtaFinal
-        h2Marked="Imagina tu domingo [acento]sin planear[/acento]"
+        h2Marked="Cierra tu día [acento]sabiendo qué sigue mañana[/acento]"
         futurePacingMarked="Te sientas, RAIZ ya sabe qué necesita cada niño, y tu semana está lista en minutos."
         ctaLabel={CTA_LABEL}
         ctaHref={CTA_HREF}
         recap="Garantía de tu Primera Semana · 7 días gratis"
-        psMarked="PS: RAIZ convierte lo que sabes de cada niño en lo que haces mañana, con [b]la Memoria del Salón[/b]. Hoy entras con 7 días gratis y la Garantía de tu Primera Semana."
+        psMarked="PS: RAIZ convierte lo que sabes de cada niño en lo que haces mañana, con [b]la Memoria del Salón[/b]. Entras hoy con 7 días gratis."
       />
 
       {/* 10. FOOTER LEGAL */}
       <FooterLegal
         appName="RAIZ"
+        logo={<img src="/brand/raiz-logo.png" alt="Raíz" className="h-6 w-auto" />}
         soporteEmail="hola@raizapp.com"
         enlaces={[
           { label: 'Privacidad', href: '/privacidad' },
