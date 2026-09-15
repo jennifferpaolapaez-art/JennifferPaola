@@ -137,11 +137,17 @@ miles de archivos pequeños peleando con la sincronización en tiempo real) y ni
 symlinks/junctions para redirigir `node_modules`.
 - **Flujo de trabajo:** editar/instalar/compilar SIEMPRE en `C:\dev\raiz-app`. Al cerrar un hito,
   sincronizar con `robocopy "C:\dev\raiz-app" "G:\My Drive\CLAUDE\Proyectos\RAIZ" /E /XD
-  node_modules .next /NFL /NDL /NJH` y copiar `package-lock.json` aparte.
+  node_modules .next .git /NFL /NDL /NJH` y copiar `package-lock.json` aparte.
+  **⚠️ EL `.git` SIEMPRE VA EN `/XD` (excluido) — `C:\dev\raiz-app` NUNCA debe tener su propia
+  carpeta `.git`.** Si alguna vez aparece una (por ejemplo si alguien copia el proyecto completo
+  con `/E` sin excluirla), el próximo robocopy C:→G: SOBRESCRIBE el `.git` real de G: con esa
+  copia vieja y congelada — pasó una vez en esta sesión y se perdió un commit intermedio
+  ("Sesión 3: landing construida y verificada", el contenido no se perdió, solo el punto de
+  guardado). Ya se borró esa carpeta duplicada en `C:\dev\raiz-app\.git`; si reaparece, borrarla
+  de nuevo antes de sincronizar.
   **⚠️ CUIDADO DE DIRECCIÓN: el robocopy va SIEMPRE de C: → G:, nunca al revés.** Si se edita
   ESTADO.md (o cualquier archivo) directo en G: y LUEGO se corre robocopy C:→G:, el archivo de
-  G: se pisa con la versión vieja de C: y el edit se pierde (pasó una vez en esta sesión — el
-  aviso de este mismo bloque desapareció así). Regla segura: cualquier archivo que se edite fuera
+  G: se pisa con la versión vieja de C: y el edit se pierde. Regla segura: cualquier archivo que se edite fuera
   de `C:\dev\raiz-app` (como ESTADO.md casi siempre) se edita, y LUEGO se copia manualmente esa
   misma edición también a `C:\dev\raiz-app` antes de la próxima sincronización — o mejor, editar
   ESTADO.md siempre en AMBOS lados, o revisar el diff antes de sincronizar.
