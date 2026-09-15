@@ -3,7 +3,9 @@
 > Memoria viva del proyecto. Se actualiza en cada hito.
 
 ## Fase actual
-Sesión 1 (Validación → Constitución → Dirección de Arte) — en curso, sub-paso: dirección visual (B4/54).
+Sesión 1 CERRADA (validación, constitución, app modelo, dirección de arte, precio, arquitectura,
+base de datos, auth). Siguiente: Sesión 3 — página de ventas (la Sesión 2 de identidad visual ya
+quedó resuelta dentro de la Sesión 1 por el contrato de marca del usuario).
 
 ## Fuente de verdad del producto
 `G:\My Drive\CLAUDE\Proyectos\App Creciendo Bilingue\Notas de trabajo.docx` — documento maestro de
@@ -132,9 +134,67 @@ direcciones A/B/C fusionadas que se habían propuesto sin referencia (esas queda
   bloquea construcción — se resuelve al producir assets finales (ícono de app, favicon) más
   adelante, ya sea generándolo en SVG limpio o si el usuario consigue el archivo original.
 
-## Próximos pasos
-1. Presentar Plan Maestro completo (8 sesiones) → arrancar Sesión 1 formal (pricing con 02C +
-   40-UNIT-ECONOMICS, arquitectura, base de datos, auth).
+## Sesión 1 — CERRADA (precio, arquitectura, base de datos, auth)
+
+### Precio (decidido con LOS 3 SUELOS del 02C — no se le preguntó al usuario, es decisión con
+### respaldo del SO)
+- **Plan Base $19.99/mes** (hasta ~12 niños) · **Plan Pro $29.99/mes** (+ Centros/Inventario y
+  printables cuando existan) · **prueba de 7 días** (ya reflejado en el mockup del paywall).
+- Suelo de MERCADO: pasa — dentro del rango $15-40/mes de la competencia documentada en el
+  Reporte de Validación (Learning Genie, Bloomily, Illumine).
+- Suelo de COSTO: pasa — con IA <20% del precio de catálogo (regla del 30/40), $19.99 deja
+  ~$4/usuario/mes de presupuesto de IA, generoso para generación de texto (planeación semanal,
+  reformulación de observaciones) en V1, que es solo texto — sin imagen todavía (printables con
+  imagen quedan en fase posterior, cuando también se revisa el costo de infra/egress).
+- Suelo de CANAL: pendiente — se revisa recién antes de la primera campaña paga (Sesión 8, `34`).
+- Modelo de monetización: **onboarding-first** (Modelo 2 del 02C) — nicho "Productividad" de la
+  matriz consolidada (primera victoria = primer plan semanal organizado, paywall después de
+  ordenar algo, retención por sistema acumulado = el perfil del niño).
+
+### Arquitectura (decisión técnica — framework)
+- **Next.js** (no Vite) — regla del stack: Vite es solo para herramienta tras login sin SEO ni
+  API routes; RAIZ necesita landing pública con SEO (adquisición orgánica), API routes/BFF para
+  llamadas de IA server-side, y webhooks de Hotmart.
+
+### Base de datos (esquema — RLS por programa desde el día 1, contempla Centros/Inventario y
+### evaluaciones en el modelo aunque su UI se construya después, por instrucción explícita del
+### documento maestro)
+```
+programs          (id, nombre, logo, metodología, prioridades_pedagógicas, rutina_diaria, plan)
+staff             (id, program_id, nombre, cargo, idioma_trabajo)
+children          (id, program_id, nombre, fecha_nacimiento, etapa, idioma_familiar,
+                   fecha_ingreso, días_asistencia)
+skills_catalog    (id, dominio, nombre, etapa_apropiada, prerrequisitos[])  -- knowledge base
+                   pedagógica propia (sec. 60 del doc maestro), no libre
+child_skills      (child_id, skill_id, estado: dominado|en_desarrollo|no_observado, fecha)
+individual_plans  (child_id, meta, estado: por_trabajar|en_progreso|casi|alcanzado) -- opcional
+weekly_plans      (id, program_id, semana, tema, subtema, vocabulario[], objetivos[])
+activities        (id, weekly_plan_id, título, momento_rutina, objetivo, adaptaciones_por_etapa,
+                   niños_foco[], materiales[])
+observations      (id, child_id, texto, fecha, fuente: voz|texto, skills_relacionados[])
+evidence          (id, observation_id, tipo: foto|audio|video|doc, url_privada, visible_familia)
+centers           (id, program_id, nombre, tipo)
+inventory_items   (id, program_id, nombre, centro_actual, historial_rotación[])   -- fase
+                   posterior en UI, existe en el esquema desde ya
+assessments       (id, child_id, tipo, periodo, evaluador, resultados)            -- ídem
+families          (id, child_id, idioma_preferido, contacto)
+```
+- RLS: toda tabla filtra por `program_id` vía membership en `staff` — una educadora nunca ve
+  datos de otro programa. `children`/`observations`/`evidence` heredan el filtro por
+  `program_id` del niño.
+- Storage de evidencia (fotos/audio/video): privado, URLs firmadas no públicas, metadatos
+  EXIF/geolocalización eliminados al subir (doc maestro sec. 57).
+
+### Auth
+- Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).
+  MFA disponible para la cuenta de la directora/dueña del programa (doc maestro sec. 59). Los
+  niños NUNCA tienen cuenta — no aplica auth a `children`.
+
+### IA (decisión sync/async — se detalla al llegar a Sesión 6, `30`)
+- V1: solo texto (planeación, reformulación de observaciones) — servidor/BFF, nunca API key en
+  el navegador. No se envía apellido/dirección/teléfono del niño al modelo — primer nombre o ID
+  interno únicamente (doc maestro sec. 58).
 
 ## Decisiones técnicas (para el agente, no se discuten con el usuario)
-- Ninguna aún — se registran aquí cuando se tomen (stack, esquema de datos, auth).
+- Registradas arriba (Sesión 1): Next.js, esquema de datos, RLS por programa, Supabase Auth
+  email+Google, IA solo texto en V1 vía servidor.
