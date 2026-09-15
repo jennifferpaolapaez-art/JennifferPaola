@@ -85,7 +85,6 @@
   encabeza la TABLA DE LÍDERES junto con Lillio, Learning Genie, Bloomily, Notion).
 
 ## Cierre
-- Fecha de cierre: 14-sep-2026 · Aprobada por el usuario: PENDIENTE (se presenta en el próximo
-  mensaje)
+- Fecha de cierre: 14-sep-2026 · Aprobada por el usuario: **SÍ**
 - Regla de caché: todo dato lleva fuente y fecha — ver arriba. Campos NO ENCONTRADOS quedan
   marcados explícitamente, no inventados.

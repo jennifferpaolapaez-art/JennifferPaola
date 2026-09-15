@@ -89,4 +89,6 @@
 
 ## Idioma UI: español (interfaz de trabajo de la maestra; salida a familias puede traducirse —
 ver Constitución del Producto en ESTADO.md) · Fecha de cierre: 14-sep-2026 · Aprobada por el
-usuario: PENDIENTE (se presenta ahora con la réplica fiel)
+usuario: **SÍ** (con nota: el logo se recreó en CSS a partir de una imagen — el archivo vectorial
+final del logotipo "Raíz" queda como pendiente de producción, no bloqueante — ver ESTADO.md
+"Problemas conocidos")

@@ -84,7 +84,7 @@ descriptiva fuerte:
   0.2bis) + fusión, NO invención. Pendiente: completar tabla, arquetipo, mundo del sujeto, y
   presentar 3 fusiones A/B/C renderizadas.
 
-## App modelo (FICHA-MODELO.md — creada, pendiente de aprobación del usuario)
+## App modelo (FICHA-MODELO.md — APROBADA por el usuario)
 - Elegida: **Brightwheel** (revenue probado: ~$37.5M ARR 2024 (Latka) + $88.8M levantados/
   valuación $735M 2025 (PitchBook/Crunchbase) — 2 señales independientes, ambas de terceros
   porque es privada).
@@ -96,7 +96,7 @@ descriptiva fuerte:
   pública, ángulos de ads en Meta Ads Library — pendientes para cuando se necesiten (Sesión 1
   completa / Sesión 8 adquisición).
 
-## Dirección de arte — CERRADA (FICHA-ARTE.md aprobada, referencia-mandato del usuario)
+## Dirección de arte — CERRADA Y APROBADA por el usuario (referencia-mandato)
 El usuario trajo su propio board de marca (imagen) → esto es CONTRATO, reemplaza las 3
 direcciones A/B/C fusionadas que se habían propuesto sin referencia (esas quedan descartadas).
 - Paleta (proporción 70/15/10/5/5): Warm Cream `#F6F0E4` (fondo) · Deep Teal `#0D5C63` (marca/
@@ -126,10 +126,14 @@ direcciones A/B/C fusionadas que se habían propuesto sin referencia (esas queda
   final — no bloquea, pero se necesitará producir el SVG/vector definitivo del logotipo "Raiz +
   hojita" antes de assets de producción (ícono de app, favicon, print).
 
+## Problemas conocidos
+- **Logo vectorial pendiente**: el logotipo "Raíz" (tilde-hojita, ícono squircle) está recreado en
+  CSS/texto a partir de una imagen del usuario, no es un archivo vectorial de producción. No
+  bloquea construcción — se resuelve al producir assets finales (ícono de app, favicon) más
+  adelante, ya sea generándolo en SVG limpio o si el usuario consigue el archivo original.
+
 ## Próximos pasos
-1. Usuario aprueba FICHA-MODELO.md (Brightwheel como app modelo) y FICHA-ARTE.md (ya construida).
-2. Producir el logotipo vectorial final "Raiz + hojita" (pendiente marcado arriba).
-3. Presentar Plan Maestro completo (8 sesiones) y arrancar Sesión 1 formal (pricing con 02C +
+1. Presentar Plan Maestro completo (8 sesiones) → arrancar Sesión 1 formal (pricing con 02C +
    40-UNIT-ECONOMICS, arquitectura, base de datos, auth).
 
 ## Decisiones técnicas (para el agente, no se discuten con el usuario)
