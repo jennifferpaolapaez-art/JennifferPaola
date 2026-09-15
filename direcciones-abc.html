@@ -1,185 +1,512 @@
-<title>Direcciones RAIZ</title>
+<!doctype html>
+<html lang="es" data-kit="abc-v2">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direcciones de arte A/B/C — RAIZ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
-  :root{
-    --page-bg:#FAF7F1; --page-ink:#2B2621; --page-ink-soft:#6B6357; --page-line:#E6DFD1; --page-accent:#8C6B4F;
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background:
+      radial-gradient(1100px 520px at 12% -6%, #f7f7f9, transparent 62%),
+      radial-gradient(900px 460px at 92% 4%, #e2e2e9, transparent 58%),
+      linear-gradient(180deg, #ededf0, #e4e4e9);
+    color: #1c1c1f;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    padding: 32px 20px 64px;
   }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --page-bg:#1C1712; --page-ink:#EFE8DB; --page-ink-soft:#B7ACA0; --page-line:#3A322A; --page-accent:#C79A6F;
-    }
+  .cabecera { max-width: 1180px; margin: 0 auto 12px; }
+  .cabecera h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+  .cabecera p.sub { margin-top: 6px; font-size: 14px; color: #55555c; max-width: 70ch; }
+
+  .salidas { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .salidas span {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid #c9c9cf; border-radius: 999px;
+    padding: 6px 12px; font-size: 12.5px; font-weight: 600; color: #3a3a40;
+    background: #f7f7f8;
   }
-  :root[data-theme="dark"]{
-    --page-bg:#1C1712; --page-ink:#EFE8DB; --page-ink-soft:#B7ACA0; --page-line:#3A322A; --page-accent:#C79A6F;
+  .salidas b { color: #1c1c1f; }
+  .aviso-fuentes { max-width: 1180px; margin: 10px auto 28px; font-size: 12.5px; color: #6a6a72; }
+
+  .opciones { max-width: 1180px; margin: 0 auto; display: grid; gap: 40px;
+              grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+  .opcion { display: flex; flex-direction: column; gap: 18px; }
+
+  .meta { background: #f7f7f8; border: 1px solid #d9d9de; border-radius: 14px; padding: 18px; }
+  .meta .letra {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 8px; font-weight: 800; font-size: 15px;
+    color: #f7f7f8; background: #1c1c1f; margin-right: 8px;
   }
-  *{box-sizing:border-box;}
-  body{background:var(--page-bg); color:var(--page-ink); font-family:'Inter',system-ui,sans-serif; margin:0; padding:32px 20px 56px;}
-  .wrap{max-width:1180px; margin:0 auto;}
-  header{margin-bottom:28px;}
-  .eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--page-accent); font-weight:600; margin:0 0 8px;}
-  h1{font-size:22px; font-weight:600; margin:0 0 6px; text-wrap:balance;}
-  .sub{font-size:14px; color:var(--page-ink-soft); max-width:60ch; line-height:1.6; margin:0;}
-  .row{display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start; justify-content:center;}
-  .col{flex:1 1 300px; max-width:340px;}
-  .col-label{display:flex; align-items:baseline; gap:8px; margin:0 0 6px; padding:0 4px;}
-  .col-letter{font-size:13px; font-weight:700; color:var(--page-accent);}
-  .col-name{font-size:14px; font-weight:600; color:var(--page-ink);}
-  .col-tag{font-size:11.5px; color:var(--page-ink-soft); margin:0 0 14px; padding:0 4px; line-height:1.5;}
-  .phone{border-radius:26px; overflow:hidden; border:1px solid var(--page-line); box-shadow:0 1px 2px rgba(0,0,0,.06);}
+  .meta h2 { display: flex; align-items: center; font-size: 17px; font-weight: 700; }
+  .meta .direccion { margin-top: 4px; font-size: 13px; color: #55555c; }
+  .hipotesis { margin-top: 10px; font-size: 13px; line-height: 1.5; color: #3a3a40; }
+  .hipotesis .slot { background: #fff3c7; border-radius: 4px; padding: 1px 4px; font-style: italic; }
+  .meta ul.tokens { margin-top: 10px; list-style: none; font-size: 12px; color: #6a6a72;
+                    font-family: ui-monospace, monospace; line-height: 1.7; }
 
-  /* ============ DIRECCION A — Cuaderno calido ============ */
-  .dirA{ background:#F7F2E7; color:#2B2015; font-family:'Inter',sans-serif; padding:22px 18px 26px; min-height:480px;}
-  .dirA .word{font-family:'Fraunces',serif; font-size:26px; font-weight:500; letter-spacing:.01em; margin:0 0 22px;}
-  .dirA .word em{font-style:italic; font-weight:600; color:#B65C3A;}
-  .dirA .label{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:#8A7C63; font-weight:600;}
-  .dirA .tema{font-family:'Fraunces',serif; font-size:19px; font-weight:500; margin:4px 0 2px;}
-  .dirA .sub2{font-size:12.5px; color:#7C6F58; margin:0 0 16px;}
-  .dirA .card{background:#FFFDF8; border:1px solid #E9DEC7; border-radius:4px; border-left:3px solid #B65C3A; padding:14px 14px 12px; margin-bottom:12px;}
-  .dirA .card h4{font-family:'Fraunces',serif; font-size:15px; font-weight:600; margin:0 0 8px;}
-  .dirA .levels{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;}
-  .dirA .lvl{font-size:10.5px; padding:2px 8px; border:1px solid #DCCFB2; border-radius:2px; color:#5C523E;}
-  .dirA .row2{font-size:12px; color:#4A4130; line-height:1.5;}
-  .dirA .foco{background:#FFFDF8; border:1px solid #E9DEC7; border-radius:4px; padding:12px 14px;}
-  .dirA .foco h4{font-family:'Fraunces',serif; font-size:13px; font-weight:600; margin:0 0 8px; color:#5C523E;}
-  .dirA .kid{display:flex; justify-content:space-between; font-size:12.5px; padding:5px 0; border-top:1px dotted #E2D5B9;}
-  .dirA .kid:first-of-type{border-top:none;}
-  .dirA .kid b{font-weight:600;}
-  .dirA .kid span{color:#8A7C63;}
+  .especimen { margin-top: 12px; border-top: 1px solid #d9d9de; padding-top: 12px; }
+  .especimen .esp-display { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+  .especimen .esp-body { margin-top: 4px; font-size: 13.5px; color: #3a3a40; }
 
-  /* ============ DIRECCION B — Crecimiento organico ============ */
-  .dirB{ background:#F9F6EE; color:#2E3A29; font-family:'Plus Jakarta Sans',sans-serif; padding:0 0 60px; min-height:480px; display:flex; flex-direction:column;}
-  .dirB .top{padding:20px 18px 14px;}
-  .dirB .word{font-size:22px; font-weight:800; letter-spacing:-0.01em; margin:0 0 18px;}
-  .dirB .word .ai{color:#7E9470; text-decoration:underline; text-decoration-color:#C97B4A; text-decoration-thickness:2px; text-underline-offset:3px;}
-  .dirB .pill{display:inline-block; font-size:10.5px; font-weight:700; letter-spacing:.03em; background:#E7EEDF; color:#4C5C42; padding:3px 10px; border-radius:20px; margin-bottom:8px;}
-  .dirB .tema{font-size:18px; font-weight:800; margin:2px 0 3px;}
-  .dirB .sub2{font-size:12px; color:#6B7862; margin:0 0 14px;}
-  .dirB .card{background:#FFFFFF; border-radius:16px; padding:14px 14px 12px; margin:0 18px 10px; box-shadow:0 1px 0 rgba(46,58,41,.05);}
-  .dirB .card h4{font-size:14.5px; font-weight:700; margin:0 0 9px;}
-  .dirB .levels{display:flex; gap:5px; flex-wrap:wrap; margin-bottom:9px;}
-  .dirB .lvl{font-size:10px; font-weight:700; padding:3px 9px; border-radius:20px; background:#F1ECDD; color:#5A6350;}
-  .dirB .row2{font-size:11.5px; color:#485240; line-height:1.5;}
-  .dirB .foco{background:#EFE7D8; border-radius:16px; padding:12px 14px; margin:2px 18px 0;}
-  .dirB .foco h4{font-size:12.5px; font-weight:700; margin:0 0 8px; color:#5A6350;}
-  .dirB .kid{display:flex; align-items:center; gap:8px; font-size:12px; padding:5px 0;}
-  .dirB .dot{width:6px; height:6px; border-radius:50%; background:#C97B4A; flex:none;}
-  .dirB .kid span{color:#7C876F; margin-left:auto;}
-  .dirB .nav{margin-top:auto; display:flex; justify-content:space-around; padding:12px 0 14px; background:#FFFFFF; border-top:1px solid #EDE6D5;}
-  .dirB .navdot{width:20px; height:20px; border-radius:6px; background:#E7EEDF;}
-  .dirB .navdot.on{background:#7E9470;}
+  .telefono {
+    width: 310px; margin: 0 auto; aspect-ratio: 9 / 19.5;
+    border: 10px solid #101014; border-radius: 46px;
+    box-shadow: 0 24px 60px rgb(20 18 24 / 0.28);
+    overflow: hidden; position: relative; display: flex; flex-direction: column;
+  }
+  .statusbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 22px 6px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  .statusbar .der { display: flex; align-items: center; gap: 5px; }
+  .statusbar svg { display: block; }
+  .home-indicator {
+    position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%);
+    width: 116px; height: 5px; border-radius: 999px; opacity: 0.85;
+  }
+  .pantalla { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-  /* ============ DIRECCION C — Tierra contemporanea ============ */
-  .dirC{ background:#241C16; color:#F2E9DA; font-family:'Inter',sans-serif; padding:0; min-height:480px;}
-  .dirC .top{background:#B65C3A; padding:20px 18px 26px; position:relative;}
-  .dirC .word{font-family:'Fraunces',serif; font-size:24px; font-weight:700; color:#FBF3E7; margin:0 0 20px;}
-  .dirC .word .chip{background:#241C16; color:#F2A272; font-style:italic; padding:1px 6px; border-radius:3px; font-size:.85em;}
-  .dirC .label{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:#F6DCC7; font-weight:700;}
-  .dirC .tema{font-family:'Fraunces',serif; font-size:21px; font-weight:700; color:#FBF3E7; margin:4px 0 2px;}
-  .dirC .sub2{font-size:12px; color:#F6DCC7;}
-  .dirC .body{padding:16px 18px 20px; margin-top:-14px;}
-  .dirC .card{background:#2E251D; border-radius:10px; padding:14px 14px 12px; margin-bottom:10px; border:1px solid #40342A;}
-  .dirC .card h4{font-family:'Fraunces',serif; font-size:15px; font-weight:600; margin:0 0 9px; color:#FBF3E7;}
-  .dirC .levels{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:9px;}
-  .dirC .lvl{font-size:10px; font-weight:600; padding:3px 8px; border-radius:3px; background:#40342A; color:#F2A272;}
-  .dirC .row2{font-size:12px; color:#CBBBA6; line-height:1.5;}
-  .dirC .foco{background:#2E251D; border-radius:10px; padding:12px 14px; border:1px solid #40342A;}
-  .dirC .foco h4{font-family:'Fraunces',serif; font-size:13px; font-weight:600; margin:0 0 8px; color:#F2A272;}
-  .dirC .kid{display:flex; justify-content:space-between; font-size:12.5px; padding:6px 0; border-top:1px solid #3B3025;}
-  .dirC .kid:first-of-type{border-top:none;}
-  .dirC .kid b{font-weight:600; color:#FBF3E7;}
-  .dirC .kid span{color:#B39D85;}
+  .chip-icono { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0; }
+  .cta { display: flex; align-items: center; justify-content: center; height: 48px; font-size: 15px; font-weight: 600; letter-spacing: 0.01em; }
+
+  .tabbar {
+    display: flex; align-items: stretch; justify-content: space-around;
+    margin: 12px -18px 0; padding: 8px 8px 16px;
+    border-top: 1px solid color-mix(in oklab, var(--text-2) 18%, transparent);
+    background: color-mix(in oklab, var(--surface) 88%, transparent);
+  }
+  .op-c .tabbar { margin-inline: -20px; }
+  .tabbar a { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9.5px; font-weight: 600; color: var(--text-2); text-decoration: none; }
+  .tabbar .tab-chip { display: flex; align-items: center; justify-content: center; width: 36px; height: 26px; border-radius: 9px; }
+  .tabbar a.activa { color: var(--accent); }
+  .tabbar a.activa .tab-chip { background: color-mix(in oklab, var(--accent) 14%, transparent); }
+
+  .paleta { display: flex; gap: 8px; margin-top: 10px; }
+  .paleta span { width: 26px; height: 26px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.10), 0 1px 3px rgb(0 0 0 / 0.12); }
+
+  /* ── Wordmark RAIZ: serif de alto contraste + la tilde de la í como hojita ── */
+  .marca-raiz { font-family: 'Playfair Display', serif; font-weight: 700; color: var(--accent);
+                position: relative; display: inline-flex; align-items: flex-start; }
+  .marca-raiz .i-hueco { position: relative; display: inline-block; }
+  .hojita {
+    position: absolute; width: 11px; height: 15px; background: #F4C84A;
+    border-radius: 0 100% 0 100%; transform: rotate(-45deg);
+  }
+  .marca-raiz .hojita { top: -13px; left: 1px; }
+
+  .rotulo-frame { text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #85858e; margin-top: 2px; }
+  .hero-landing {
+    width: 310px; margin: 6px auto 0; border-radius: 18px; overflow: hidden;
+    border: 1px solid rgb(0 0 0 / 0.10); box-shadow: 0 16px 40px rgb(20 18 24 / 0.16);
+    background: var(--bg); color: var(--text-1); font-family: var(--font-body); padding: 22px 18px 18px;
+  }
+  .hero-landing .hl-badge {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 10%, transparent);
+    border: 1px solid color-mix(in oklab, var(--accent) 25%, transparent);
+    border-radius: 999px; padding: 4px 10px;
+  }
+  .hero-landing h4 { font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1.14; letter-spacing: -0.01em; margin-top: 10px; }
+  .hero-landing h4 em { font-style: normal; color: var(--accent); }
+  .hero-landing .hl-sub { margin-top: 8px; font-size: 13px; color: var(--text-2); line-height: 1.5; }
+  .hero-landing .hl-sub b { color: var(--text-1); font-weight: 600; }
+  .hero-landing .hl-cta {
+    margin-top: 14px; display: flex; align-items: center; justify-content: center;
+    height: 46px; border-radius: var(--radius-btn); font-size: 14.5px; font-weight: 700; color: var(--bg);
+    background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 86%, white), var(--accent));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 10px 24px -6px color-mix(in oklab, var(--accent) 45%, transparent);
+  }
+  .hero-landing .hl-prueba { margin-top: 10px; font-size: 11.5px; color: var(--text-2); text-align: center; }
+
+  /* ==========================================================================
+     Las 3 opciones comparten PALETA Y TIPOGRAFÍA (contrato de marca del usuario
+     — board de logo ya aprobado). Divergen SOLO en composición/layout, que el
+     contrato no fija — doctrina de referencia-mandato (16-DIRECCION-DE-ARTE).
+     ========================================================================== */
+  .op-a, .op-b, .op-c {
+    --bg: #F6F0E4; --surface: #FBF7EE; --text-1: #1E3A3D; --text-2: #6E6553;
+    --accent: #0D5C63; --font-display: 'Playfair Display', serif; --font-body: 'Plus Jakarta Sans', sans-serif;
+  }
+  .op-a { --radius-card: 20px; --radius-btn: 14px; --shadow-tinta: 13 92 99; }
+  .op-b { --radius-card: 16px; --radius-btn: 12px; --shadow-tinta: 13 92 99; }
+  .op-c { --radius-card: 12px; --radius-btn: 10px; --shadow-tinta: 13 92 99; }
+
+  .op-a .especimen .esp-display, .op-b .especimen .esp-display, .op-c .especimen .esp-display { font-family: var(--font-display); }
+  .op-a .especimen .esp-body, .op-b .especimen .esp-body, .op-c .especimen .esp-body { font-family: var(--font-body); }
+  .op-a .telefono, .op-b .telefono, .op-c .telefono { background: var(--bg); }
+  .op-a .pantalla, .op-b .pantalla, .op-c .pantalla { font-family: var(--font-body); color: var(--text-1); padding: 0 18px; }
+  .op-a .statusbar, .op-b .statusbar, .op-c .statusbar { color: var(--text-1); }
+  .op-a .home-indicator, .op-b .home-indicator, .op-c .home-indicator { background: var(--text-1); }
+
+  /* LAYOUT A: héroe-dato + cards apiladas */
+  .op-a .saludo { margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+  .op-a h3.titulo-a { font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1.15; letter-spacing: -0.005em; margin-top: 2px; }
+  .op-a .heroe {
+    margin-top: 14px; border-radius: var(--radius-card); border: 1.5px solid transparent;
+    background: linear-gradient(var(--surface), var(--surface)) padding-box,
+      linear-gradient(135deg, color-mix(in oklab, var(--accent) 45%, transparent), transparent 60%) border-box;
+    box-shadow: 0 10px 26px -10px rgb(var(--shadow-tinta) / 0.22); padding: 16px;
+  }
+  .op-a .heroe .label { font-size: 11.5px; font-weight: 600; color: var(--text-2); }
+  .op-a .heroe .dato { font-family: var(--font-display); font-size: 40px; font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
+  .op-a .heroe .dato small { font-size: 15px; font-weight: 600; color: var(--text-2); }
+  .op-a .heroe .insight { margin-top: 4px; font-size: 12.5px; color: var(--accent); font-weight: 600; }
+  .op-a .card { margin-top: 10px; background: var(--surface); border-radius: var(--radius-card);
+    border: 1px solid color-mix(in oklab, var(--text-2) 22%, transparent); padding: 12px 14px; display: flex; gap: 12px; align-items: flex-start; }
+  .op-a .chip-icono { border-radius: var(--radius-btn); background: color-mix(in oklab, var(--accent) 10%, transparent); border: 1px solid color-mix(in oklab, var(--accent) 22%, transparent); }
+  .op-a .card h4 { font-size: 14px; font-weight: 700; }
+  .op-a .card p { margin-top: 2px; font-size: 12.5px; color: var(--text-2); line-height: 1.45; }
+  .op-a .cta { margin-top: auto; margin-bottom: 0; border-radius: var(--radius-btn); background: var(--accent); color: var(--bg);
+    box-shadow: 0 8px 22px color-mix(in oklab, var(--accent) 30%, transparent); }
+
+  /* LAYOUT B: anillo central + grid 2x2 */
+  .op-b .encabezado-b { margin-top: 12px; text-align: center; }
+  .op-b .encabezado-b .periodo { font-size: 11.5px; font-weight: 600; color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .op-b h3.titulo-b { font-family: var(--font-display); font-size: 20px; font-weight: 700; letter-spacing: -0.01em; margin-top: 2px; }
+  .op-b .anillo-wrap { margin: 14px auto 0; position: relative; width: 132px; height: 132px; }
+  .op-b .anillo-wrap .centro { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .op-b .anillo-wrap .pct { font-family: var(--font-display); font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .op-b .anillo-wrap .pct-label { font-size: 10.5px; color: var(--text-2); font-weight: 600; }
+  .op-b .grid2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .op-b .tile { background: var(--surface); border-radius: var(--radius-card); border: 1px solid color-mix(in oklab, var(--text-2) 16%, transparent); padding: 12px; }
+  .op-b .tile.destacada { border: 1.5px solid transparent;
+    background: linear-gradient(var(--surface), var(--surface)) padding-box,
+      linear-gradient(135deg, color-mix(in oklab, var(--accent) 50%, transparent), transparent 60%) border-box; }
+  .op-b .tile .t-label { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 600; color: var(--text-2); }
+  .op-b .tile .t-dato { margin-top: 6px; font-family: var(--font-display); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .op-b .tile .t-dato small { font-size: 12px; color: var(--text-2); font-weight: 600; }
+  .op-b .cta { margin-top: auto; margin-bottom: 0; border-radius: var(--radius-btn); background: var(--accent); color: var(--bg);
+    box-shadow: 0 8px 24px color-mix(in oklab, var(--accent) 28%, transparent); }
+
+  /* LAYOUT C: timeline editorial */
+  .op-c .masthead { margin-top: 10px; border-bottom: 2px solid var(--text-1); padding-bottom: 8px; position: relative; }
+  .op-c .masthead::after { content: ''; position: absolute; left: 0; right: 0; bottom: -5px; border-bottom: 1px solid var(--text-1); }
+  .op-c .masthead .edicion { font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-2); }
+  .op-c h3.titulo-c { font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1.12; margin-top: 2px; }
+  .op-c .timeline { margin-top: 16px; display: flex; flex-direction: column; }
+  .op-c .evento { display: grid; grid-template-columns: 44px 14px 1fr; gap: 0 8px; padding-bottom: 16px; position: relative; }
+  .op-c .evento .hora { font-size: 12px; font-weight: 600; color: var(--text-2); font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .op-c .evento .nodo { position: relative; display: flex; justify-content: center; }
+  .op-c .evento .nodo::before { content: ''; position: absolute; top: 14px; bottom: -4px; width: 1.5px; background: color-mix(in oklab, var(--text-2) 35%, transparent); }
+  .op-c .evento:last-child .nodo::before { display: none; }
+  .op-c .evento .punto { width: 10px; height: 10px; border-radius: 999px; margin-top: 3px; border: 2px solid color-mix(in oklab, var(--text-2) 55%, transparent); background: var(--bg); z-index: 1; }
+  .op-c .evento.activo .punto { border-color: var(--accent); background: var(--accent); }
+  .op-c .evento h4 { font-size: 14px; font-weight: 700; line-height: 1.3; }
+  .op-c .evento.activo h4 { color: var(--accent); }
+  .op-c .evento p { margin-top: 2px; font-size: 12px; color: var(--text-2); line-height: 1.45; }
+  .op-c .cierre-nota { margin-top: 4px; border: 1px solid transparent; border-radius: var(--radius-card);
+    background: linear-gradient(var(--surface), var(--surface)) padding-box,
+      linear-gradient(135deg, color-mix(in oklab, var(--accent) 40%, transparent), transparent 60%) border-box;
+    box-shadow: 0 8px 20px -10px rgb(var(--shadow-tinta) / 0.25); padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start; }
+  .op-c .chip-icono { width: 36px; height: 36px; border-radius: var(--radius-btn); background: color-mix(in oklab, var(--accent) 10%, transparent); }
+  .op-c .cierre-nota p { font-size: 12.5px; color: var(--text-2); line-height: 1.5; }
+  .op-c .cierre-nota p b { color: var(--text-1); }
+  .op-c .cta { margin-top: auto; margin-bottom: 0; border-radius: var(--radius-btn); background: var(--accent); color: var(--bg);
+    box-shadow: 0 8px 22px color-mix(in oklab, var(--accent) 28%, transparent); font-family: var(--font-body); }
+
+  .pie { max-width: 1180px; margin: 40px auto 0; font-size: 12.5px; color: #6a6a72; border-top: 1px solid #d0d0d6; padding-top: 14px; line-height: 1.6; }
 </style>
+</head>
+<body>
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap">
-
-<div class="wrap">
-  <header>
-    <p class="eyebrow">RAIZ — dirección de arte</p>
-    <h1>3 fusiones de líderes del nicho, no una sola app clonada</h1>
-    <p class="sub">Cada dirección es una fusión distinta de apps que ya funcionan (Lillio/HiMama, Bloomily, Brightwheel, Learning Genie) más un gigante admirado por su craft (Notion) — nunca una combinación inventada. Misma pantalla — "Hoy" — para comparar en igualdad de condiciones.</p>
-  </header>
-
-  <div class="row">
-
-    <div class="col">
-      <div class="col-label"><span class="col-letter">A</span><span class="col-name">Cuaderno cálido</span></div>
-      <p class="col-tag">Notion (neutros cálidos + serif editorial) + Lillio (acento terracota) · arquetipo Sabio/Cuidador · sensación: libreta de planeación de una maestra con años de oficio.</p>
-      <div class="phone dirA">
-        <p class="word">R<em>ai</em>z</p>
-        <p class="label">Hoy · semana 3</p>
-        <p class="tema">Mi cuerpo</p>
-        <p class="sub2">Subtema: mis emociones · vocabulario: head, arm, hand, leg</p>
-        <div class="card">
-          <h4>Body collage</h4>
-          <div class="levels">
-            <span class="lvl">Infant: explorar formas</span>
-            <span class="lvl">Toddler: emparejar</span>
-            <span class="lvl">Preschool: nombrar</span>
-            <span class="lvl">Pre-K: clasificar</span>
-          </div>
-          <p class="row2">Materiales en tu Science Center — no necesitas comprar nada.</p>
-        </div>
-        <div class="foco">
-          <h4>Niños foco de hoy</h4>
-          <div class="kid"><b>Luca</b><span>tijeras — observa cortes consecutivos</span></div>
-          <div class="kid"><b>Zayne</b><span>números 6–8</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col">
-      <div class="col-label"><span class="col-letter">B</span><span class="col-name">Crecimiento orgánico</span></div>
-      <p class="col-tag">Brightwheel (estructura app-shell, bottom nav) + Learning Genie (cards de skill) reteñidos en verdes/tierra · arquetipo Explorador · sensación: app nativa, ligera, de uso diario.</p>
-      <div class="phone dirB">
-        <div class="top">
-          <p class="word">R<span class="ai">ai</span>z</p>
-          <span class="pill">HOY · SEMANA 3</span>
-          <p class="tema">Mi cuerpo</p>
-          <p class="sub2">Mis emociones · head · arm · hand · leg</p>
-        </div>
-        <div class="card">
-          <h4>Body collage</h4>
-          <div class="levels">
-            <span class="lvl">Infant</span><span class="lvl">Toddler</span><span class="lvl">Preschool</span><span class="lvl">Pre-K</span>
-          </div>
-          <p class="row2">Ya tienes los materiales en Science Center.</p>
-        </div>
-        <div class="foco">
-          <h4>Niños foco de hoy</h4>
-          <div class="kid"><span class="dot"></span><b>Luca</b><span>tijeras</span></div>
-          <div class="kid"><span class="dot"></span><b>Zayne</b><span>números 6–8</span></div>
-        </div>
-        <div class="nav">
-          <div class="navdot on"></div><div class="navdot"></div><div class="navdot"></div><div class="navdot"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="col">
-      <div class="col-label"><span class="col-letter">C</span><span class="col-name">Tierra contemporánea</span></div>
-      <p class="col-tag">Bloomily (SaaS premium simple) + Notion (neutros) con terracota como protagonista, no solo acento · arquetipo Gobernante/Sabio · sensación: editorial, con más carácter y contraste.</p>
-      <div class="phone dirC">
-        <div class="top">
-          <p class="word">R<span class="chip">ai</span>z</p>
-          <p class="label">Hoy · semana 3</p>
-          <p class="tema">Mi cuerpo</p>
-          <p class="sub2">Mis emociones · head · arm · hand · leg</p>
-        </div>
-        <div class="body">
-          <div class="card">
-            <h4>Body collage</h4>
-            <div class="levels">
-              <span class="lvl">Infant</span><span class="lvl">Toddler</span><span class="lvl">Preschool</span><span class="lvl">Pre-K</span>
-            </div>
-            <p class="row2">Materiales listos en tu Science Center.</p>
-          </div>
-          <div class="foco">
-            <h4>Niños foco de hoy</h4>
-            <div class="kid"><b>Luca</b><span>tijeras</span></div>
-            <div class="kid"><b>Zayne</b><span>números 6–8</span></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
+<header class="cabecera">
+  <h1>Dirección de arte — 3 composiciones para RAIZ</h1>
+  <p class="sub">
+    Tu contrato de marca (Deep Teal, Warm Cream, Sage, Butter Yellow, Soft Coral + la serif Playfair
+    Display con la hojita en la tilde de la "í") ya está fijado — las 3 opciones NO son 3 marcas
+    distintas, son 3 formas de organizar la pantalla "Hoy" con esa misma marca. Eliges la
+    composición, no el color.
+  </p>
+  <div class="salidas" role="list">
+    <span role="listitem"><b>1 · Elegir</b> A, B o C</span>
+    <span role="listitem"><b>2 · Combinar</b> («el dato grande de la A, pero el timeline de la C»)</span>
+    <span role="listitem"><b>3 · Pedir otras 3</b> composiciones nuevas</span>
+    <span role="listitem"><b>4 · Ajustar un detalle</b></span>
   </div>
+</header>
+<p class="aviso-fuentes">
+  Verificación de fuentes: el nombre de cada familia (abajo, en cada panel) se muestra EN su propia
+  fuente. Si se ve letra de máquina de escribir, esa fuente no está embebida — no evaluar así.
+</p>
+
+<div class="opciones">
+
+  <!-- ═══════════════════════ OPCIÓN A — héroe-dato con cards apiladas ═══════════════════════ -->
+  <section class="opcion op-a" aria-label="Opción A">
+    <div class="meta">
+      <h2><span class="letra">A</span> El dato del día</h2>
+      <p class="direccion">Arriba de todo, un número grande — cuántos niños tienen foco hoy. Debajo, el plan y los materiales listos, en tarjetas.</p>
+      <p class="hipotesis"><strong>Hipótesis de conversión:</strong>
+        <span class="slot">la maestra abre la app y en 1 segundo ve cuántos niños necesitan atención especial hoy — sin leer nada más.</span>
+      </p>
+      <ul class="tokens">
+        <li>--bg #F6F0E4 · --accent #0D5C63</li>
+        <li>radius 20/14 · Playfair Display + Plus Jakarta Sans</li>
+      </ul>
+      <div class="paleta" aria-hidden="true">
+        <span style="background:#F6F0E4"></span><span style="background:#FBF7EE"></span>
+        <span style="background:#0D5C63"></span><span style="background:#A8B9A5"></span>
+        <span style="background:#F4C84A"></span><span style="background:#F28A7A"></span>
+      </div>
+      <div class="especimen">
+        <p class="esp-display">Playfair Display — AaBbÑñ 0123</p>
+        <p class="esp-body">Plus Jakarta Sans — El veloz murciélago hindú comía feliz cardillo y kiwi.</p>
+      </div>
+    </div>
+
+    <div class="telefono">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="der">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/><rect x="9" y="3" width="3" height="8" rx="0.8"/><rect x="13.5" y="0.5" width="3" height="10.5" rx="0.8"/></svg>
+          <svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M1.5 4.2a9.5 9.5 0 0 1 13 0"/><path d="M3.8 6.6a6.2 6.2 0 0 1 8.4 0"/><path d="M6.2 9a2.8 2.8 0 0 1 3.6 0"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" aria-hidden="true"><rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="currentColor" opacity="0.4"/><rect x="2" y="2" width="15" height="8" rx="1.6" fill="currentColor"/><rect x="22.5" y="3.8" width="2" height="4.4" rx="1" fill="currentColor" opacity="0.4"/></svg>
+        </span>
+      </div>
+
+      <div class="pantalla">
+        <p class="saludo marca-raiz" style="font-size:13px; margin-top:8px;">Ra<span class="i-hueco">i<span class="hojita"></span></span>z</p>
+        <p class="saludo">Martes · semana 3 · Mi cuerpo</p>
+        <h3 class="titulo-a">Buenos días, Miss Ana</h3>
+
+        <div class="heroe">
+          <p class="label">Niños con foco hoy</p>
+          <p class="dato">4 <small>de 9</small></p>
+          <p class="insight">Luca (tijeras) y Zayne (números) tienen metas activas</p>
+        </div>
+
+        <div class="card">
+          <span class="chip-icono" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D5C63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </span>
+          <div><h4>Body collage · 10:00</h4><p>Infant explora formas · Preschool nombra y clasifica</p></div>
+        </div>
+        <div class="card">
+          <span class="chip-icono" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D5C63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+          </span>
+          <div><h4>Materiales listos</h4><p>Ya tienes todo en tu Science Center — nada que comprar</p></div>
+        </div>
+
+        <div class="cta">Ver mi semana</div>
+
+        <nav class="tabbar" aria-label="Navegación">
+          <a class="activa" href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>Hoy</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 9h18"/></svg></span>Semana</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></span>Niños</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>Progreso</a>
+        </nav>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <p class="rotulo-frame">Así se vería la página que vende RAIZ</p>
+    <div class="hero-landing">
+      <span class="hl-badge">Método RAÍZ</span>
+      <h4>Deja de cargar a <em>todos tus niños</em> en la cabeza</h4>
+      <p class="hl-sub"><b>RAIZ recuerda qué necesita cada uno.</b> Y convierte eso en tu próxima planeación, sin que tengas que reconstruirlo cada semana.</p>
+      <div class="hl-cta">Empezar prueba de 7 días</div>
+      <p class="hl-prueba">Sin tarjeta ahora · cancela cuando quieras</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ OPCIÓN B — anillo centrado + grid 2x2 ═══════════════════ -->
+  <section class="opcion op-b" aria-label="Opción B">
+    <div class="meta">
+      <h2><span class="letra">B</span> El progreso de la semana</h2>
+      <p class="direccion">Un anillo central con cuánto de la semana ya está resuelto, y cuatro datos clave alrededor — niños evaluados, skills en desarrollo, actividades hechas, racha de observación.</p>
+      <p class="hipotesis"><strong>Hipótesis de conversión:</strong>
+        <span class="slot">refuerza la sensación de "ya tengo esto bajo control" — clave para la maestra que llega agotada.</span>
+      </p>
+      <ul class="tokens">
+        <li>--bg #F6F0E4 · --accent #0D5C63</li>
+        <li>radius 16/12 · Playfair Display + Plus Jakarta Sans</li>
+      </ul>
+      <div class="paleta" aria-hidden="true">
+        <span style="background:#F6F0E4"></span><span style="background:#FBF7EE"></span>
+        <span style="background:#0D5C63"></span><span style="background:#A8B9A5"></span>
+        <span style="background:#F4C84A"></span><span style="background:#F28A7A"></span>
+      </div>
+      <div class="especimen">
+        <p class="esp-display">Playfair Display — AaBbÑñ 0123</p>
+        <p class="esp-body">Plus Jakarta Sans — El veloz murciélago hindú comía feliz cardillo y kiwi.</p>
+      </div>
+    </div>
+
+    <div class="telefono">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="der">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/><rect x="9" y="3" width="3" height="8" rx="0.8"/><rect x="13.5" y="0.5" width="3" height="10.5" rx="0.8"/></svg>
+          <svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M1.5 4.2a9.5 9.5 0 0 1 13 0"/><path d="M3.8 6.6a6.2 6.2 0 0 1 8.4 0"/><path d="M6.2 9a2.8 2.8 0 0 1 3.6 0"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" aria-hidden="true"><rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="currentColor" opacity="0.4"/><rect x="2" y="2" width="15" height="8" rx="1.6" fill="currentColor"/><rect x="22.5" y="3.8" width="2" height="4.4" rx="1" fill="currentColor" opacity="0.4"/></svg>
+        </span>
+      </div>
+
+      <div class="pantalla">
+        <p class="marca-raiz" style="font-size:13px; margin-top:8px; justify-content:center;">Ra<span class="i-hueco">i<span class="hojita"></span></span>z</p>
+        <div class="encabezado-b">
+          <p class="periodo">Semana 3 · Mi cuerpo</p>
+          <h3 class="titulo-b">Tu semana, resuelta</h3>
+        </div>
+
+        <div class="anillo-wrap">
+          <svg width="132" height="132" viewBox="0 0 132 132" role="img" aria-label="Semana al 68 por ciento">
+            <circle cx="66" cy="66" r="57" fill="none" stroke-width="11" stroke="rgba(13,92,99,0.14)"/>
+            <circle cx="66" cy="66" r="57" fill="none" stroke-width="11" stroke="#0D5C63" stroke-linecap="round" stroke-dasharray="358.1" stroke-dashoffset="114.6" transform="rotate(-90 66 66)"/>
+          </svg>
+          <div class="centro"><span class="pct">68%</span><span class="pct-label">planeada</span></div>
+        </div>
+
+        <div class="grid2x2">
+          <div class="tile destacada">
+            <p class="t-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0D5C63" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Niños evaluados</p>
+            <p class="t-dato">9<small>/9</small></p>
+          </div>
+          <div class="tile">
+            <p class="t-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Skills en desarrollo</p>
+            <p class="t-dato">6</p>
+          </div>
+          <div class="tile">
+            <p class="t-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2v6h-6"/><path d="M3 12a9 9 0 0 1 14-6.7L17 8"/><path d="M7 22v-6h6"/><path d="M21 12a9 9 0 0 1-14 6.7L7 16"/></svg>Actividades hechas</p>
+            <p class="t-dato">3</p>
+          </div>
+          <div class="tile">
+            <p class="t-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 2.6 6.9L22 9.3l-5.4 4.6 1.8 7.1L12 17l-6.4 4 1.8-7.1L2 9.3l7.4-.4Z"/></svg>Racha de observación</p>
+            <p class="t-dato">12<small> días</small></p>
+          </div>
+        </div>
+
+        <div class="cta">Planear mi jueves</div>
+
+        <nav class="tabbar" aria-label="Navegación">
+          <a class="activa" href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>Hoy</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 9h18"/></svg></span>Semana</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></span>Niños</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>Progreso</a>
+        </nav>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <p class="rotulo-frame">Así se vería la página que vende RAIZ</p>
+    <div class="hero-landing">
+      <span class="hl-badge">Método RAÍZ</span>
+      <h4>Tu semana <em>bajo control</em>, sin cargarla en la cabeza</h4>
+      <p class="hl-sub"><b>Un vistazo, toda tu semana.</b> RAIZ conecta lo que sabes de cada niño con lo que planeas.</p>
+      <div class="hl-cta">Armar mi primera semana</div>
+      <p class="hl-prueba">Sin tarjeta ahora · cancela cuando quieras</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════ OPCIÓN C — timeline editorial ═══════════════════════ -->
+  <section class="opcion op-c" aria-label="Opción C">
+    <div class="meta">
+      <h2><span class="letra">C</span> El día contado</h2>
+      <p class="direccion">El día de hoy narrado como una línea de tiempo — qué actividad, a qué hora, y qué niño la aprovecha para su meta.</p>
+      <p class="hipotesis"><strong>Hipótesis de conversión:</strong>
+        <span class="slot">se siente como si alguien ya hubiera pensado el día por ti — el alivio inmediato que vende la promesa central.</span>
+      </p>
+      <ul class="tokens">
+        <li>--bg #F6F0E4 · --accent #0D5C63</li>
+        <li>radius 12/10 · Playfair Display + Plus Jakarta Sans</li>
+      </ul>
+      <div class="paleta" aria-hidden="true">
+        <span style="background:#F6F0E4"></span><span style="background:#FBF7EE"></span>
+        <span style="background:#0D5C63"></span><span style="background:#A8B9A5"></span>
+        <span style="background:#F4C84A"></span><span style="background:#F28A7A"></span>
+      </div>
+      <div class="especimen">
+        <p class="esp-display">Playfair Display — AaBbÑñ 0123</p>
+        <p class="esp-body">Plus Jakarta Sans — El veloz murciélago hindú comía feliz cardillo y kiwi.</p>
+      </div>
+    </div>
+
+    <div class="telefono">
+      <div class="statusbar">
+        <span>9:41</span>
+        <span class="der">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor" aria-hidden="true"><rect x="0" y="7" width="3" height="4" rx="0.8"/><rect x="4.5" y="5" width="3" height="6" rx="0.8"/><rect x="9" y="3" width="3" height="8" rx="0.8"/><rect x="13.5" y="0.5" width="3" height="10.5" rx="0.8"/></svg>
+          <svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M1.5 4.2a9.5 9.5 0 0 1 13 0"/><path d="M3.8 6.6a6.2 6.2 0 0 1 8.4 0"/><path d="M6.2 9a2.8 2.8 0 0 1 3.6 0"/></svg>
+          <svg width="25" height="12" viewBox="0 0 25 12" aria-hidden="true"><rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="currentColor" opacity="0.4"/><rect x="2" y="2" width="15" height="8" rx="1.6" fill="currentColor"/><rect x="22.5" y="3.8" width="2" height="4.4" rx="1" fill="currentColor" opacity="0.4"/></svg>
+        </span>
+      </div>
+
+      <div class="pantalla">
+        <p class="marca-raiz" style="font-size:13px; margin-top:8px;">Ra<span class="i-hueco">i<span class="hojita"></span></span>z</p>
+        <div class="masthead">
+          <p class="edicion">Martes · semana 3 · Mi cuerpo</p>
+          <h3 class="titulo-c">Tu día, en tres momentos</h3>
+        </div>
+
+        <div class="timeline">
+          <div class="evento activo">
+            <span class="hora">8:00</span>
+            <span class="nodo"><span class="punto"></span></span>
+            <div><h4>Circle time · partes del cuerpo</h4><p>Luca puede practicar tijeras aquí.</p></div>
+          </div>
+          <div class="evento">
+            <span class="hora">10:00</span>
+            <span class="nodo"><span class="punto"></span></span>
+            <div><h4>Body collage</h4><p>Infant explora · Preschool nombra y clasifica.</p></div>
+          </div>
+          <div class="evento">
+            <span class="hora">15:00</span>
+            <span class="nodo"><span class="punto"></span></span>
+            <div><h4>Cierre y observación</h4><p>Zayne — confirmar números 6 a 8.</p></div>
+          </div>
+        </div>
+
+        <div class="cierre-nota">
+          <span class="chip-icono" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0D5C63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </span>
+          <p><b>Ya tienes los materiales.</b> Nada que comprar para hoy.</p>
+        </div>
+
+        <div class="cta">Empezar mi día</div>
+
+        <nav class="tabbar" aria-label="Navegación">
+          <a class="activa" href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg></span>Hoy</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 9h18"/></svg></span>Semana</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></span>Niños</a>
+          <a href="#"><span class="tab-chip"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></span>Progreso</a>
+        </nav>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+
+    <p class="rotulo-frame">Así se vería la página que vende RAIZ</p>
+    <div class="hero-landing">
+      <span class="hl-badge">Método RAÍZ</span>
+      <h4>Tu día, <em>ya pensado</em> antes de que empiece</h4>
+      <p class="hl-sub"><b>Tres momentos, cero improvisación.</b> RAIZ te dice qué hacer, con quién y con qué materiales.</p>
+      <div class="hl-cta">Recibir mi primer día</div>
+      <p class="hl-prueba">Sin tarjeta ahora · cancela cuando quieras</p>
+    </div>
+  </section>
+
 </div>
+
+<footer class="pie">
+  Referencia-mandato: el usuario trajo su propio board de marca (logo "Raíz" + 5 colores +
+  proporción) — las 3 opciones de arriba NO son 3 direcciones de marca distintas, son 3
+  composiciones de la pantalla "Hoy" con esa MISMA marca (16-DIRECCION-DE-ARTE, protocolo
+  REFERENCIA=CONTRATO: con referencia, las opciones divergen solo en lo que el contrato no fija).
+  Gates verificados: fuentes embebidas vía Google Fonts y comprobadas en el espécimen · mockups
+  LLENOS con datos reales del dominio (Luca, Zayne, Body collage, Science Center) y tab bar
+  visible · materiales premium (hairline, chip, sombra tintada) · cada opción con su HERO DE
+  LANDING aplicado · el marcador data-kit="abc-v2" del &lt;html&gt; intacto. Elección y
+  descartadas se anotan en FICHA-ARTE.md y ESTADO.md.
+</footer>
+
+</body>
+</html>

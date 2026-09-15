@@ -3,7 +3,16 @@
 ## Referencia del usuario (CONTRATO)
 - ¿Hay imagen(es) de referencia del usuario?: SÍ → board de logo/brand identity subido en chat
   (logo primario/secundario, ícono de app, mockup de celular y tarjeta, 5 swatches de color con
-  nombre + hex + uso, tabla de proporción 70/15/10/5/5).
+  nombre + hex + uso, tabla de proporción 70/15/10/5/5) + una segunda imagen más nítida del
+  logotipo que corrigió la primera extracción (ver abajo).
+- ⚠️ CORRECCIÓN (misma sesión): la primera extracción usó una serif suave equivocada (Fraunces) y
+  un dispositivo de firma equivocado (hojita como punto de una "i" sin tilde). El usuario mandó
+  una imagen más clara del logo real: es **"Raíz"** completo, en serif de **alto contraste**
+  (trazos finos/gruesos marcados — equivalente Google Fonts: **Playfair Display**), y el
+  dispositivo de firma es la **tilde de la "í" convertida en hojita** (no un punto de "i" sin
+  tilde). Ícono de app: squircle Deep Teal, "R" en Warm Cream, hojita superpuesta arriba a la
+  derecha. Corregido en FICHA-ARTE.md y en los 3 entregables (direcciones-abc.html,
+  replica-fiel.html, vista-previa-app.html) antes de cerrar.
 - Extracción (mirada directamente en la imagen):
   - Modo: **claro** · Fondo: **#F6F0E4** (Warm Cream) · Superficie/card: N/A en el board — se
     deriva un tono elevado ligeramente más claro que el fondo (ver Brand kit final)
@@ -12,9 +21,10 @@
   - Acento(s): **#F4C84A** Butter Yellow — aparece en la hojita del logo primario (detalle de
     firma) · **#F28A7A** Soft Coral — hojita del logo secundario y como acento cálido declarado
   - Semánticos visibles: ninguno (el board es de marca, no de UI con estados)
-  - Display: serif redondeada/slab cálida, trazo grueso, terminales suaves, minúsculas con
-    personalidad — candidata elegida: **Fraunces** (eje "soft" alto, peso 600-700) — es la que
-    más se acerca a la calidez y grosor del logotipo sin clonar una fuente propietaria
+  - Display: serif de **alto contraste** (trazos finos/gruesos marcados, elegante, editorial) —
+    candidata elegida: **Playfair Display** (pesos 600-800) — la más cercana a las formas reales
+    del logotipo "Raíz" sin clonar una fuente propietaria (descartadas: Fraunces por demasiado
+    suave/redondeada, Lora por menos contraste)
   - Body: el board no define tipografía de cuerpo (es un lockup de marca, no una pantalla de
     producto) — se EXTIENDE con el mismo sistema: sans humanista cálida que no compita con la
     serif del logo — **Plus Jakarta Sans** (candidatas descartadas: Inter por sentirse más fría,
@@ -29,8 +39,9 @@
   - Layout: hero + grid de lockups (logo design board), no aplica 1:1 a una pantalla de app —
     se traduce a layout de tipo "hero+cards" para la UI
   - Mood: cálido, artesanal, sereno
-  - Detalle de firma a replicar: **la hojita reemplazando el punto de la "í"** — este gesto se
-    convierte en el dispositivo ownable de toda la app (bullets, markers de skill logrado, favicon)
+  - Detalle de firma a replicar: **la tilde de la "í" de "Raíz" convertida en hojita** (no un
+    punto de "i") — este gesto se convierte en el dispositivo ownable de toda la app (bullets,
+    markers de skill logrado, favicon)
 - Prohibiciones anti-IA que la referencia LEVANTA: ninguna — el board ya evita fondo oscuro,
   neón y glass; coincide con la capa anti-IA por diseño propio del usuario.
 
@@ -51,7 +62,7 @@
   secundario, alertas suaves, 3-5%) · Apoyo: **#A8B9A5** Sage (fondos de tarjeta/categoría, 10%)
 - Semánticos: éxito **#7A9B6E** (variante sage más saturada) · error **#D9614E** (variante coral
   más profunda, nunca rojo puro) · aviso **#E0A93A** (variante butter más oscura)
-- Display: **Fraunces** (pesos 500/600/700, eje soft alto) · Body/UI: **Plus Jakarta Sans**
+- Display: **Playfair Display** (pesos 600/700/800) · Body/UI: **Plus Jakarta Sans**
   (pesos 400/500/700) · Escala: display 28px / title 20px / body 15px / label 12px
 - Radio: 18px (cards), 14px (botones/inputs) · Profundidad: sombras suaves de 1 nivel (contacto,
   nunca glass) · Espaciado base: escala 4·8·12·16·24·32·48

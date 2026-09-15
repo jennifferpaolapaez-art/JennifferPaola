@@ -102,20 +102,26 @@ direcciones A/B/C fusionadas que se habían propuesto sin referencia (esas queda
 - Paleta (proporción 70/15/10/5/5): Warm Cream `#F6F0E4` (fondo) · Deep Teal `#0D5C63` (marca/
   texto 1º) · Sage `#A8B9A5` (apoyo/tarjetas) · Butter Yellow `#F4C84A` (acento firma — hojita) ·
   Soft Coral `#F28A7A` (acento cálido secundario).
-- Logotipo: "Raiz" en serif redondeada cálida (equivalente Google Fonts: **Fraunces**, eje soft
-  alto) con una hojita reemplazando el punto de la "í" — dispositivo ownable que se repite en
-  toda la UI (bullets, marcador de niño foco, favicon).
+- Logotipo: "Raíz" en serif de **alto contraste** (equivalente Google Fonts: **Playfair
+  Display** — corregido en esta sesión tras una segunda imagen más nítida del usuario; la
+  primera extracción usó Fraunces, demasiado suave/redondeada) con la **tilde de la "í"
+  convertida en hojita** (no un punto de "i") — dispositivo ownable que se repite en toda la UI
+  (bullets, marcador de niño foco, favicon, ícono de app squircle).
 - Body/UI (extendido, el board no lo definía): **Plus Jakarta Sans**.
 - Radio 18px cards/14px botones · sombras suaves de 1 nivel · modo claro derivado directamente
   del board (Warm Cream de fondo).
-- Réplica fiel construida: `replica-fiel.html` (raíz del proyecto, screenshot en
-  `docs/revisiones/replica-fiel.png`) — pantalla "Hoy" con el sistema completo, board recreado al
-  lado, test de fidelidad pasado.
-- Tour de la app construido: `vista-previa-app.html` (raíz, screenshot en
-  `docs/revisiones/vista-previa-app.png`) — 5 vistas: onboarding, paywall, Hoy, planeación
-  semanal, perfil del niño. Pendiente: pregunta de cierre al usuario (me encanta/ajustar/repensar).
-- `direcciones-abc.html` conservado en la raíz (screenshot en `docs/revisiones/`) como evidencia
-  de las 3 fusiones descartadas al llegar el contrato de marca del usuario.
+- Los 3 entregables nacen del kit oficial `plantillas-codigo/direcciones-abc/plantilla.html`
+  (marcador `data-kit="abc-v2"` intacto en los 3 — gate del hook pre-stop), viven en la raíz del
+  proyecto con screenshot en `docs/revisiones/`:
+  - `direcciones-abc.html`: como el usuario ya trajo su contrato de marca, las 3 opciones NO son
+    3 direcciones distintas — son 3 COMPOSICIONES de la pantalla "Hoy" con la MISMA marca
+    (doctrina referencia-mandato: divergen solo en lo que el contrato no fija). A = dato del día
+    grande, B = anillo de progreso + grid, C = timeline editorial.
+  - `replica-fiel.html`: board recreado al lado de la pantalla "Hoy" real, test de fidelidad
+    pasado.
+  - `vista-previa-app.html`: 5 vistas (onboarding, paywall, Hoy, planeación semanal, perfil del
+    niño) en el chasis real de la app. Pendiente: pregunta de cierre al usuario
+    (me encanta/ajustar/repensar).
 - ⚠️ Pendiente real: el logo del board parece boceto/concepto (probable IA), no archivo vectorial
   final — no bloquea, pero se necesitará producir el SVG/vector definitivo del logotipo "Raiz +
   hojita" antes de assets de producción (ícono de app, favicon, print).
