@@ -8,7 +8,6 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion/react';
-import { Check } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 /* ── <Accent> — la palabra que vende, en el acento del kit ─────────────────── */
@@ -74,15 +73,19 @@ export function Hairline({
   );
 }
 
-/* ── <CheckCustom> — círculo acento 12% + check SVG (55 repertorio #9).
-   Nunca el ✓ del sistema ni emoji. ── */
+/* ── <CheckCustom> — círculo acento 12% + la HOJITA propia de la marca (FICHA-ARTE:
+   dispositivo ownable — la tilde de la "í" de Raíz, reutilizada como marcador de
+   check/logro en toda la UI). Nunca el ✓ del sistema ni un ícono genérico. ── */
 export function CheckCustom() {
   return (
     <span
       aria-hidden="true"
       className="mt-0.5 inline-flex size-[22px] shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--accent)_12%,transparent)]"
     >
-      <Check size={13} strokeWidth={2.5} color="var(--accent)" aria-hidden="true" />
+      <span
+        className="block h-[11px] w-2 rounded-tl-full rounded-br-full"
+        style={{ background: 'var(--accent)', transform: 'rotate(-45deg)' }}
+      />
     </span>
   );
 }

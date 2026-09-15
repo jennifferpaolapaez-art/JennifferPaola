@@ -3,9 +3,11 @@
 > Memoria viva del proyecto. Se actualiza en cada hito.
 
 ## Fase actual
-Sesión 1 CERRADA. Sesión 3 (landing) — v2 construida tras rechazo explícito de la v1 por el
-usuario (ver "Sesión 3 — revisión v2" abajo). Pendiente: aprobación del usuario ("Landing
-aprobada.") antes de arrancar Sesión 4.
+Sesión 1 CERRADA. Sesión 3 (landing) v2 construida, pero el revisor-visual independiente la
+marcó **NO LISTA** (ver `docs/revisiones/landing-veredicto.md`: Usabilidad 27/40, Craft 12/20,
+Copy 14/20 — los 3 por debajo del umbral ≥36/≥16/≥16). NO se declara la landing terminada ni se
+avanza a Sesión 4 hasta corregir los 5 defectos del veredicto y volver a pasar el revisor.
+Progreso de corrección: 1 de 5 defectos corregido (ver "Problemas conocidos").
 
 ## Fuente de verdad del producto
 `G:\My Drive\CLAUDE\Proyectos\App Creciendo Bilingue\Notas de trabajo.docx` — documento maestro de
@@ -243,8 +245,29 @@ POSITIVOS de la heurística estática del script (confirmado leyendo el código 
   de assets de producción (ícono de app nativo, favicon nítido a tamaños pequeños, print).
 - **Fotografía real pendiente**: ver nota en "Sesión 3 — v2" arriba — el usuario debe proveer
   fotos reales de educadoras/salones cuando las tenga; no se fabricaron.
-- **Auditoría de conversión no re-corrida tras v2** — ver nota arriba, pendiente antes del cierre
-  100% de la landing.
+- **Auditoría de conversión**: re-corrida sobre v2 — mismos falsos positivos ya documentados
+  (hairlines/gradiente/voseo) + 2 hallazgos reales corregidos (acento de h1 en `/onboarding` y
+  `/entrar` vía `style` en vez de clase CSS → corregido a className; `docs/copy/landing.md`
+  desactualizado → reescrito para v2).
+- **⛔ Veredicto revisor-visual: NO LISTA** (`docs/revisiones/landing-veredicto.md` —
+  Usabilidad 27/40, Craft 12/20, Copy 14/20; umbral ≥36/≥16/≥16). 5 defectos reportados,
+  estado de corrección:
+  1. ✅ CORREGIDO — `CheckCustom` en `ui.tsx` usaba el ícono genérico Lucide `Check`; ahora usa la
+     hojita propia de la marca (mismo gesto CSS del logo) como dispositivo ownable repetido.
+  2. ⬜ PENDIENTE — CTA con copy inconsistente: `page.tsx` usa "Crear mi primera semana gratis"
+     pero `Oferta.tsx` cambia a "Empezar mis 7 días gratis" / "Elegir mensual". Falta unificar al
+     mismo verbo en toda la página (regla propia del kit).
+  3. ⬜ PENDIENTE — la Garantía vive en su propia sección, separada de los botones de precio; falta
+     microcopy de garantía con plazo justo debajo de cada CTA de plan en `Oferta.tsx`.
+  4. ⬜ PENDIENTE — el badge de credibilidad del hero ("Creada desde un salón real...") no tiene
+     dato verificable/citable; el revisor pide retirarlo o reemplazarlo por algo concreto.
+  5. ⬜ PENDIENTE — la landing solo usa 2 niveles de profundidad (base/elevado); falta un
+     tratamiento "hundido" (ej. en el stack de valor Hormozi de `Oferta.tsx`).
+  **No avanzar a Sesión 4 ni declarar la landing lista hasta corregir 2-5 y volver a correr el
+  revisor-visual** (ver protocolo en `.claude/agents/revisor-visual.md` — en este entorno el
+  Agent tool no reconoce agentes de proyecto por nombre; se simula invocando un agente
+  general-purpose con el contenido completo de esa ficha pegado en el prompt, más las 4 rutas
+  de insumo: screenshot 375, código, FICHA-ARTE.md, FICHA-AVATAR.md).
 
 ## Sesión 1 — CERRADA (precio, arquitectura, base de datos, auth)
 

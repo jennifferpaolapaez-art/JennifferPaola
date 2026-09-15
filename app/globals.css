@@ -1,3 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "../components/landing/tokens.css";
+
+/* MODO CAPTURA — SOLO para evidencia/QA a 375px (revisor-visual). Fuerza visible el contenido
+   que normalmente aparece con whileInView al hacer scroll (headless/captura no dispara el
+   IntersectionObserver de forma confiable en una sola toma). Se activa con html[data-capture],
+   asignado por un pequeño script en app/capture-mode.tsx leyendo ?capture=1 de la URL. No afecta
+   el uso normal de la app. */
+html[data-capture] [style*="opacity: 0"],
+html[data-capture] [style*="opacity:0"] {
+  opacity: 1 !important;
+  transform: none !important;
+}
