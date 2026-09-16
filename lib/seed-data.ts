@@ -150,6 +150,50 @@ export interface NinoFocoActividad {
   observar: string;
 }
 
+/* ── GUÍAS ESPECÍFICAS POR TIPO DE BLOQUE (corrección del usuario, Sesión 5 — ronda 2):
+   "NO todos necesitan exactamente los mismos campos... RAÍZ debe entender el tipo de bloque."
+   Circle Time, Outdoor y Centros tienen una función pedagógica propia que NO cabe en los campos
+   genéricos de preparación/qué-hace-la-maestra (esos SÍ le quedan bien a Actividad Principal,
+   STEAM y Trabajo Pre-K — se reutilizan ahí). Cada bloque solo llena el campo `guia*` que le
+   corresponde; nunca los tres a la vez. ── */
+
+/** Circle Time: rutina breve que se repite (saludo/fecha/clima/conteo/abecedario — 3-5 min) +
+ * el FOCO específico de ese día (tema/palabras/muestra/preguntas/libro/letra/canción — 5-7 min),
+ * nunca los dos con la misma profundidad todos los días. */
+export interface GuiaCircleTime {
+  duracion: string; // "10–15 min"
+  rutinaDiaria: { icono: string; titulo: string; texto: string }[];
+  focoDeHoy: {
+    tema: string;
+    palabrasDelDia: string[];
+    muestra: string;
+    preguntas: string[];
+    libro?: string;
+    letra?: string;
+    cancion?: string;
+  };
+  cierre: string;
+}
+
+/** Outdoor/Movimiento: una invitación intencional breve conectada al tema, seguida de juego
+ * libre — RAIZ nunca convierte este bloque en otra clase académica. */
+export interface GuiaOutdoor {
+  movimientoIntencional: { duracion: string; invitacion: string; ideas: string[]; cancion?: string };
+  juegoLibre: string;
+  preguntaInformal?: string;
+  quePriorizar: string;
+}
+
+/** Un centro disponible hoy — Centros muestra varios a la vez, cada uno con su propia
+ * provocación (nunca "juego libre" a secas). */
+export interface CentroDisponible {
+  nombre: string;
+  material: string;
+  provocacion: string;
+  intencion: string;
+  pregunta?: string;
+}
+
 export interface Actividad {
   id: string;
   bloque: Bloque;
@@ -163,6 +207,8 @@ export interface Actividad {
   queHaceMaestra?: string;
   queHacenNinos?: string;
   preguntasGuia?: string[];
+  /** Por qué esta experiencia se conecta con el tema/objetivo de la semana. */
+  conexionTema?: string;
   /** Adaptación por ETAPA (capa A) — solo las actividades que lo ameritan la tienen. */
   diferenciacion?: Record<Etapa, string>;
   adaptacionesIndividuales?: AdaptacionIndividual[];
@@ -171,6 +217,10 @@ export interface Actividad {
   evidenciaPosible?: string;
   printable?: string;
   notas?: string;
+  /** Guías específicas — solo UNA se llena, según `bloque`. */
+  guiaCircle?: GuiaCircleTime;
+  guiaOutdoor?: GuiaOutdoor;
+  guiaCentros?: CentroDisponible[];
 }
 
 export interface DiaPlan {
@@ -256,9 +306,51 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           bloque: 'circle',
           hora: '9:30',
           titulo: 'Circle Time — Mi cuerpo',
-          objetivo: 'Repasar el vocabulario de la semana antes de la actividad principal.',
+          objetivo: 'Rutina breve del día + foco en "cabeza" y "mano" antes de la actividad principal.',
           dominio: 'Lenguaje y vocabulario',
           materiales: [{ nombre: 'Libro "Mi cuerpo y yo"', disponible: true }],
+          conexionTema: 'Introduce las 2 palabras que Collage del cuerpo (actividad principal) va a poner en práctica con las manos.',
+          guiaCircle: {
+            duracion: '10–15 min',
+            rutinaDiaria: [
+              { icono: '👋', titulo: 'Saludo', texto: 'Cantar la canción de buenos días configurada por la maestra.' },
+              { icono: '📅', titulo: 'Hoy', texto: '"Today is Tuesday / Hoy es martes."' },
+              { icono: '☀️', titulo: 'Clima', texto: 'Mirar por la ventana y elegir el clima juntos.' },
+              { icono: '🔢', titulo: 'Conteo', texto: 'Contar del 1 al 10 en grupo.' },
+            ],
+            focoDeHoy: {
+              tema: 'Hoy vamos a descubrir diferentes partes de nuestro cuerpo.',
+              palabrasDelDia: ['HEAD / CABEZA', 'HAND / MANO'],
+              muestra: 'Señala tu cabeza y tus manos. Invita a los niños a encontrarlas en su propio cuerpo.',
+              preguntas: ['Where is your head?', 'Can you show me your hands?', 'What can your hands do?'],
+              libro: '"Mi cuerpo y yo" — picture walk breve por las páginas de cabeza y manos.',
+              letra: 'H — "Today we are noticing H. Head starts with H."',
+              cancion: '"Head, Shoulders, Knees and Toes"',
+            },
+            cierre: 'Antes de levantarnos, toca tu cabeza, tus manos y tus piernas. Transición a Collage del cuerpo.',
+          },
+          diferenciacion: {
+            Infant: 'Escucha la canción, observa las imágenes, toca o señala partes del cuerpo con ayuda.',
+            Toddler: 'Señala, imita el gesto, repite una palabra si puede.',
+            Preschool: 'Nombra la parte del cuerpo, responde preguntas simples, participa en la canción.',
+            'Pre-K': 'Describe con una frase corta y relaciona la letra H con "head".',
+          },
+          adaptacionesIndividuales: [
+            {
+              ninoId: 'sofia',
+              necesidad: 'Lenguaje expresivo limitado',
+              ajuste: 'Permitir señalar o elegir entre dos imágenes en vez de responder con palabras.',
+            },
+            {
+              ninoId: 'mateo',
+              necesidad: 'Aún no se sienta con apoyo total',
+              ajuste: 'Participar en brazos de la maestra o en el piso, con apoyo directo.',
+            },
+          ],
+          ninosFoco: [
+            { ninoId: 'sofia', meta: 'Vocabulario de 2 palabras', observar: 'Observa si Sofía señala HEAD cuando la nombras.' },
+            { ninoId: 'luca', meta: 'Reconocimiento corporal', observar: 'Observa si Luca responde a una pregunta simple sobre su cuerpo.' },
+          ],
         },
         {
           id: 'mar-principal',
@@ -306,10 +398,29 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           id: 'mar-outdoor',
           bloque: 'outdoor',
           hora: '10:30',
-          titulo: 'Juego libre en patio',
-          objetivo: 'Movimiento grueso y socialización libre.',
+          titulo: 'Movimiento intencional + juego libre',
+          objetivo: 'Descubrir lo que puede hacer el cuerpo en movimiento, después juego libre.',
           dominio: 'Motricidad gruesa',
           materiales: [{ nombre: 'Patio/juegos exteriores', disponible: true }],
+          conexionTema: 'Lleva "Mi cuerpo" del salón al patio: hoy el cuerpo se explora en movimiento, no solo en la silueta.',
+          guiaOutdoor: {
+            movimientoIntencional: {
+              duracion: '5 min',
+              invitacion: 'Vamos a descubrir lo que puede hacer nuestro cuerpo.',
+              ideas: ['Caminar rápido y lento', 'Saltar', 'Estirar los brazos', 'Tocar las rodillas', 'Contar 5 pasos'],
+              cancion: '"Head, Shoulders, Knees and Toes" (versión en movimiento)',
+            },
+            juegoLibre: 'Después de la invitación, tiempo abierto de juego libre en el patio.',
+            preguntaInformal: '"What can your legs do?"',
+            quePriorizar: 'Movimiento, exploración, juego, socialización y aire libre — nunca un worksheet al aire libre.',
+          },
+          diferenciacion: {
+            Infant: 'Explora el pasto/superficie con apoyo, gateo o pasos asistidos.',
+            Toddler: 'Imita 1-2 movimientos simples (saltar, estirar) junto a la maestra.',
+            Preschool: 'Sigue la secuencia completa de movimientos y los nombra.',
+            'Pre-K': 'Propone un movimiento nuevo para que el grupo lo imite.',
+          },
+          queObservar: 'Quién sigue la invitación de movimiento y quién prefiere el juego libre desde el inicio — ambos son válidos.',
         },
         {
           id: 'mar-steam',
@@ -319,15 +430,53 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           objetivo: 'Explorar la simetría del propio rostro con espejos.',
           dominio: 'Pensamiento científico',
           materiales: [{ nombre: 'Espejos irrompibles', disponible: true }],
+          preparacion: 'Colocar espejos irrompibles a distintas alturas alrededor de un tapete.',
+          queHaceMaestra: 'Modela mirándose al espejo y nombrando partes de su cara; hace una pregunta abierta.',
+          queHacenNinos: 'Se miran al espejo, mueven la cara y el cuerpo, y comparan lo que ven.',
+          preguntasGuia: ['What do you notice?', 'Are both sides of your face the same?', 'What happens when you move the mirror?'],
+          conexionTema: 'Extiende "Mi cuerpo" de cabeza y manos (Circle Time) a la cara, con exploración científica propia.',
+          diferenciacion: {
+            Infant: 'Explora su reflejo con la maestra cerca; mira y toca el espejo.',
+            Toddler: 'Señala partes de su cara en el espejo cuando se le nombran.',
+            Preschool: 'Nombra lo que ve y compara ambos lados de su cara.',
+            'Pre-K': 'Describe la simetría de su cara con una frase completa.',
+          },
+          adaptacionesIndividuales: [
+            {
+              ninoId: 'mateo',
+              necesidad: 'Aún no se sostiene sentado frente al espejo',
+              ajuste: 'Sostenerlo en brazos frente al espejo, a su altura.',
+            },
+          ],
+          ninosFoco: [
+            { ninoId: 'zayne', meta: 'Vocabulario descriptivo', observar: 'Usa una palabra propia para describir lo que ve en el espejo.' },
+          ],
+          queObservar: 'Quién nombra partes de su cara sin ayuda y quién solo explora la textura del espejo.',
         },
         {
           id: 'mar-centros',
           bloque: 'centros',
           hora: '15:30',
           titulo: 'Centros: Ciencias + Bloques',
-          objetivo: 'Profundizar en lo explorado en STEAM, en juego libre.',
+          objetivo: 'Profundizar en lo explorado en STEAM, en juego libre por estaciones.',
           dominio: 'Exploración y juego libre',
           materiales: [{ nombre: 'Lupas', disponible: true }, { nombre: 'Bloques', disponible: true }],
+          guiaCentros: [
+            {
+              nombre: 'Science',
+              material: 'Espejos irrompibles',
+              provocacion: 'Coloca espejos a diferentes alturas para que los niños observen su rostro y cuerpo.',
+              intencion: 'Autoconocimiento + observación.',
+              pregunta: 'What do you notice?',
+            },
+            {
+              nombre: 'Blocks',
+              material: 'Bloques + figuras humanas del inventario',
+              provocacion: 'Construir una casa o espacio para las personas.',
+              intencion: 'Representación espacial + juego simbólico.',
+              pregunta: 'Where will the people sleep?',
+            },
+          ],
         },
       ],
     },

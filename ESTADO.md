@@ -7,11 +7,14 @@ Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRAD
 Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
 revisor-visual, defectos reales corregidos, gate binario aceptado como techo estructural
 documentado (mismo patrón que la landing) — ver "Problemas conocidos". Sesión 5 (app interna) —
-**construida y con el modelo pedagógico CORREGIDO por el usuario tras verla** (dirección visual
-aprobada sin cambios; corrección de fondo en cómo RAIZ representa una planeación real — ver
-"Sesión 5"), build verde — **mostrada al usuario, pendiente de su OK antes de seguir** (no se
-avanza a nuevas pantallas ni a servicios externos hasta que confirme). Gate del revisor-visual
-sobre `/hoy` (4 rondas antes de la corrección pedagógica) sigue pendiente de decisión — ver
+**construida, dirección visual APROBADA sin cambios por el usuario, modelo pedagógico corregido
+en 2 rondas de feedback** (ronda 1: jerarquía Resumen→Planeación completa→Día→Actividad + 3
+capas separadas; ronda 2: cada TIPO de bloque tiene su propia guía — Circle Time/Outdoor/STEAM/
+Centros ya no comparten plantilla genérica) — ver "Sesión 5". Build verde. **Mostrada al usuario
+con 4 bloques de ejemplo (martes) a profundidad completa — pendiente su aprobación explícita
+para replicar el patrón al resto de la semana/sistema antes de seguir** (regla propia del
+usuario: "no avances a otra sesión todavía"). Gate del revisor-visual sobre `/hoy` (4 rondas,
+previas a ambas correcciones pedagógicas) sigue pendiente de decisión — ver
 "Problemas conocidos".
 
 ## Sesión 4 — Onboarding, paywall y login
@@ -532,6 +535,44 @@ HTML renderizado en servidor cuando la animación de entrada no había asentado 
 **Mostrado al usuario — pendiente su confirmación antes de avanzar** (regla explícita del
 usuario: "no avances todavía a nuevas funcionalidades hasta mostrarme cómo quedan estas
 correcciones").
+
+### ⚠️ CORRECCIÓN PEDAGÓGICA DEL USUARIO — RONDA 2 (tras ver la ronda 1 — cosa juzgada)
+El usuario aprobó la estructura de la ronda 1 ("va exactamente en la dirección correcta") pero
+señaló que solo la Actividad Principal tenía profundidad real — Circle Time/Outdoor/STEAM/
+Centros se quedaban en una descripción corta + skill + materiales. Regla nueva, cosa juzgada:
+```
+7. CADA TIPO DE BLOQUE tiene una función pedagógica propia y NECESITA SU PROPIA estructura de
+   guía — nunca forzar todo en la plantilla de "Actividad Principal". Implementado como 3 tipos
+   de guía específicos en `Actividad` (`guiaCircle`, `guiaOutdoor`, `guiaCentros` — solo UNO se
+   llena según `bloque`), reutilizando los campos genéricos ya existentes (`preparacion`/
+   `queHaceMaestra`/`queHacenNinos`/`preguntasGuia`) para STEAM y Pre-K, que SÍ encajan en esa
+   forma:
+   - CIRCLE TIME (`guiaCircle`): rutina que se repite BREVE cada día (saludo/fecha/clima/conteo,
+     3-5 min) + un "Foco de hoy" que SÍ cambia (tema/palabras del día/muestra/preguntas/libro/
+     letra/canción, 5-7 min) + cierre-transición. RAIZ decide qué enfatizar cada día — la maestra
+     nunca escribe esto desde cero.
+   - OUTDOOR (`guiaOutdoor`): una invitación de movimiento intencional breve (~5 min) conectada
+     al tema, seguida de juego libre real — JAMÁS otra clase académica al aire libre.
+   - CENTROS (`guiaCentros`): lista de estaciones simultáneas, cada una con su propia
+     provocación/intención/pregunta — nunca "juego libre" a secas.
+8. La superficie se mantiene simple aunque la profundidad exista: `<Colapsable>` nuevo en
+   `components/app/shell.tsx` — "Adaptaciones individuales", "Niños foco" y "Qué observar" viven
+   plegados por defecto en el detalle de cualquier bloque; lo que SÍ es la guía propia del tipo
+   de bloque (Circle Time/Outdoor/Centros/genérica) y "Una experiencia, cuatro niveles" quedan
+   siempre visibles al abrir la pantalla.
+```
+Implementado y poblado a profundidad completa para los 4 bloques del martes que el usuario pidió
+ver como muestra (`mar-circle`, `mar-outdoor`, `mar-steam`, `mar-centros` en `lib/seed-data.ts`),
+demostrando los 4 conceptos pedidos en los 4: diferenciación por etapa, adaptación individual
+(Sofía/lenguaje expresivo en Circle Time, Mateo/no se sienta en Circle Time y STEAM), niño foco
+con micro-observación (Sofía→HEAD, Luca→pregunta corporal en Circle; Zayne→vocabulario en STEAM),
+y `conexionTema` (cómo cada bloque se conecta con el tema semanal). El resto de la semana
+(Lunes/Miércoles/Jueves/Viernes) sigue con el nivel de detalle de la ronda 1 — **no se replicó
+la profundidad todavía a los demás días/bloques**, a la espera de la aprobación explícita del
+usuario sobre el patrón antes de generalizarlo (su instrucción: "decidimos si la estructura
+queda aprobada para replicarla en el resto del sistema. No avances a otra sesión todavía").
+Verificado: tsc ✓ build ✓ · los 4 bloques revisados visualmente en producción + confirmados
+completos vía HTML renderizado en servidor.
 - **Alcance:** las 3 funciones núcleo del MVP (Constitución del Producto) + la pantalla principal
   M0. Construida con datos semilla realistas (`lib/seed-data.ts` — 4 niños: Luca/Preschool,
   Zayne/Pre-K, Sofía/Toddler, Mateo/Infant, con habilidades y estados reales) — SIN backend

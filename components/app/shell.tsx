@@ -5,9 +5,10 @@
 // activa con layoutId. Reutiliza los tokens de marca de components/landing/tokens.css (import
 // global en app/globals.css) — NO redefine color aquí.
 
+import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { motion } from 'motion/react';
-import { CalendarDays, Home, Users } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { CalendarDays, ChevronDown, Home, Users } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 const NAV = [
@@ -155,5 +156,53 @@ export function AvatarInicial({ nombre, hex, size = 36 }: { nombre: string; hex:
     >
       {nombre.charAt(0)}
     </span>
+  );
+}
+
+/* ── <Colapsable> — la superficie se mantiene simple, la profundidad vive debajo (regla del
+   usuario, Sesión 5 ronda 2: "primero veo lo esencial, después puedo expandir 'Adaptaciones',
+   'Qué observar'"). Cerrado por defecto salvo que la pantalla decida abrirlo (ej. si aplica hoy). ── */
+export function Colapsable({
+  titulo,
+  subtitulo,
+  defaultAbierto = false,
+  children,
+}: {
+  titulo: string;
+  subtitulo?: string;
+  defaultAbierto?: boolean;
+  children: ReactNode;
+}) {
+  const [abierto, setAbierto] = useState(defaultAbierto);
+  return (
+    <div className="overflow-hidden rounded-[var(--radius-card)] bg-[var(--surface)] shadow-[var(--shadow-1)]">
+      <button
+        type="button"
+        onClick={() => setAbierto((a) => !a)}
+        aria-expanded={abierto}
+        className="flex w-full items-center justify-between gap-3 p-4 text-left"
+      >
+        <span>
+          <span className="block text-[15px] font-semibold text-[var(--text-primary)]">{titulo}</span>
+          {subtitulo && <span className="mt-0.5 block text-[12px] text-[var(--text-secondary)]">{subtitulo}</span>}
+        </span>
+        <motion.span animate={{ rotate: abierto ? 180 : 0 }} transition={{ duration: 0.2 }} className="shrink-0 text-[var(--text-tertiary)]">
+          <ChevronDown size={18} aria-hidden="true" />
+        </motion.span>
+      </button>
+      <AnimatePresence initial={false}>
+        {abierto && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
