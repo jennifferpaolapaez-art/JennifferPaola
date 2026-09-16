@@ -6,8 +6,10 @@
 Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRADA** (detalle abajo).
 Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
 revisor-visual, defectos reales corregidos, gate binario aceptado como techo estructural
-documentado (mismo patrón que la landing) — ver "Problemas conocidos". Build verde, código
-completo. Siguiente: **Sesión 5 (app interna)** en cuanto el usuario confirme seguir.
+documentado (mismo patrón que la landing) — ver "Problemas conocidos". Sesión 5 (app interna) —
+**construida (Hoy/Observar/Semana/Niños/Perfil), 4 rondas de revisor-visual sobre la pantalla
+principal, build verde — pendiente de decisión del usuario sobre el gate** (ver "Sesión 5" y
+"Problemas conocidos" abajo).
 
 ## Sesión 4 — Onboarding, paywall y login
 - **Alcance de esta sesión** (SECUENCIA MAESTRA: página de ventas → onboarding → paywall →
@@ -410,6 +412,24 @@ POSITIVOS de la heurística estática del script (confirmado leyendo el código 
   (con el copy de v1) → reescrito para reflejar el copy real de v2.
 
 ## Problemas conocidos
+- **⛔ Veredicto revisor-visual — pantalla principal /hoy (Sesión 5, ronda 4 de 4): NO LISTA** —
+  24/40→27/40→34/40→28/40 · 12/20→15/20→15/20→14/20 (umbral ≥36/40 y ≥16/20). Historial completo
+  de las 4 rondas arriba en "Sesión 5". Cada ronda corrigió defectos reales y verificables (sin
+  CTA principal → agregado; contraste AA fallando en 2 tokens → corregido; ícono genérico en vez
+  del dispositivo ownable → corregido; tamaño táctil bajo 44px → corregido; texto tapado por el
+  nav → corregido), pero el puntaje OSCILÓ en vez de converger — mismo patrón de techo
+  estructural ya documentado y aceptado por el usuario en la landing (7 rondas) y en
+  onboarding/paywall/entrar (3 rondas): a partir de cierto punto, cada ronda de revisor
+  independiente encuentra un conjunto DISTINTO de micro-defectos subjetivos (jerarquía de
+  tamaños, timing de animación, persistencia de preferencias) más rápido de lo que se pueden
+  cerrar, sin que el puntaje general mejore de forma sostenida.
+  **DECISIÓN PENDIENTE DEL USUARIO** (presentada en el reporte de cierre de esta sesión, aún sin
+  respuesta): (a) avanzar aceptando el estado actual de `/hoy` como techo estructural
+  documentado — los defectos objetivos (CTA, contraste, tamaño táctil, dispositivo ownable) ya
+  están corregidos; lo que resta son matices de criterio entre revisores; (b) invertir una 5ª
+  ronda de revisor-visual; (c) revisar manualmente junto con el usuario los 5 defectos de la
+  ronda 4 y decidir cuáles vale la pena perseguir. **No se avanza a la fase de servicios externos
+  (Supabase/Hotmart reales) ni se declara la Sesión 5 "lista" hasta que el usuario elija.**
 - **⛔ Veredicto revisor-visual — onboarding, paywall y entrar (Sesión 4, ronda 3 de 3): NO
   LISTA en las 3 pantallas** — onboarding 30/40 · 11/20, paywall 33/40 · 15/20 · copy 18/20,
   entrar 35/40 · 13/20 (umbral
@@ -465,6 +485,66 @@ POSITIVOS de la heurística estática del script (confirmado leyendo el código 
   no un olvido: Craft y Copy, los dos ejes que sí eran alcanzables para un formato estático, están
   arriba del umbral. La landing en código (v2, ronda 7 + foto humana integrada después) queda
   como versión final de esta fase del proyecto salvo que el usuario pida cambios puntuales.
+
+## Sesión 5 — App interna (Hoy, Observar, Semana, Niños, Perfil)
+- **Alcance:** las 3 funciones núcleo del MVP (Constitución del Producto) + la pantalla principal
+  M0. Construida con datos semilla realistas (`lib/seed-data.ts` — 4 niños: Luca/Preschool,
+  Zayne/Pre-K, Sofía/Toddler, Mateo/Infant, con habilidades y estados reales) — SIN backend
+  todavía (Supabase se conecta en la fase de servicios externos, más adelante en la secuencia
+  maestra). Message-match verificado con los mockups YA mostrados en la landing (frame-hoy.png,
+  frame-foco.png, frame-semana.png, frame-perfil.png de `AppPorDentro.tsx`) — misma actividad
+  "Collage del cuerpo", mismos niños foco.
+- **Pantallas construidas:**
+  - `/hoy` (M0, pantalla principal): actividad del día diferenciada por las 4 bandas de edad
+    (tabs tocables) + materiales disponibles/faltantes + niños foco + CTA principal.
+  - `/observar` (nueva, no estaba en los mockups de la landing): la 3ª función núcleo del MVP
+    ("observación rápida que alimenta el próximo plan") — flujo de 3 pasos (niño → habilidad →
+    nota) que antes NO existía como pantalla; se creó porque el revisor-visual marcó que Hoy no
+    tenía ninguna acción principal reconocible en <3s.
+  - `/ninos-foco`: drill-down desde Hoy, expande "Niños foco de hoy" (message-match frame-foco.png).
+  - `/semana`: planeación semanal con navegación de períodos (mockup frame-semana.png).
+  - `/ninos` (roster, agrupado por etapa) → `/ninos/[id]` (Perfil — mockup frame-perfil.png).
+- **Componentes nuevos:** `components/app/shell.tsx` (AppShell con bottom nav de 3 destinos:
+  Hoy/Semana/Niños, `SkillBadge`, `EtapaChip`, `AvatarInicial`, `LeafCheck` — el dispositivo
+  ownable de marca, reemplazando los íconos genéricos Check/X de Lucide) + `lib/seed-data.ts`.
+  Se agregaron tokens `--sage`/`--butter`/`--coral`/`--teal-nota` a `tokens.css` (antes cada
+  archivo del proyecto hardcodeaba su propio hex para las 4 notas de color del ciclo RAÍZ).
+- **Revisor-visual sobre `/hoy` (pantalla principal — obligatorio, una de las 4 del dinero):
+  4 rondas corridas.**
+  ```
+  R1  24/40 · 12/20 — defectos: bandas de edad "en inglés" (FALSO POSITIVO — decisión de
+      producto ya tomada, términos de licenciamiento US, documentado abajo), párrafo de cierre
+      no visible, sin CTA principal reconocible (defecto real más importante — Hoy no tenía
+      NINGUNA acción en <3s), fecha con "De" en mayúscula (bug de la clase `capitalize` de
+      Tailwind con preposiciones en español), sin dispositivo ownable, reduced-motion incompleto.
+  R2  27/40 · 15/20 — tras agregar el CTA "Registrar observación de hoy" (→ nueva pantalla
+      /observar), LeafCheck en vez de Check/X genérico, fix de fecha, reduced-motion completo.
+      Defectos nuevos: contraste del --coral en el chip negativo (~3.25:1), el ícono de éxito de
+      /observar no usaba LeafCheck, EtapaChip duplicado (Hoy reimplementaba el compartido a
+      mano), CTA sin whileTap real (solo CSS).
+  R3  34/40 · 15/20 — tras oscurecer --coral a #96412D, unificar EtapaChip, agregar whileTap.
+      Defectos nuevos: --text-secondary sobre --surface-2 medía ~4.15:1 (bajo AA), card principal
+      dependía solo de la sombra para separarse del fondo, botón deshabilitado de /observar sin
+      texto de ayuda.
+  R4  28/40 · 14/20 — tras los 3 fixes de R3 (chip inactivo a --text-primary, borde sutil en la
+      card, hint bajo el textarea). OSCILÓ hacia abajo pese a fixes reales — mismo patrón de
+      varianza entre revisores independientes ya visto en onboarding. Defectos nuevos: el pie de
+      página quedaba tapado por el nav sticky (pb-6 insuficiente — REAL, corregido), chips de
+      edad con ~34px de alto táctil (bajo el mínimo 44px — REAL, corregido a min-h-11), falta
+      AnimatePresence en el cross-fade del texto de diferenciación, "Preschool" como default sin
+      persistencia (heurística 7), jerarquía de tamaños 13/14/15px muy apretada.
+  ```
+  **Fixes objetivos de R4 aplicados sin relanzar una 5ª ronda** (padding del shell, tamaño
+  táctil de los chips — ambos verificables sin ambigüedad, no dependen del criterio subjetivo
+  del revisor). NO se corrió una 5ª ronda de revisor-visual: 4 rondas ya corridas (~320k tokens),
+  con oscilación de puntaje (24→27→34→28) en vez de convergencia — el mismo patrón de techo
+  estructural que la landing (7 rondas) y onboarding/paywall/entrar (3 rondas). Ver decisión en
+  "Problemas conocidos".
+- **Nota sobre "Infant/Toddler/Preschool/Pre-K" en inglés:** el revisor R1 lo marcó como defecto
+  de idioma; se mantuvo sin cambio porque es una decisión de producto YA tomada y documentada
+  (Sesión 3, mockups de la landing): son los términos de clasificación por edad del licenciamiento
+  de cuidado infantil en EE.UU., no un descuido de traducción — cambiarlos rompería además el
+  message-match con los mockups que la landing ya le prometió al usuario.
 
 ## Sesión 1 — CERRADA (precio, arquitectura, base de datos, auth)
 

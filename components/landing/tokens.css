@@ -39,6 +39,16 @@
 
   /* ── DERIVADOS ── */
   --chip-bg: color-mix(in oklab, var(--accent) 10%, transparent);
+
+  /* ── NOTAS DE COLOR DEL CICLO RAÍZ (Solucion.tsx en la landing, reutilizadas en la app
+     interna para bandas de edad y estados de habilidad) — las 4 notas de FICHA-ARTE.md,
+     como tokens únicos en vez de hex repetidos por archivo. ── */
+  --sage: #4F6249;
+  --butter: #B58A1E;
+  --coral: #96412D;           /* oscurecido (revisor-visual, app interna R2): #C85D48 original
+                                 fallaba WCAG AA (~3.25:1) como texto sobre su chip tintado —
+                                 mismo ajuste ya aplicado a --accent-2 en el kit de landing */
+  --teal-nota: #0D5C63;
 }
 
 /* Base mínima que el kit asume (no tematizar) */
