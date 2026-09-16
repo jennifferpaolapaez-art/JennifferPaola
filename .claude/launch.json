@@ -3,10 +3,10 @@
   "configurations": [
     {
       "name": "start",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "cmd.exe",
       "runtimeArgs": [
-        "run",
-        "start"
+        "/c",
+        "cd /d C:\\dev\\raiz-app && npm run start"
       ],
       "port": 3000
     }

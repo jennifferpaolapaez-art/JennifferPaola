@@ -7,9 +7,12 @@ Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRAD
 Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
 revisor-visual, defectos reales corregidos, gate binario aceptado como techo estructural
 documentado (mismo patrón que la landing) — ver "Problemas conocidos". Sesión 5 (app interna) —
-**construida (Hoy/Observar/Semana/Niños/Perfil), 4 rondas de revisor-visual sobre la pantalla
-principal, build verde — pendiente de decisión del usuario sobre el gate** (ver "Sesión 5" y
-"Problemas conocidos" abajo).
+**construida y con el modelo pedagógico CORREGIDO por el usuario tras verla** (dirección visual
+aprobada sin cambios; corrección de fondo en cómo RAIZ representa una planeación real — ver
+"Sesión 5"), build verde — **mostrada al usuario, pendiente de su OK antes de seguir** (no se
+avanza a nuevas pantallas ni a servicios externos hasta que confirme). Gate del revisor-visual
+sobre `/hoy` (4 rondas antes de la corrección pedagógica) sigue pendiente de decisión — ver
+"Problemas conocidos".
 
 ## Sesión 4 — Onboarding, paywall y login
 - **Alcance de esta sesión** (SECUENCIA MAESTRA: página de ventas → onboarding → paywall →
@@ -487,6 +490,48 @@ POSITIVOS de la heurística estática del script (confirmado leyendo el código 
   como versión final de esta fase del proyecto salvo que el usuario pida cambios puntuales.
 
 ## Sesión 5 — App interna (Hoy, Observar, Semana, Niños, Perfil)
+
+### ⚠️ CORRECCIÓN PEDAGÓGICA DEL USUARIO (tras ver la app construida — cosa juzgada, no redecidir)
+El usuario aprobó la dirección visual sin cambios ("me gusta mucho cómo va visualmente y NO
+quiero cambiar la dirección general") pero corrigió el MODELO de fondo: la v1 de Hoy/Semana
+simplificaba de más cómo funciona una planeación real de Early Childhood Education. Reglas
+correctas ya implementadas, cosa juzgada para toda sesión futura:
+```
+1. Un día tiene VARIOS bloques de rutina (Circle Time, Actividad principal, STEAM, Centros,
+   Lectura, Outdoor, Pre-K, Cierre) — NUNCA una sola actividad. Los bloques son CONFIGURABLES
+   por la maestra (catálogo Bloque/BLOQUE_LABEL en seed-data.ts), no fijos para todas.
+2. "Semana" (la pantalla que ya existía) es un RESUMEN/vista rápida — NUNCA la planeación. Debe
+   llevar a "Ver planeación completa" (/planeacion), que sí muestra info general de la semana
+   (tema mensual, subtema, vocabulario, objetivos, dominios) + TODOS los bloques de cada día.
+3. Jerarquía de navegación fija: Vista rápida (/semana) → Planeación completa (/planeacion) →
+   Día (sección dentro de /planeacion) → Actividad (/planeacion/[id]) → capas de esa actividad.
+4. Dentro de una actividad hay 3 CAPAS que NUNCA se mezclan entre sí:
+   (a) diferenciación por ETAPA (Infant/Toddler/Preschool/Pre-K) — universal, "Una experiencia,
+       cuatro niveles" se mantiene tal cual, pero aclarando que es de UNA actividad, no del día.
+   (b) ADAPTACIONES INDIVIDUALES — ajuste puntual de un niño por una necesidad (sensorial,
+       motriz, de lenguaje). NUNCA implica que el niño tenga un Plan Individual.
+   (c) NIÑOS FOCO — niños cuya meta/skill activa se observa a propósito en ESA actividad. Un
+       niño foco puede no tener ninguna adaptación, y viceversa — son listas independientes
+       (`adaptacionesIndividuales` y `ninosFoco` en el tipo `Actividad`, nunca combinadas).
+5. 3 NIVELES de objetivo, nunca colapsados en uno: objetivo DE LA SEMANA (grupo — campo
+   `objetivosGenerales` de `PlaneacionSemanal`), objetivo DE LA ACTIVIDAD (skill/propósito —
+   campo `objetivo` de `Actividad`), objetivo INDIVIDUAL (cómo un niño puntual aprovecha esa
+   misma experiencia — vive en `ninosFoco`/`adaptacionesIndividuales`, no como campo aparte).
+6. "Hoy" muestra PRIMERO el resumen de toda la rutina del día (todos los bloques con hora),
+   Y DESPUÉS destaca la "Actividad actual" con su detalle — nunca entra directo a una actividad.
+```
+Implementado en `lib/seed-data.ts` (reescrito: `PlaneacionSemanal`/`DiaPlan`/`Actividad`/
+`AdaptacionIndividual`/`NinoFocoActividad`, catálogo `Bloque`/`BLOQUE_LABEL`) + `app/semana`
+(ahora "Resumen semanal", mismo diseño ya aprobado, + CTA "Ver planeación completa") +
+`app/planeacion` (nueva, info general de semana + todos los bloques de cada día) +
+`app/planeacion/[id]` (nueva, detalle de actividad con las 3 capas separadas) + `app/hoy`
+(reescrita: rutina completa primero, actividad actual después, adaptaciones y foco como
+secciones separadas). Verificado: tsc ✓ build ✓ · las 4 pantallas revisadas visualmente en
+producción (screenshots temporales, no guardados) — contenido completo confirmado también vía
+HTML renderizado en servidor cuando la animación de entrada no había asentado en la captura.
+**Mostrado al usuario — pendiente su confirmación antes de avanzar** (regla explícita del
+usuario: "no avances todavía a nuevas funcionalidades hasta mostrarme cómo quedan estas
+correcciones").
 - **Alcance:** las 3 funciones núcleo del MVP (Constitución del Producto) + la pantalla principal
   M0. Construida con datos semilla realistas (`lib/seed-data.ts` — 4 niños: Luca/Preschool,
   Zayne/Pre-K, Sofía/Toddler, Mateo/Infant, con habilidades y estados reales) — SIN backend
