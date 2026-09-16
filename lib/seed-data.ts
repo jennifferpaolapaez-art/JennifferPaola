@@ -18,6 +18,28 @@
 // Y 3 niveles de objetivo: el de la SEMANA (grupo), el de la ACTIVIDAD (skill/propósito), y el
 // INDIVIDUAL (qué aprovecha cada niño puntual de esa misma experiencia — vive en ninosFoco y en
 // adaptacionesIndividuales, no como un campo aparte).
+//
+// ARQUITECTURA DE DATOS (decidida con el usuario, Sesión 5 ronda 3 — arquitectura oficial de
+// RAÍZ, documentada también en ESTADO.md):
+//   1. `Actividad` = LA INSTANCIA programada de un día concreto, nunca una biblioteca reutilizable.
+//      Una futura `activity_templates`/`activity_library` (NO construida) podría alimentar una
+//      instancia; la instancia sigue siendo la fuente de verdad de lo que pasa ese día.
+//   2. Contenido flexible (JSONB en el esquema real: guiaCircle/guiaOutdoor/guiaCentros/
+//      guiaCierre/preparacion/queHace*) vs. HECHOS RELACIONALES (adaptacionesIndividuales,
+//      ninosFoco, asistencia, printables) — el contenido JAMÁS esconde una llave relacional
+//      (ninoId, skillId, printableId, observationId...); esas siempre viven en campos/tablas
+//      estructurados.
+//   3. `AdaptacionIndividual` y `NinoFocoActividad` son entidades relacionales completas (con
+//      origen/alcance/referencias y skillId/estado respectivamente), nunca texto libre.
+//   4. Asistencia REAL usa un ESTADO (sin_marcar/presente/ausente), nunca un boolean — y
+//      "programado" NO es un valor de ese estado: se DERIVA del horario del niño
+//      (`Nino.diasAsistencia`) comparado contra el día, nunca se guarda como presencia. En el
+//      esquema real, `asistencia_diaria` tiene restricción única (ninoId, fecha).
+//   5. El resultado de un niño foco NUNCA se duplica como texto: `NinoFocoActividad` solo guarda
+//      un `estadoFoco` (pendiente/observado) y, cuando existe, una referencia `observationId` —
+//      el contenido real de la observación vive únicamente en `observations`.
+//   6. Los bloques del día se DERIVAN de `RUTINA_PROGRAMA` (la configuración del salón), no se
+//      improvisan por día — ver esa sección más abajo.
 
 export type Etapa = 'Infant' | 'Toddler' | 'Preschool' | 'Pre-K';
 export type EstadoSkill = 'dominado' | 'en_desarrollo' | 'no_observado';
@@ -38,6 +60,10 @@ export interface Nino {
   skills: Skill[];
   /** Meta activa (si tiene foco hoy) — se muestra en Hoy/Niños foco. */
   metaActiva?: { skillId: string; nota: string };
+  /** Asistencia PROGRAMADA (horario configurado) — de aquí se DERIVA si hoy le tocaba venir; la
+   * presencia REAL de cada día vive aparte, en ASISTENCIA_HOY (regla del usuario, Sesión 5
+   * ronda 3: nunca mezclar planificación con realidad). */
+  diasAsistencia: DiaSemana[];
 }
 
 export const NINOS: Nino[] = [
@@ -48,6 +74,7 @@ export const NINOS: Nino[] = [
     edadTexto: '3 años 8 meses',
     colorTint: 'coral',
     metaActiva: { skillId: 'tijeras', nota: 'Tijeras' },
+    diasAsistencia: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
     skills: [
       { id: 'tijeras', nombre: 'Tijeras', estado: 'en_desarrollo', actualizado: '2026-09-08' },
       { id: 'numeros-1-8', nombre: 'Números 1–8', estado: 'dominado', actualizado: '2026-08-20' },
@@ -62,6 +89,7 @@ export const NINOS: Nino[] = [
     edadTexto: '4 años 5 meses',
     colorTint: 'sage',
     metaActiva: { skillId: 'numeros-6-8', nota: 'Números 6–8' },
+    diasAsistencia: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
     skills: [
       { id: 'numeros-6-8', nombre: 'Conteo 6–8', estado: 'en_desarrollo', actualizado: '2026-09-09' },
       { id: 'rima', nombre: 'Identifica rimas', estado: 'dominado', actualizado: '2026-08-28' },
@@ -75,6 +103,7 @@ export const NINOS: Nino[] = [
     etapa: 'Toddler',
     edadTexto: '2 años 1 mes',
     colorTint: 'butter',
+    diasAsistencia: ['Lun', 'Mar', 'Jue'],
     skills: [
       { id: 'palabras', nombre: 'Vocabulario de 2 palabras', estado: 'en_desarrollo', actualizado: '2026-09-05' },
       { id: 'apilar', nombre: 'Apila 4+ bloques', estado: 'dominado', actualizado: '2026-08-22' },
@@ -86,6 +115,7 @@ export const NINOS: Nino[] = [
     etapa: 'Infant',
     edadTexto: '11 meses',
     colorTint: 'teal',
+    diasAsistencia: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
     skills: [
       { id: 'gateo', nombre: 'Gateo cruzado', estado: 'dominado', actualizado: '2026-08-30' },
       { id: 'pinza', nombre: 'Agarre de pinza', estado: 'en_desarrollo', actualizado: '2026-09-10' },
@@ -109,6 +139,8 @@ export function ninoPorId(id: string): Nino | undefined {
 export function ninosConFocoHoy(): Nino[] {
   return NINOS.filter((n) => n.metaActiva);
 }
+
+export type DiaSemana = 'Lun' | 'Mar' | 'Mié' | 'Jue' | 'Vie';
 
 /* ── RUTINA DIARIA — los bloques que la maestra configura para su salón (regla del usuario:
    "estos bloques deben ser configurables, porque no todas las maestras tienen la misma rutina").
@@ -135,19 +167,76 @@ export const BLOQUE_LABEL: Record<Bloque, string> = {
   cierre: 'Cierre / Reflexión',
 };
 
-/** Adaptación por una necesidad puntual de UN niño (capa B) — nunca implica Plan Individual. */
+/** RUTINA CONFIGURADA DEL PROGRAMA — regla del usuario (Sesión 5 ronda 3): un día NUNCA improvisa
+ * qué bloques trae, los HEREDA de esta configuración. Formaliza el patrón real que ya vive en
+ * PLANEACION_SEMANA_3 (cada bloque, con qué días y a qué hora aproximada ocurre). Cuando exista
+ * una pantalla de configuración de rutina, la maestra edita esta lista y los días futuros se
+ * validan/generan a partir de ella — hoy la usa `bloquesConfiguradosParaDia` como fuente de qué
+ * bloques le tocan a cada día de la semana. */
+export interface BloqueRutina {
+  bloque: Bloque;
+  horaAproximada: string;
+  duracionMin: number;
+  orden: number;
+  dias: DiaSemana[];
+}
+
+export const RUTINA_PROGRAMA: BloqueRutina[] = [
+  { bloque: 'circle', horaAproximada: '9:30', duracionMin: 15, orden: 1, dias: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'] },
+  { bloque: 'principal', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Lun', 'Mar', 'Jue'] },
+  { bloque: 'steam', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Mié'] },
+  { bloque: 'centros', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Vie'] },
+  { bloque: 'outdoor', horaAproximada: '10:30', duracionMin: 30, orden: 3, dias: ['Lun', 'Mar', 'Jue'] },
+  { bloque: 'lectura', horaAproximada: '11:00', duracionMin: 20, orden: 3, dias: ['Mié'] },
+  { bloque: 'steam', horaAproximada: '11:30', duracionMin: 30, orden: 4, dias: ['Mar'] },
+  { bloque: 'prek', horaAproximada: '13:30', duracionMin: 30, orden: 4, dias: ['Mié'] },
+  { bloque: 'centros', horaAproximada: '15:30', duracionMin: 45, orden: 5, dias: ['Lun', 'Mar'] },
+  { bloque: 'cierre', horaAproximada: '15:00', duracionMin: 15, orden: 6, dias: ['Vie'] },
+];
+
+/** Los bloques que le tocan a un día de la semana según la rutina configurada, en orden. */
+export function bloquesConfiguradosParaDia(dia: DiaSemana): BloqueRutina[] {
+  return RUTINA_PROGRAMA.filter((b) => b.dias.includes(dia)).sort((a, b) => a.orden - b.orden);
+}
+
+/** De dónde salió una adaptación individual — para que RAÍZ sepa no solo QUÉ se hizo, sino POR
+ * QUÉ se sugirió (regla del usuario, Sesión 5 ronda 3). */
+export type OrigenAdaptacion = 'necesidad_registrada' | 'plan_individual' | 'observacion' | 'recomendacion_raiz';
+
+/** Adaptación por una necesidad puntual de UN niño (capa B) — nunca implica Plan Individual.
+ * Entidad relacional completa: `necesidad`/`ajuste` son el snapshot histórico de lo que se usó
+ * ESE día; las referencias (`childNeedId`/`individualGoalId`/`planId`/`observationId`) enlazan a
+ * la fuente estructurada cuando existe — ninguna es obligatoria (regla del usuario: "no todos son
+ * obligatorios"). */
 export interface AdaptacionIndividual {
   ninoId: string;
   necesidad: string;
   ajuste: string;
+  origen: OrigenAdaptacion;
+  /** Si esta adaptación aplica solo a esta actividad puntual o es una adaptación general del
+   * niño que se está reutilizando aquí (capa B nunca implica Plan Individual, pero sí puede ser
+   * una adaptación permanente que se repite en varias actividades). */
+  alcance: 'solo_esta_actividad' | 'general_del_nino';
+  childNeedId?: string;
+  individualGoalId?: string;
+  planId?: string;
+  observationId?: string;
 }
 
 /** Niño cuya meta/skill activa se observa a propósito en ESTA actividad (capa C) — objetivo
- * individual: cómo esa misma experiencia grupal sirve a su meta puntual. */
+ * individual: cómo esa misma experiencia grupal sirve a su meta puntual. El RESULTADO de la
+ * observación nunca se duplica aquí como texto (regla del usuario, Sesión 5 ronda 3): solo se
+ * guarda un estado (`pendiente`/`observado`) y, cuando existe, la referencia `observationId` — el
+ * contenido real vive únicamente en `observations`. */
 export interface NinoFocoActividad {
   ninoId: string;
   meta: string;
   observar: string;
+  /** Enlaza con el skill/meta real del niño (`Nino.skills[].id`) cuando ya existe como skill
+   * formal; algunos focos observan un dominio que aún no se ha formalizado como skill. */
+  skillId?: string;
+  estadoFoco: 'pendiente' | 'observado';
+  observationId?: string;
 }
 
 /* ── GUÍAS ESPECÍFICAS POR TIPO DE BLOQUE (corrección del usuario, Sesión 5 — ronda 2):
@@ -203,6 +292,16 @@ export interface GuiaCierre {
   puenteManana?: string;
 }
 
+/** Imprimible RESERVADO — la entidad existe en el modelo para que una actividad pueda
+ * enlazarlos, pero NO se genera ningún archivo real todavía (regla del usuario, Sesión 5 ronda
+ * 3: "no construyas printables reales"). Reemplaza el campo `printable?: string` que no se
+ * renderizaba en ninguna pantalla. */
+export interface Printable {
+  id: string;
+  titulo: string;
+  tipo: 'ficha_individual' | 'ficha_grupal' | 'guia_para_casa';
+}
+
 export interface Actividad {
   id: string;
   bloque: Bloque;
@@ -224,7 +323,8 @@ export interface Actividad {
   ninosFoco?: NinoFocoActividad[];
   queObservar?: string;
   evidenciaPosible?: string;
-  printable?: string;
+  /** Reservado — ver `Printable`. Ninguna actividad de esta demo lo puebla todavía. */
+  printablesDisponibles?: Printable[];
   notas?: string;
   /** Guías específicas — solo UNA se llena, según `bloque`. */
   guiaCircle?: GuiaCircleTime;
@@ -234,8 +334,13 @@ export interface Actividad {
 }
 
 export interface DiaPlan {
-  dia: 'Lun' | 'Mar' | 'Mié' | 'Jue' | 'Vie';
+  dia: DiaSemana;
   fecha: string; // ISO
+  /** Tema/foco del día (primera clase) — antes vivía escondido dentro de guiaCircle.focoDeHoy;
+   * ahora es un hecho estructurado del día (regla del usuario: nunca esconder relaciones/hechos
+   * dentro del contenido flexible). */
+  temaDia: string;
+  focoDia: string;
   actividades: Actividad[];
 }
 
@@ -265,6 +370,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
     {
       dia: 'Lun',
       fecha: '2026-09-14',
+      temaDia: 'Empezamos a conocer nuestro cuerpo',
+      focoDia: 'Introducimos el tema de la semana con la canción del cuerpo.',
       actividades: [
         {
           id: 'lun-circle',
@@ -325,9 +432,13 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
               ninoId: 'mateo',
               necesidad: 'Aún no se acuesta boca arriba largo rato sin apoyo',
               ajuste: 'Trazar solo el contorno de sus manos y pies en vez del cuerpo completo.',
+              origen: 'necesidad_registrada',
+              alcance: 'solo_esta_actividad',
             },
           ],
-          ninosFoco: [{ ninoId: 'luca', meta: 'Reconocimiento corporal', observar: 'Nombra al menos 2 partes al ver su silueta.' }],
+          ninosFoco: [
+            { ninoId: 'luca', meta: 'Reconocimiento corporal', observar: 'Nombra al menos 2 partes al ver su silueta.', estadoFoco: 'pendiente' },
+          ],
           queObservar: 'Quién reconoce su silueta como "yo" y quién la ve como un dibujo cualquiera.',
         },
         {
@@ -379,6 +490,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
     {
       dia: 'Mar',
       fecha: '2026-09-15',
+      temaDia: 'Mi cuerpo: cabeza y manos',
+      focoDia: 'Cabeza y manos — las mismas dos palabras se practican en Circle Time y en Collage del cuerpo.',
       actividades: [
         {
           id: 'mar-circle',
@@ -419,16 +532,20 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
               ninoId: 'sofia',
               necesidad: 'Lenguaje expresivo limitado',
               ajuste: 'Permitir señalar o elegir entre dos imágenes en vez de responder con palabras.',
+              origen: 'necesidad_registrada',
+              alcance: 'general_del_nino',
             },
             {
               ninoId: 'mateo',
               necesidad: 'Aún no se sienta con apoyo total',
               ajuste: 'Participar en brazos de la maestra o en el piso, con apoyo directo.',
+              origen: 'necesidad_registrada',
+              alcance: 'general_del_nino',
             },
           ],
           ninosFoco: [
-            { ninoId: 'sofia', meta: 'Vocabulario de 2 palabras', observar: 'Observa si Sofía señala HEAD cuando la nombras.' },
-            { ninoId: 'luca', meta: 'Reconocimiento corporal', observar: 'Observa si Luca responde a una pregunta simple sobre su cuerpo.' },
+            { ninoId: 'sofia', meta: 'Vocabulario de 2 palabras', observar: 'Observa si Sofía señala HEAD cuando la nombras.', skillId: 'palabras', estadoFoco: 'pendiente' },
+            { ninoId: 'luca', meta: 'Reconocimiento corporal', observar: 'Observa si Luca responde a una pregunta simple sobre su cuerpo.', estadoFoco: 'pendiente' },
           ],
         },
         {
@@ -459,16 +576,20 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
               ninoId: 'sofia',
               necesidad: 'Sensibilidad sensorial (evita tocar texturas pegajosas)',
               ajuste: 'Ofrecerle un aplicador de pega en vez de pega-stick directo en la mano.',
+              origen: 'necesidad_registrada',
+              alcance: 'general_del_nino',
             },
             {
               ninoId: 'mateo',
               necesidad: 'Aún no se sostiene de pie por sí solo',
               ajuste: 'Explorar la silueta en el piso, boca abajo, con apoyo directo de la maestra.',
+              origen: 'necesidad_registrada',
+              alcance: 'general_del_nino',
             },
           ],
           ninosFoco: [
-            { ninoId: 'luca', meta: 'Tijeras', observar: 'Cortes consecutivos sin ayuda' },
-            { ninoId: 'zayne', meta: 'Números 6–8', observar: 'Reconoce solo, sin contar con el dedo' },
+            { ninoId: 'luca', meta: 'Tijeras', observar: 'Cortes consecutivos sin ayuda', skillId: 'tijeras', estadoFoco: 'pendiente' },
+            { ninoId: 'zayne', meta: 'Números 6–8', observar: 'Reconoce solo, sin contar con el dedo', skillId: 'numeros-6-8', estadoFoco: 'pendiente' },
           ],
           queObservar: 'Quién nombra la parte del cuerpo sin que se le pregunte, y quién necesita el modelo de la maestra.',
           evidenciaPosible: 'Foto de la silueta terminada + la frase textual que dijo el niño al pegar.',
@@ -525,10 +646,12 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
               ninoId: 'mateo',
               necesidad: 'Aún no se sostiene sentado frente al espejo',
               ajuste: 'Sostenerlo en brazos frente al espejo, a su altura.',
+              origen: 'necesidad_registrada',
+              alcance: 'general_del_nino',
             },
           ],
           ninosFoco: [
-            { ninoId: 'zayne', meta: 'Vocabulario descriptivo', observar: 'Usa una palabra propia para describir lo que ve en el espejo.' },
+            { ninoId: 'zayne', meta: 'Vocabulario descriptivo', observar: 'Usa una palabra propia para describir lo que ve en el espejo.', estadoFoco: 'pendiente' },
           ],
           queObservar: 'Quién nombra partes de su cara sin ayuda y quién solo explora la textura del espejo.',
         },
@@ -562,6 +685,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
     {
       dia: 'Mié',
       fecha: '2026-09-16',
+      temaDia: 'De pies a cabeza',
+      focoDia: 'La palabra "pies" y el libro que leemos completo más tarde en Lectura.',
       actividades: [
         {
           id: 'mie-circle',
@@ -620,9 +745,13 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
               ninoId: 'sofia',
               necesidad: 'Sensibilidad sensorial con pintura',
               ajuste: 'Usar un guante fino o un pincel en vez de contacto directo con la pintura.',
+              origen: 'necesidad_registrada',
+              alcance: 'general_del_nino',
             },
           ],
-          ninosFoco: [{ ninoId: 'zayne', meta: 'Conteo 6–8', observar: 'Cuenta los dedos de su propia huella sin ayuda.' }],
+          ninosFoco: [
+            { ninoId: 'zayne', meta: 'Conteo 6–8', observar: 'Cuenta los dedos de su propia huella sin ayuda.', skillId: 'numeros-6-8', estadoFoco: 'pendiente' },
+          ],
           queObservar: 'Quién compara tamaños por iniciativa propia y quién necesita la pregunta guía.',
         },
         {
@@ -656,7 +785,9 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           queHaceMaestra: 'Modela trazando la primera letra de cada palabra despacio, nombrándola.',
           queHacenNinos: 'Practican el trazo sobre las letras punteadas de su ficha.',
           preguntasGuia: ['¿Qué letra empieza "head"?'],
-          ninosFoco: [{ ninoId: 'zayne', meta: 'Escritura de nombre', observar: 'Sostiene el lápiz con pinza madura mientras traza.' }],
+          ninosFoco: [
+            { ninoId: 'zayne', meta: 'Escritura de nombre', observar: 'Sostiene el lápiz con pinza madura mientras traza.', skillId: 'nombre-propio', estadoFoco: 'pendiente' },
+          ],
           queObservar: 'Agarre del lápiz y reconocimiento de la primera letra de cada palabra.',
         },
       ],
@@ -664,6 +795,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
     {
       dia: 'Jue',
       fecha: '2026-09-17',
+      temaDia: 'Mis 5 sentidos',
+      focoDia: 'Ojos y orejas — los 5 sentidos con los que exploramos el mundo.',
       actividades: [
         {
           id: 'jue-circle',
@@ -715,7 +848,9 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
             Preschool: 'Juega el rol de doctor o paciente y nombra una parte del cuerpo.',
             'Pre-K': 'Sostiene un diálogo corto de 2-3 turnos en el rol.',
           },
-          ninosFoco: [{ ninoId: 'sofia', meta: 'Vocabulario de 2 palabras', observar: 'Nombra una parte del cuerpo durante el juego.' }],
+          ninosFoco: [
+            { ninoId: 'sofia', meta: 'Vocabulario de 2 palabras', observar: 'Nombra una parte del cuerpo durante el juego.', skillId: 'palabras', estadoFoco: 'pendiente' },
+          ],
           queObservar: 'Quién sostiene el rol más allá de un turno y quién necesita que la maestra lo guíe.',
         },
         {
@@ -742,6 +877,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
     {
       dia: 'Vie',
       fecha: '2026-09-18',
+      temaDia: 'Repaso de la semana',
+      focoDia: 'Repasamos cabeza, mano y pies antes de contar partes del cuerpo de un amigo en Centros.',
       actividades: [
         {
           id: 'vie-circle',
@@ -792,7 +929,9 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
               pregunta: 'How many eyes does your friend have?',
             },
           ],
-          ninosFoco: [{ ninoId: 'zayne', meta: 'Números 6–8', observar: 'Cuenta dedos y ojos de sus compañeros sin ayuda.' }],
+          ninosFoco: [
+            { ninoId: 'zayne', meta: 'Números 6–8', observar: 'Cuenta dedos y ojos de sus compañeros sin ayuda.', skillId: 'numeros-6-8', estadoFoco: 'pendiente' },
+          ],
         },
         {
           id: 'vie-cierre',
@@ -835,6 +974,42 @@ export function diaPorFecha(fecha: string): DiaPlan | undefined {
 
 /** Fecha de referencia de esta demo — en producción se calcula con la fecha real. */
 export const FECHA_HOY = '2026-09-15';
+
+/* ── ASISTENCIA — dos conceptos separados (regla del usuario, Sesión 5 ronda 3): la asistencia
+   PROGRAMADA se deriva del horario del niño (`Nino.diasAsistencia`, arriba) y nunca se guarda
+   como presencia; la presencia REAL del día vive aquí, en `ASISTENCIA_HOY`, con un estado que
+   nunca incluye "programado" como valor. En el esquema real, `asistencia_diaria` tiene
+   restricción única (ninoId, fecha) — un solo registro de presencia por niño por día. ── */
+export type EstadoAsistencia = 'sin_marcar' | 'presente' | 'ausente';
+
+export interface AsistenciaDia {
+  ninoId: string;
+  fecha: string;
+  estado: EstadoAsistencia;
+}
+
+/** Presencia real del día de referencia — Luca y Zayne ya marcados presentes, Sofía marcada
+ * ausente (aunque su horario la programaba para hoy — así se ve la diferencia entre programado
+ * y real), Mateo todavía sin marcar. */
+export const ASISTENCIA_HOY: AsistenciaDia[] = [
+  { ninoId: 'luca', fecha: FECHA_HOY, estado: 'presente' },
+  { ninoId: 'zayne', fecha: FECHA_HOY, estado: 'presente' },
+  { ninoId: 'sofia', fecha: FECHA_HOY, estado: 'ausente' },
+  { ninoId: 'mateo', fecha: FECHA_HOY, estado: 'sin_marcar' },
+];
+
+/** Si el horario del niño lo programaba para el día de esta fecha — NUNCA se guarda como un
+ * valor de `estado`, se deriva comparando `diasAsistencia` contra el día de la semana. */
+export function estaProgramadoEnFecha(ninoId: string, fecha: string): boolean {
+  const nino = ninoPorId(ninoId);
+  const dia = diaPorFecha(fecha);
+  return !!(nino && dia && nino.diasAsistencia.includes(dia.dia));
+}
+
+/** Presencia real registrada para un niño en una fecha — 'sin_marcar' si todavía no se marca. */
+export function estadoAsistencia(ninoId: string, fecha: string): EstadoAsistencia {
+  return ASISTENCIA_HOY.find((a) => a.ninoId === ninoId && a.fecha === fecha)?.estado ?? 'sin_marcar';
+}
 
 /** La actividad más representativa de un día, para la Vista rápida de la semana (NUNCA "la
  * planeación completa" — regla del usuario: la vista rápida es un resumen, no reemplaza los

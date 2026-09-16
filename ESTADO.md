@@ -11,10 +11,16 @@ documentado (mismo patrón que la landing) — ver "Problemas conocidos". Sesió
 tras 2 rondas de feedback + replicado a las 5 semanas completas** (ronda 1: jerarquía Resumen→
 Planeación completa→Día→Actividad + 3 capas separadas; ronda 2: guía propia por tipo de bloque,
 aprobada por el usuario ["se ve bien, replícalo al resto de la semana"] y ya generalizada a
-Lunes-Viernes completos) — ver "Sesión 5". Build verde. **Sesión 5 funcionalmente completa —
-pendiente que el usuario la recorra completa y confirme antes de pasar a Sesión 6** (regla propia del
-usuario: "no avances a otra sesión todavía"). Gate del revisor-visual sobre `/hoy` (4 rondas,
-previas a ambas correcciones pedagógicas) sigue pendiente de decisión — ver
+Lunes-Viernes completos) — ver "Sesión 5". **Ronda 3 (arquitectura de datos): CERRADA** — antes de
+seguir construyendo pantallas nuevas, el usuario pidió fijar el esqueleto de datos (rutina
+configurada, adaptaciones/niños foco relacionales, asistencia con estado, imprimibles reservados);
+negociado punto por punto con el usuario y ejecutado — ver "Refinamiento del esquema (Sesión 5,
+ronda 3)" en Sesión 1 y "Sesión 5 → Arquitectura de datos" abajo. Build verde. **Sesión 5
+funcionalmente completa — pendiente que el usuario la recorra completa y confirme antes de pasar a
+Sesión 6** (regla propia del usuario: "no avances a otra sesión todavía"). Explícitamente NO
+construido todavía (por instrucción del usuario): generación de PDF, contenido generado por IA
+real, imprimibles reales, paquete semanal, pantalla "Preparar mi semana". Gate del revisor-visual
+sobre `/hoy` (4 rondas, previas a ambas correcciones pedagógicas) sigue pendiente de decisión — ver
 "Problemas conocidos".
 
 ## Sesión 4 — Onboarding, paywall y login
@@ -688,6 +694,52 @@ families          (id, child_id, idioma_preferido, contacto)
   `program_id` del niño.
 - Storage de evidencia (fotos/audio/video): privado, URLs firmadas no públicas, metadatos
   EXIF/geolocalización eliminados al subir (doc maestro sec. 57).
+
+### Refinamiento del esquema (Sesión 5, ronda 3 — arquitectura oficial, decidida con el usuario)
+El modelo pedagógico de Sesión 5 (rutina/capas/guías por bloque) exigió extender el esquema base
+de arriba sin romperlo — negociado punto por punto con el usuario (relacional vs. JSONB, qué
+entidades separar), documentado aquí como arquitectura oficial de RAÍZ:
+```
+rutina_bloques         (id, program_id, bloque, hora_aproximada, duracion_min, orden, dias[])
+                        -- CONFIGURACIÓN del salón; el día NUNCA improvisa qué bloques trae, los
+                        hereda de aquí (demo: RUTINA_PROGRAMA + bloquesConfiguradosParaDia())
+dias_plan               (id, weekly_plan_id, dia_semana, fecha, tema_dia, foco_dia)
+                        -- antes vivía escondido dentro del contenido de Circle Time; ahora es un
+                        hecho estructurado del día (demo: DiaPlan.temaDia/focoDia)
+activities              = LA INSTANCIA programada de un día concreto, nunca una biblioteca
+                        reutilizable. Contenido flexible por tipo de bloque (circle/outdoor/
+                        centros/cierre/genérico) va en JSONB; una futura activity_templates/
+                        activity_library (NO construida) podría alimentarla más adelante.
+activity_child_adaptations (id, activity_id, child_id, necesidad, adaptacion, origen:
+                        necesidad_registrada|plan_individual|observacion|recomendacion_raiz,
+                        alcance: solo_esta_actividad|general_del_nino, child_need_id?,
+                        individual_goal_id?, plan_id?, observation_id?)
+                        -- necesidad/adaptacion = snapshot histórico de lo usado ese día; las
+                        referencias enlazan la fuente estructurada cuando existe (ninguna
+                        obligatoria) para saber no solo QUÉ se hizo sino POR QUÉ se sugirió
+activity_child_focus    (id, activity_id, child_id, skill_id?, individual_goal_id?, motivo,
+                        pregunta_observacion, estado: pendiente|observado, observation_id?)
+                        -- el RESULTADO nunca se duplica como texto aquí: la fuente de verdad del
+                        resultado vive solo en observations
+asistencia_diaria       (child_id, fecha, estado: sin_marcar|presente|ausente,
+                        UNIQUE(child_id, fecha))
+                        -- "programado" NO es un valor de este estado: se DERIVA comparando
+                        children.días_asistencia contra el día de la semana, nunca se guarda como
+                        presencia (demo: estaProgramadoEnFecha() vs. estadoAsistencia())
+printables              (id, activity_id, titulo, tipo: ficha_individual|ficha_grupal|
+                        guia_para_casa) -- entidad RESERVADA, sin generación de archivos real
+```
+Regla dura que gobierna todo lo anterior: el contenido flexible (JSONB) NUNCA esconde una llave
+relacional (child_id, skill_id, observation_id, individual_goal_id...) — esas siempre viven en
+campos/tablas estructurados, nunca en el texto libre de una guía. Implementado en el modelo
+TypeScript de la demo (`lib/seed-data.ts`): `BloqueRutina`/`RUTINA_PROGRAMA`,
+`AdaptacionIndividual` (con origen/alcance/referencias), `NinoFocoActividad` (con skillId/
+estadoFoco/observationId), `EstadoAsistencia`/`ASISTENCIA_HOY`/`estaProgramadoEnFecha`,
+`Printable` (reservado, sin instancias todavía), `DiaPlan.temaDia`/`focoDia`. Verificado: tsc ✓
+build ✓ · `/hoy` y `/planeacion/mar-principal` revisadas en el navegador interactivo, sin
+regresión frente al modelo anterior. **Explícitamente NO construido en esta ronda** (instrucción
+del usuario): generación de PDF, contenido generado por IA real, archivos de imprimibles reales,
+el paquete semanal agregado, la pantalla "Preparar mi semana".
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).
