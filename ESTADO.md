@@ -7,12 +7,12 @@ Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRAD
 Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
 revisor-visual, defectos reales corregidos, gate binario aceptado como techo estructural
 documentado (mismo patrón que la landing) — ver "Problemas conocidos". Sesión 5 (app interna) —
-**construida, dirección visual APROBADA sin cambios por el usuario, modelo pedagógico corregido
-en 2 rondas de feedback** (ronda 1: jerarquía Resumen→Planeación completa→Día→Actividad + 3
-capas separadas; ronda 2: cada TIPO de bloque tiene su propia guía — Circle Time/Outdoor/STEAM/
-Centros ya no comparten plantilla genérica) — ver "Sesión 5". Build verde. **Mostrada al usuario
-con 4 bloques de ejemplo (martes) a profundidad completa — pendiente su aprobación explícita
-para replicar el patrón al resto de la semana/sistema antes de seguir** (regla propia del
+**construida, dirección visual APROBADA sin cambios por el usuario, modelo pedagógico APROBADO
+tras 2 rondas de feedback + replicado a las 5 semanas completas** (ronda 1: jerarquía Resumen→
+Planeación completa→Día→Actividad + 3 capas separadas; ronda 2: guía propia por tipo de bloque,
+aprobada por el usuario ["se ve bien, replícalo al resto de la semana"] y ya generalizada a
+Lunes-Viernes completos) — ver "Sesión 5". Build verde. **Sesión 5 funcionalmente completa —
+pendiente que el usuario la recorra completa y confirme antes de pasar a Sesión 6** (regla propia del
 usuario: "no avances a otra sesión todavía"). Gate del revisor-visual sobre `/hoy` (4 rondas,
 previas a ambas correcciones pedagógicas) sigue pendiente de decisión — ver
 "Problemas conocidos".
@@ -566,13 +566,19 @@ ver como muestra (`mar-circle`, `mar-outdoor`, `mar-steam`, `mar-centros` en `li
 demostrando los 4 conceptos pedidos en los 4: diferenciación por etapa, adaptación individual
 (Sofía/lenguaje expresivo en Circle Time, Mateo/no se sienta en Circle Time y STEAM), niño foco
 con micro-observación (Sofía→HEAD, Luca→pregunta corporal en Circle; Zayne→vocabulario en STEAM),
-y `conexionTema` (cómo cada bloque se conecta con el tema semanal). El resto de la semana
-(Lunes/Miércoles/Jueves/Viernes) sigue con el nivel de detalle de la ronda 1 — **no se replicó
-la profundidad todavía a los demás días/bloques**, a la espera de la aprobación explícita del
-usuario sobre el patrón antes de generalizarlo (su instrucción: "decidimos si la estructura
-queda aprobada para replicarla en el resto del sistema. No avances a otra sesión todavía").
-Verificado: tsc ✓ build ✓ · los 4 bloques revisados visualmente en producción + confirmados
-completos vía HTML renderizado en servidor.
+y `conexionTema` (cómo cada bloque se conecta con el tema semanal).
+
+**✅ APROBADO por el usuario** ("se ve bien, replícalo al resto de la semana") **y ya
+replicado a los 5 días completos** (Lunes-Viernes, 18 actividades en total en
+`PLANEACION_SEMANA_3`): cada Circle Time de la semana sigue la distribución que el propio
+usuario propuso (Lunes introduce el tema + 1 palabra · Martes profundiza 2 palabras + letra ·
+Miércoles trae el libro del día · Jueves liga un concepto/número [los 5 sentidos] · Viernes
+repasa todo el vocabulario de la semana), cada Outdoor tiene su invitación de movimiento propia,
+cada Centros tiene sus estaciones con provocación propia, y se agregó el tipo `GuiaCierre`
+(Recuerda/Pregunta/Vocabulario/Canción-movimiento/Puente a la próxima semana) para `vie-cierre`,
+que la ronda 1 había dejado sin estructura. Verificado: tsc ✓ build ✓ · las 14 rutas nuevas
+responden 200 · contenido confirmado completo vía HTML renderizado en servidor para varias
+muestras (Lunes completo, Viernes-Cierre).
 - **Alcance:** las 3 funciones núcleo del MVP (Constitución del Producto) + la pantalla principal
   M0. Construida con datos semilla realistas (`lib/seed-data.ts` — 4 niños: Luca/Preschool,
   Zayne/Pre-K, Sofía/Toddler, Mateo/Infant, con habilidades y estados reales) — SIN backend

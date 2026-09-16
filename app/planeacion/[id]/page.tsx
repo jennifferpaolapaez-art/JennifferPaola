@@ -202,6 +202,27 @@ export default function DetalleActividad() {
           </motion.section>
         )}
 
+        {/* ——— GUÍA DE CIERRE: cierra el aprendizaje del día sin volverlo académico ——— */}
+        {actividad.guiaCierre && (
+          <motion.section variants={item} className="mb-6 flex flex-col gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
+            <div>
+              <Etiqueta>Recuerda</Etiqueta>
+              <p className="mt-1 text-[14px] leading-snug text-[var(--text-primary)]">{actividad.guiaCierre.recuerda}</p>
+            </div>
+            <p className="text-[14px] text-[var(--text-secondary)]">💬 {actividad.guiaCierre.pregunta}</p>
+            <p className="text-[14px] text-[var(--text-primary)]">🗣️ {actividad.guiaCierre.vocabulario}</p>
+            {actividad.guiaCierre.cancionOMovimiento && (
+              <p className="text-[14px] text-[var(--text-primary)]">🎵 {actividad.guiaCierre.cancionOMovimiento}</p>
+            )}
+            {actividad.guiaCierre.puenteManana && (
+              <div className="rounded-[var(--radius-button)] bg-[var(--surface-2)] p-3">
+                <p className="text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--text-secondary)]">Puente a la próxima semana</p>
+                <p className="mt-1 text-[14px] leading-snug text-[var(--text-primary)]">{actividad.guiaCierre.puenteManana}</p>
+              </div>
+            )}
+          </motion.section>
+        )}
+
         {/* ——— GUÍA GENÉRICA (Actividad Principal, STEAM, Pre-K, Lectura, Cierre) ——— */}
         {tieneGuiaGenerica && (
           <motion.section variants={item} className="mb-6 flex flex-col gap-4 rounded-[var(--radius-card)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
