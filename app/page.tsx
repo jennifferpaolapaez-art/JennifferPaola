@@ -6,7 +6,7 @@
 // v2 — elevación visual pedida por el usuario (dirección de arte, riqueza de color,
 // demo real del producto) tras rechazar la v1. Ver ESTADO.md "Sesión 3 — revisión v2".
 
-import type { CSSProperties, ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { Clock, Brain, Users, ImageOff } from 'lucide-react';
 import { Hero } from '@/components/landing/Hero';
 import { Problema } from '@/components/landing/Problema';
@@ -37,13 +37,24 @@ function Tint({ bg, surface, children }: { bg: string; surface: string; children
   );
 }
 
+/** Fix del revisor (ronda 2, defecto #1): CtaFinal invierte a fondo oscuro (--text-primary)
+ * pero el acento [acento]/CtaButton seguían usando --accent (Deep Teal), casi invisible
+ * sobre ese mismo oscuro (~1.6:1). Butter Yellow es el acento luminoso de la ficha para
+ * momentos "aha" — aquí se usa SOLO en este bloque, vía override local de --accent. */
+
 export default function LandingRaiz() {
+  // Fix revisor-visual (ronda 5): Hero ocultaba la imagen rota (hueco silencioso) mientras
+  // AppPorDentro caía a su placeholder honesto — patrón inconsistente entre ambos. Ahora Hero
+  // hace lo mismo: si /mockups/hero.png falla, se pasa visual=undefined y el propio componente
+  // muestra su placeholder honesto ya existente (cámara + sugerencia), no un hueco vacío.
+  const [heroVisualRoto, setHeroVisualRoto] = useState(false);
+
   return (
     <div className="min-h-dvh bg-[var(--bg)] text-[var(--text-primary)] [font-family:var(--font-body)]">
       {/* 1. HERO */}
       <Hero
         appName=""
-        logo={<img src="/brand/raiz-logo.png" alt="Raíz" className="h-8 w-auto md:h-9" />}
+        logo={<img src="/brand/raiz-logo.svg" alt="Raíz" className="h-8 w-auto md:h-9" />}
         loginHref="/entrar"
         h1Marked="Deja de cargar a todos tus niños [acento]en la cabeza[/acento]"
         subtitleMarked="La Memoria del Salón conecta lo que sabes de cada niño con tu planeación."
@@ -52,15 +63,19 @@ export default function LandingRaiz() {
         socialProof={
           <span className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_oklab,var(--accent)_18%,transparent)] bg-[color-mix(in_oklab,var(--accent)_6%,transparent)] px-4 py-2 text-[13px] font-medium text-[var(--text-primary)]">
             <span aria-hidden="true" className="inline-block size-[7px] rounded-full bg-[var(--accent-2)]" />
-            Creada desde un salón real, no desde una lista de features.
+            Creada por el equipo de Creciendo Bilingüe, desde salones reales de primera infancia.
           </span>
         }
+        visualPlaceholderSugerencia="captura de la pantalla Hoy con la diferenciación por edad ya generada"
         visual={
-          <img
-            src="/mockups/hero.png"
-            alt="Pantalla Hoy de RAIZ: la actividad Body Collage adaptada a Infant, Toddler, Preschool y Pre-K, con el foco individual de Luca en tijeras y Zayne en números, y los materiales ya disponibles en el Science Center."
-            className="h-auto w-full"
-          />
+          heroVisualRoto ? undefined : (
+            <img
+              src="/mockups/hero.png"
+              alt="Pantalla Hoy de RAIZ: la actividad Collage del cuerpo adaptada a Infant, Toddler, Preschool y Pre-K, con el foco individual de Luca en tijeras y Zayne en números, y los materiales ya disponibles en el Centro de Ciencias."
+              onError={() => setHeroVisualRoto(true)}
+              className="h-auto w-full"
+            />
+          )
         }
       />
 
@@ -77,17 +92,17 @@ export default function LandingRaiz() {
             {
               icon: Brain,
               textoMarked: '¿Sabes lo que necesita cada niño, pero no puedes tenerlo todo en la cabeza?',
-              tint: 'sage',
+              tint: 'coral',
             },
             {
               icon: Users,
               textoMarked: '¿Una actividad termina convertida en cuatro versiones distintas?',
-              tint: 'butter',
+              tint: 'coral',
             },
             {
               icon: ImageOff,
               textoMarked: '¿Cuando llega el reporte ya intentas recordar qué pasó hace semanas?',
-              tint: 'teal',
+              tint: 'coral',
             },
           ]}
         />
@@ -113,7 +128,7 @@ export default function LandingRaiz() {
           mecanismo="la Memoria del Salón"
           bigIdeaMarked="No te falta dedicación — te falta una herramienta que recuerde. [b]La Memoria del Salón[/b] conecta lo que sabes de cada niño con lo que haces mañana."
           pasos={[
-            { titulo: 'Conoce', detalle: 'Perfil, edades y skills de tu grupo, una sola vez.', tint: 'teal' },
+            { titulo: 'Conoce', detalle: 'Perfil, edades y habilidades de tu grupo, una sola vez.', tint: 'teal' },
             { titulo: 'Planea', detalle: 'Cruza tu tema semanal con lo que cada niño necesita.', tint: 'butter' },
             { titulo: 'Observa', detalle: 'Notas y evidencia del día, en segundos.', tint: 'coral' },
             { titulo: 'Avanza', detalle: 'Cada observación mejora tu próxima planeación.', tint: 'sage' },
@@ -123,6 +138,10 @@ export default function LandingRaiz() {
             antes: 'Una planeación genérica que adaptas tú sola, niño por niño.',
             labelDespues: 'Con RAIZ',
             despues: 'Una semana que ya trae la diferenciación y el foco de cada niño.',
+          }}
+          foto={{
+            src: '/fotos/educadora-hero.png',
+            alt: 'Educadora leyendo un cuento a un grupo de niños pequeños de distintas edades, sentados en el piso de un salón cálido y luminoso.',
           }}
         />
       </Tint>
@@ -172,6 +191,7 @@ export default function LandingRaiz() {
           totalTachado: '$340',
           nota: 'Hoy: $16.66/mes (se cobra $199.90/año)',
         }}
+        garantiaNota="Respaldado por la Garantía de tu Primera Semana — 15 días"
         anual={{
           nombre: 'Anual',
           badge: 'MEJOR VALOR',
@@ -179,7 +199,7 @@ export default function LandingRaiz() {
           totalAnual: 'Se cobra $199.90/año',
           ahorro: '2 meses gratis (~17%)',
           descomposicionDia: 'menos de $0.56 al día',
-          ctaLabel: 'Empezar mis 7 días gratis',
+          ctaLabel: CTA_LABEL,
           ctaHref: CTA_HREF,
           features: [
             'Planeación semanal diferenciada por edad',
@@ -191,7 +211,7 @@ export default function LandingRaiz() {
         mensual={{
           nombre: 'Mensual',
           precioMes: '$19.99',
-          ctaLabel: 'Elegir mensual',
+          ctaLabel: CTA_LABEL,
           ctaHref: CTA_HREF,
           features: [
             'Planeación semanal diferenciada por edad',
@@ -220,7 +240,7 @@ export default function LandingRaiz() {
           {
             pregunta: '¿Por qué no simplemente usar ChatGPT?',
             respuestaMarked:
-              'ChatGPT genera una actividad suelta. RAIZ conoce a tu grupo, tus niños, sus skills y tu inventario real — y lo usa en cada planeación.',
+              'ChatGPT genera una actividad suelta. RAIZ conoce a tu grupo, tus niños, sus habilidades y tu inventario real — y lo usa en cada planeación.',
           },
           {
             pregunta: 'Ya tengo un currículo, ¿tengo que dejarlo?',
@@ -246,14 +266,14 @@ export default function LandingRaiz() {
         futurePacingMarked="Te sientas, RAIZ ya sabe qué necesita cada niño, y tu semana está lista en minutos."
         ctaLabel={CTA_LABEL}
         ctaHref={CTA_HREF}
-        recap="Garantía de tu Primera Semana · 7 días gratis"
+        recap="7 días de prueba gratis · Garantía de 15 días al pagar"
         psMarked="PS: RAIZ convierte lo que sabes de cada niño en lo que haces mañana, con [b]la Memoria del Salón[/b]. Entras hoy con 7 días gratis."
       />
 
       {/* 10. FOOTER LEGAL */}
       <FooterLegal
         appName="RAIZ"
-        logo={<img src="/brand/raiz-logo.png" alt="Raíz" className="h-6 w-auto" />}
+        logo={<img src="/brand/raiz-logo.svg" alt="Raíz" className="h-6 w-auto" />}
         soporteEmail="hola@raizapp.com"
         enlaces={[
           { label: 'Privacidad', href: '/privacidad' },

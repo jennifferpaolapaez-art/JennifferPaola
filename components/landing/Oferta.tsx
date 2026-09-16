@@ -47,6 +47,9 @@ export interface OfertaProps {
     totalTachado: string;
     nota?: string;
   };
+  /** Microcopy de garantía con plazo, justo bajo CADA CtaButton (regla del revisor: la
+   * garantía no puede vivir aislada de los botones de compra). */
+  garantiaNota?: string;
   /** default 'oferta' — lo observa StickyCtaMobile. */
   id?: string;
 }
@@ -98,6 +101,7 @@ export function Oferta({
   anual,
   mensual,
   stack,
+  garantiaNota,
   id = 'oferta',
 }: OfertaProps) {
   warnCopy('Oferta → título', tituloMarked, 8);
@@ -120,9 +124,14 @@ export function Oferta({
             variants={item}
             className="mx-auto mt-8 max-w-[560px] rounded-[var(--radius-card)] border border-[color-mix(in_oklab,var(--text-tertiary)_25%,transparent)] bg-[var(--surface)] p-6"
           >
-            <ul className="flex flex-col gap-3">
+            {/* filas HUNDIDAS (surface-2 + inset sutil) — el 3er nivel de profundidad que
+                le faltaba a la página (revisor-visual, eje 2 craft) */}
+            <ul className="flex flex-col gap-2">
               {stack.lineas.map((l, i) => (
-                <li key={i} className="flex items-start justify-between gap-4 text-[15px]">
+                <li
+                  key={i}
+                  className="flex items-start justify-between gap-4 rounded-[calc(var(--radius-button)-2px)] bg-[var(--surface-2)] px-3 py-2.5 text-[15px] shadow-[inset_0_2px_4px_rgba(0,0,0,0.12)]"
+                >
                   <span className="flex items-start gap-3 text-[var(--text-primary)]">
                     <CheckCustom />
                     <span>{l.resultado}</span>
@@ -152,7 +161,7 @@ export function Oferta({
               </span>
             )}
             <Hairline emphasis surface="surface" className="shadow-[0_12px_36px_color-mix(in_oklab,var(--accent)_16%,transparent)]">
-              <div className="rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--accent)_5%,transparent)] p-6 md:p-7">
+              <div className="rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--accent)_9%,transparent)] p-6 md:p-7">
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">{anual.nombre}</h3>
                   {trialDias !== undefined && <TrialBadge dias={trialDias} />}
@@ -168,6 +177,9 @@ export function Oferta({
                   <CtaButton href={anual.ctaHref} fullMobile>
                     {anual.ctaLabel}
                   </CtaButton>
+                  {garantiaNota && (
+                    <p className="mt-2 text-center text-[12px] text-[var(--text-secondary)]">{garantiaNota}</p>
+                  )}
                 </div>
               </div>
             </Hairline>
@@ -176,7 +188,7 @@ export function Oferta({
           {/* ── MENSUAL: card base, CTA outline — menos peso visual ── */}
           <motion.div
             variants={item}
-            className="rounded-[var(--radius-card)] border border-[color-mix(in_oklab,var(--text-tertiary)_28%,transparent)] bg-[var(--surface)] p-6 shadow-[var(--shadow-1)] md:p-7"
+            className="rounded-[var(--radius-card)] border border-[color-mix(in_oklab,var(--text-tertiary)_38%,transparent)] bg-[color-mix(in_oklab,var(--text-tertiary)_5%,var(--surface))] p-6 shadow-[var(--shadow-2)] md:p-7"
           >
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-[18px] font-semibold text-[var(--text-primary)]">{mensual.nombre}</h3>
@@ -193,6 +205,9 @@ export function Oferta({
             >
               {mensual.ctaLabel}
             </motion.a>
+            {garantiaNota && (
+              <p className="mt-2 text-center text-[12px] text-[var(--text-secondary)]">{garantiaNota}</p>
+            )}
           </motion.div>
         </div>
       </motion.div>

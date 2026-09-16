@@ -45,6 +45,10 @@ export interface SolucionProps {
     labelDespues: string;
     despues: string;
   };
+  /** Fotografía humana real (educadora + niños) — pedido del usuario tras v1: la
+   * página necesitaba calidez humana, no solo mockups de producto. Va entre la Big
+   * Idea y los 4 pasos: ancla el mecanismo en un salón real antes de mostrar el ciclo. */
+  foto?: { src: string; alt: string };
   id?: string;
 }
 
@@ -55,6 +59,7 @@ export function Solucion({
   bigIdeaMarked,
   pasos,
   antesDespues,
+  foto,
   id,
 }: SolucionProps) {
   warnCopy('Solución → título', tituloMarked, 8);
@@ -90,6 +95,17 @@ export function Solucion({
         <motion.p variants={item} className="mt-5 max-w-[620px] text-[17px] leading-relaxed text-[var(--text-secondary)] md:text-[18px]">
           <MarkedCopy text={bigIdeaMarked} />
         </motion.p>
+
+        {/* Fotografía humana real: ancla el mecanismo en un salón real, no solo pantallas */}
+        {foto && (
+          <motion.div
+            variants={item}
+            className="mt-8 overflow-hidden rounded-[var(--radius-card)] border border-[color-mix(in_oklab,var(--accent)_16%,transparent)] shadow-[var(--shadow-2)]"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={foto.src} alt={foto.alt} className="aspect-[16/9] w-full object-cover" />
+          </motion.div>
+        )}
 
         {/* 4 pasos del ciclo RAÍZ: filas apiladas en mobile, 4 columnas en desktop,
             conectados por una línea sutil (54 — dispositivo del ciclo, no diagrama técnico) */}

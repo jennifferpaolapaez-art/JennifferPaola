@@ -9,6 +9,7 @@
 // segundo texto más leído de la página (19 §9). Nada se interpone entre el PS
 // y el footer.
 
+import type { CSSProperties } from 'react';
 import { motion } from 'motion/react';
 import { CtaButton, useReveal, VIEWPORT_ONCE } from './ui';
 import { MarkedCopy, warnCopy } from './MarkedCopy';
@@ -70,7 +71,15 @@ export function CtaFinal({
         <motion.h2
           variants={item}
           className="text-balance text-[30px] font-bold leading-[1.15] [font-family:var(--font-display)] md:text-[44px]"
-          style={{ color: 'var(--bg)' }}
+          style={
+            {
+              color: 'var(--bg)',
+              /* Fix revisor-visual (ronda 2, actualizado ronda 4): <Accent> ahora lee
+                 --accent-2 (ver ui.tsx) — se sobreescribe esa variable, acotada al <h2>,
+                 a Butter Yellow para máximo contraste sobre este fondo invertido oscuro. */
+              '--accent-2': '#F4C84A',
+            } as CSSProperties
+          }
         >
           <MarkedCopy text={h2Marked} />
         </motion.h2>
@@ -84,10 +93,14 @@ export function CtaFinal({
         </motion.p>
 
         <motion.div variants={item} className="mt-8 w-full sm:w-auto">
-          {/* Acento pleno sobre fondo invertido = el máximo contraste de la página */}
-          <CtaButton href={ctaHref} alto={56}>
-            {ctaLabel}
-          </CtaButton>
+          {/* Fix revisor-visual (ronda 3): el botón en Deep Teal se fundía con el fondo
+              invertido (también oscuro, ~1.6:1). Butter Yellow + texto oscuro propio,
+              acotado SOLO a este botón (el resto de CTAs de la página siguen en teal). */}
+          <div style={{ '--accent': '#F4C84A', '--bg': '#241D14' } as CSSProperties}>
+            <CtaButton href={ctaHref} alto={56}>
+              {ctaLabel}
+            </CtaButton>
+          </div>
         </motion.div>
 
         {recap && (

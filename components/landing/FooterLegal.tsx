@@ -33,8 +33,12 @@ export function FooterLegal({ appName, logo, enlaces, soporteEmail, anio }: Foot
         {/* Fila 1: marca chica + enlaces legales */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="flex items-center gap-2 text-[14px] font-semibold text-[var(--text-secondary)]">
-            {logo ?? <span aria-hidden="true" className="size-5 rounded-[6px] bg-[var(--text-tertiary)]" />}
-            {appName}
+            {logo ?? (
+              <>
+                <span aria-hidden="true" className="size-5 rounded-[6px] bg-[var(--text-tertiary)]" />
+                {appName}
+              </>
+            )}
           </p>
           <nav aria-label="Enlaces legales">
             <ul className="flex flex-wrap items-center gap-x-1 gap-y-0">

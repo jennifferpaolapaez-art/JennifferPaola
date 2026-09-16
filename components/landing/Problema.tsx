@@ -7,7 +7,6 @@
 // ELEVADO: abre el bloque problema+agitación (un solo movimiento visual, T1).
 
 import { motion } from 'motion/react';
-import type { CSSProperties } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { IconChip, SectionShell, useReveal, VIEWPORT_ONCE } from './ui';
 import { MarkedCopy, warnCopy, warnRango } from './MarkedCopy';
@@ -59,19 +58,37 @@ export function Problema({ titulo, preguntas, id }: ProblemaProps) {
           </motion.h2>
         )}
         <ul className="flex flex-col gap-4">
-          {preguntas.map((p, i) => (
-            <motion.li
-              key={i}
-              variants={item}
-              style={p.tint ? ({ '--accent': TINT_HEX[p.tint] } as CSSProperties) : undefined}
-              className="flex items-start gap-4 rounded-[var(--radius-card)] bg-[var(--bg)] p-4 shadow-[var(--shadow-1)]"
-            >
-              <IconChip icon={p.icon} tone={p.tint ? 'accent' : 'muted'} />
-              <p className="pt-2 text-[17px] font-medium leading-snug text-[var(--text-primary)]">
-                <MarkedCopy text={p.textoMarked} />
-              </p>
-            </motion.li>
-          ))}
+          {preguntas.map((p, i) => {
+            const hex = p.tint ? TINT_HEX[p.tint] : undefined;
+            return (
+              <motion.li
+                key={i}
+                variants={item}
+                className="flex items-start gap-4 rounded-[var(--radius-card)] bg-[var(--bg)] p-4 shadow-[var(--shadow-1)]"
+              >
+                {hex ? (
+                  /* Estilo inline explícito — la cascada de --accent vía CSS var no se
+                     resolvía de forma confiable a través de --chip-bg (derivado en tokens.css
+                     a nivel :root); esto es directo y verificado visualmente. */
+                  <span
+                    aria-hidden="true"
+                    className="inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-button)] border"
+                    style={{
+                      borderColor: `color-mix(in oklab, ${hex} 22%, transparent)`,
+                      background: `color-mix(in oklab, ${hex} 10%, transparent)`,
+                    }}
+                  >
+                    <p.icon size={22} strokeWidth={2} color={hex} aria-hidden="true" />
+                  </span>
+                ) : (
+                  <IconChip icon={p.icon} tone="muted" />
+                )}
+                <p className="pt-2 text-[17px] font-medium leading-snug text-[var(--text-primary)]">
+                  <MarkedCopy text={p.textoMarked} />
+                </p>
+              </motion.li>
+            );
+          })}
         </ul>
       </motion.div>
     </SectionShell>

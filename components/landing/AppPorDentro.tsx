@@ -49,6 +49,9 @@ export function AppPorDentro({
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const frameRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [activo, setActivo] = useState(0);
+  // Fix revisor-visual (ronda 4): si un f.src no carga, caer al placeholder honesto
+  // en vez de dejar un ícono de imagen rota sin contexto.
+  const [rotos, setRotos] = useState<Set<number>>(new Set());
 
   // Dots sincronizados con el frame más visible — obligatorios SIEMPRE (19 §5)
   useEffect(() => {
@@ -104,7 +107,7 @@ export function AppPorDentro({
                   className="relative aspect-[9/19.5] w-[250px] overflow-hidden rounded-[30px] border-[5px] shadow-[var(--shadow-2)]"
                   style={{ borderColor: 'color-mix(in oklab, var(--text-primary) 90%, var(--accent))' }}
                 >
-                  {f.src ? (
+                  {f.src && !rotos.has(i) ? (
                     /* Si el proyecto usa next/image, cambiar por <Image> — <img> mantiene el kit portable */
                     <img
                       src={f.src}
@@ -112,6 +115,7 @@ export function AppPorDentro({
                       width={250}
                       height={542}
                       loading="lazy"
+                      onError={() => setRotos((prev) => new Set(prev).add(i))}
                       className="h-full w-full object-cover"
                     />
                   ) : (

@@ -3,11 +3,122 @@
 > Memoria viva del proyecto. Se actualiza en cada hito.
 
 ## Fase actual
-Sesión 1 CERRADA. Sesión 3 (landing) v2 construida, pero el revisor-visual independiente la
-marcó **NO LISTA** (ver `docs/revisiones/landing-veredicto.md`: Usabilidad 27/40, Craft 12/20,
-Copy 14/20 — los 3 por debajo del umbral ≥36/≥16/≥16). NO se declara la landing terminada ni se
-avanza a Sesión 4 hasta corregir los 5 defectos del veredicto y volver a pasar el revisor.
-Progreso de corrección: 1 de 5 defectos corregido (ver "Problemas conocidos").
+Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRADA** (detalle abajo).
+Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
+revisor-visual, defectos reales corregidos, gate binario aceptado como techo estructural
+documentado (mismo patrón que la landing) — ver "Problemas conocidos". Build verde, código
+completo. Siguiente: **Sesión 5 (app interna)** en cuanto el usuario confirme seguir.
+
+## Sesión 4 — Onboarding, paywall y login
+- **Alcance de esta sesión** (SECUENCIA MAESTRA: página de ventas → onboarding → paywall →
+  login/auth → app interna → servicios externos): se construyeron las 3 piezas de UI con copy y
+  precio REALES, pero SIN backend real todavía — ni Supabase Auth ni checkout Hotmart están
+  conectados (eso es la fase de "servicios externos", más adelante). Las interacciones (envío de
+  magic link, "pago") están simuladas con estado local, siguiendo el mockup-honesto de
+  `50-DISENO-ONBOARDING-PAYWALL.md` → C3ter: sin checkout falso, con precio/copy reales.
+- **Decisión técnica (sin preguntar al usuario, con respaldo del SO):** longitud del onboarding
+  = 5 preguntas reales + 2 reconocimientos + loading (categoría "Productividad" → 02B: "empezar
+  con 4-8 pasos de alto rendimiento"). Cada pregunta ecoa un campo de FICHA-AVATAR.md (dolor,
+  objeción, ancla contextual) — ninguna es decorativa (regla 2 de 02B). Preguntas: (1) tipo de
+  salón (segmentación), (2) niños en el grupo (compromiso/slider), (3) mayor complicación al
+  planear (dolor #1-4 de la ficha, con reconocimiento personalizado por respuesta), (4) qué ya
+  probó (objeción dominante de la ficha), (5) cuándo planea (ancla contextual, fija hora de
+  recordatorio futuro). Reconocimiento final con ETIQUETADO POSITIVO (regla b de LA ESCALERA,
+  02B). Loading "Construyendo tu Memoria del Salón" con líneas armadas con las respuestas reales
+  del usuario (spec B de 50).
+- **Paywall en 3 pantallas** (secuencia C0 de 50, +37% de conversión medido vs 1 página): (1)
+  recap con inversión visible ("Hecho con tus N respuestas") + value stack con la respuesta real
+  del dolor elegido, (2) timeline del trial (patrón Blinkist: Hoy/Día 6/Día 7 con fecha y monto
+  exactos), (3) precio — MISMOS planes y garantía que la landing (Anual $16.66/mes · $199.90/año
+  · 2 meses gratis; Mensual $19.99/mes; 7 días de prueba; Garantía de tu Primera Semana 15 días —
+  cosa juzgada de FICHA-MERCADO.md, no se re-decidió aquí).
+- **Login** (`/entrar`): magic link por email (método primario, decisión Hotmart-first de
+  26-AUTH-MODERNO.md) + Google OAuth secundario, con los 3 estados reales (enviando/enviado con
+  cooldown de 60s/error con copy anti-enumeración) — spec E de 50.
+- **Componentes nuevos:** `components/onboarding/ui.tsx` (kit compartido: FunnelTopBar con barra
+  de progreso ENDOWED PROGRESS, QuestionChip, QuestionScreen, SliderMeta, Reconocimiento,
+  LoadingConstruyendo, FunnelCta) reutilizando `tokens.css` de la landing (misma marca, sin
+  redefinir color) · `app/onboarding/page.tsx` (máquina de estados del quiz) ·
+  `app/paywall/page.tsx` (secuencia de 3 pantallas, lee respuestas de `localStorage`) ·
+  `app/entrar/page.tsx` (reemplazó el placeholder de Sesión 3).
+- **Verificado:** tsc ✓ · build ✓ (`app/onboarding`, `/paywall`, `/entrar` compilan como rutas
+  estáticas) · recorrido completo probado en el navegador interactivo a 375px real: selección de
+  chip con auto-avance, slider con conteo en vivo, reconocimiento personalizado por respuesta
+  (verificado con 2 respuestas distintas), retroceso preservando estado, las 3 pantallas del
+  paywall con datos inyectados, y los 3 estados del login (idle/enviando/enviado con cooldown).
+  Screenshots no guardados en docs/revisiones/ todavía (pendiente antes del revisor-visual).
+- **⚠️ Nota de entorno (no es bug de producto):** durante la primera verificación manual, el
+  servidor de desarrollo sufrió varias recargas en caliente (Fast Refresh) que, en un tramo,
+  reseteaban el estado local del onboarding a mitad de la prueba (websocket de HMR fallando en
+  el panel del navegador). Un reinicio limpio del servidor resolvió el síntoma. Para las capturas
+  de revisor-visual, a partir de la ronda 1 se usó SIEMPRE `next build && next start` (producción
+  real), nunca `next dev` — evita además la insignia de Next.js/Turbopack que un round inicial
+  malinterpretó como un elemento roto de la UI (falso positivo ya descartado).
+
+### Revisor-visual — 3 rondas corridas sobre onboarding/paywall/entrar
+Igual que en la landing: Agent tool no reconoce `revisor-visual` por nombre en este entorno →
+simulado con `general-purpose` + la ficha completa pegada + los 4 insumos (screenshot 375,
+código, FICHA-ARTE.md, FICHA-AVATAR.md cuando vende).
+
+```
+                    ONBOARDING          PAYWALL                  ENTRAR (login)
+R1  Usab/Craft/Copy 30/40 · 12/20       29/40 · 12/20 · 15/20    29/40 · 13/20
+    Defecto dominante en las 3: vacío muerto (contenido pegado arriba, resto de
+    min-h-dvh vacío) + fondo totalmente plano. Paywall además sin navegación
+    "Atrás" entre sus 3 sub-pantallas. Entrar sin <form>/onSubmit real.
+    FIX: <FunnelStage> centra verticalmente + mesh radial de fondo + stagger de
+    entrada en chips/listas + Atrás real en paywall + <form onSubmit> con regex
+    de email + mensajes de error separados por causa.
+
+R2  Usab/Craft/Copy 34/40 · 13/20       33/40 · 13/20 · 17/20    34/40 · 10/20
+    El centrado vertical resolvió el vacío muerto pero el mesh (7%/6%) seguía
+    "imperceptible en el screenshot real" en las 3 — hallazgo repetido, no
+    aislado. Logo del funnel muy chico, ningún dispositivo ownable visible,
+    botón "Continuar con Google" sin onClick (regla dura #11: nada interactivo
+    sin función), sin indicador de paso en el paywall, números héroe sin
+    conteo animado.
+    FIX: mesh subido a 14-26%/11-20% + hojita de firma como watermark + logo
+    agrandado (h-7→h-9) + sombra en QuestionChip + indicador "Paso X de 3"
+    (reusa <ProgressBar> del kit) + <AnimatedNumber> en todos los números héroe
+    + whileTap en tarjetas de plan + botón Google con nota honesta ("llega muy
+    pronto, usa tu enlace por correo" — no hay OAuth real todavía) + onBlur y
+    precarga de correo en el login.
+
+R3  Usab/Craft/Copy 30/40 · 11/20 ↓     33/40 · 15/20 · 18/20 ↑  35/40 · 13/20 ↑
+    Paywall y Entrar mejoraron real y consistentemente. Onboarding OSCILÓ hacia
+    abajo (34→30) pese a los mismos fixes aplicados — la varianza entre
+    revisores independientes en preguntas cortas de poco contenido es alta.
+    Hallazgo que se repite POR TERCERA VEZ en las 3 pantallas: el mesh de
+    fondo y la hojita de firma se leen "planos" en el screenshot real pese a
+    verificarse correctos en el código — inspeccionado a fondo tras esta
+    ronda (ver nota técnica abajo).
+```
+
+**Investigación técnica del "mesh imperceptible" (tras R3):** se verificó con
+`getBoundingClientRect()` y `getComputedStyle()` en el navegador real que el gradiente y la
+hojita de firma SÍ se pintan con los valores correctos (color, opacity, posición, tamaño) — no
+es un bug de código. Es un límite de contraste real: Deep Teal al 13-26% de opacidad sobre Warm
+Cream produce una diferencia de luminancia pequeña (~15-30/255 en R) que un revisor humano/IA
+mirando un PNG comprimido percibe como "plano", incluso cuando matemáticamente existe. Subir más
+la opacidad entra en tensión directa con la Regla de Oro de dirección de arte ("restricción
+cromática estricta", "sin loud decoration") — es el mismo tipo de techo que Craft tocó en la
+landing entre "sutil y elegante" vs "visible para un revisor exigente".
+
+**Fixes de la ronda 3 (aplicados, sin 4ª ronda de revisor todavía — ver decisión pendiente):**
+mesh subido de nuevo (10%/-10% → 26%/20%) + hojita reposicionada a media altura (antes esquina
+extrema invisible) + `<FunnelStage>` ya NO centra verticalmente (el centrado resolvía R1 pero
+abría un vacío igual de grande arriba Y abajo en preguntas cortas — patrón real de apps de
+onboarding como Duolingo/Cal AI es contenido anclado arriba, no centrado) + tinte de íconos del
+paywall subido 12%→18% + validación `onBlur` y precarga del último correo en el login.
+Verificado: tsc ✓ build ✓ (producción). NO se relanzó una 4ª ronda de revisor-visual sobre estos
+últimos cambios — ver "Problemas conocidos" para la decisión pendiente del usuario.
+
+- **⛔ Pendiente antes de declarar Sesión 4 "lista" (Regla de Oro 7):** el gate doble (≥36/40 y
+  ≥16/20) no se cumplió en ninguna de las 3 pantallas tras 3 rondas — ver "Problemas conocidos"
+  para el detalle y las opciones presentadas al usuario. Tampoco se ha decidido el "review prompt
+  a mitad del onboarding" (patrón Cal AI, opcional) ni instrumentado analítica (`36`, fase
+  posterior). El backend real (Supabase Auth + Hotmart) se conecta en la fase de servicios
+  externos, más adelante en la secuencia maestra.
 
 ## Fuente de verdad del producto
 `G:\My Drive\CLAUDE\Proyectos\App Creciendo Bilingue\Notas de trabajo.docx` — documento maestro de
@@ -177,18 +288,22 @@ secciones ni el argumento de venta ya aprobado. v2 responde punto por punto:
   (`plantillas-codigo/landing/`) copiado a `components/landing/`, tokens.css tematizado con
   FICHA-ARTE, copy marcado en `docs/copy/landing.md` (trazado a FICHA-AVATAR), página compuesta
   en `app/page.tsx`. `npm run build` pasa limpio.
-- **Logo real en el header y footer**: `<img src="/brand/raiz-logo.png">` — el PNG que el usuario
-  compartió en chat (se guardó solo en `public/brand/raiz-logo.png`), usado TAL CUAL, no
-  recreado en CSS/texto (instrucción explícita del usuario en el rechazo de v1).
+- **Logo real en el header y footer**: `<img src="/brand/raiz-logo.svg">` — el usuario mandó
+  después el vector oficial (`RAIZ_logo_oficial_vector.svg`, vectorizado desde el PNG maestro),
+  usado TAL CUAL, no recreado en CSS/texto. El PNG (`raiz-logo.png`) se conserva como respaldo
+  visual, per instrucción del usuario, pero el SVG es el que se usa en producción.
 - **Headline nuevo**: "Deja de cargar a todos tus niños en la cabeza" (con acento en "en la
   cabeza") — se evaluó contra 2 alternativas que el usuario propuso y contra el original; ganó
   por ser la más corta, más emocional y la que mejor espeja el dolor #1 de FICHA-AVATAR. Subtítulo
   corregido a una idea completa (antes se cortaba en "...con tu próxima").
 - **Visual del hero real**: ya no es el placeholder punteado — es un mockup construido con el
-  sistema de marca real (`public/mockups/hero.png`) mostrando la pantalla "Hoy": actividad Body
-  Collage, adaptación a los 4 niveles, foco individual de Luca/Zayne, materiales en Science
-  Center. Mismos mockups reutilizados como screenshots reales del carrusel (`public/mockups/
-  frame-*.png`) — ya no son cajas grises con nombre, son demos visuales del producto.
+  sistema de marca real (`public/mockups/hero.png`) mostrando la pantalla "Hoy": actividad
+  "Collage del cuerpo" (100% en español desde la ronda 6 del revisor — ver abajo), adaptación a
+  los 4 niveles (Infant/Toddler/Preschool/Pre-K se dejan en inglés a propósito: terminología
+  estándar de la industria en el mercado real de EE.UU., FICHA-AVATAR), foco individual de
+  Luca/Zayne, materiales en el Centro de Ciencias. Mismos mockups reutilizados como screenshots
+  del carrusel (`public/mockups/frame-*.png`) — ya no son cajas grises con nombre, son demos
+  visuales del producto, con el mismo nombre de actividad en ambos (antes divergían).
 - **Riqueza de color**: se agregó un helper `Tint` (en `app/page.tsx`, no toca el kit) que pinta
   un fondo propio por bloque de secciones sin romper la doctrina "el kit no se reescribe a mano"
   — Problema+Agitación en blush coral pálido, Mecanismo en sage pálido, Carrusel en butter cálido
@@ -217,6 +332,62 @@ secciones ni el argumento de venta ya aprobado. v2 responde punto por punto:
   lanzar): `/privacidad`, `/terminos`, `/reembolsos`, `/aviso-ia`. `/onboarding` y `/entrar` son
   placeholders (se construyen en Sesión 4).
 
+## Revisor-visual independiente — 7 rondas corridas (ver docs/revisiones/landing-veredicto.md)
+⚠️ En este entorno el Agent tool NO reconoce el subagente de proyecto `revisor-visual` por
+nombre (`.claude/agents/revisor-visual.md` no se carga vía `subagent_type`). Se simuló
+invocando un agente `general-purpose` con el contenido COMPLETO de esa ficha pegado en el
+prompt (rúbricas /40, /20, /20 + formato de salida + instrucción de escribir el archivo de
+veredicto) más los 4 insumos exigidos (screenshot 375, código, FICHA-ARTE.md, FICHA-AVATAR.md).
+Repetir este patrón en futuras revisiones mientras el entorno no resuelva agentes de proyecto.
+
+Trayectoria de puntajes (Usabilidad/40 · Craft/20 · Copy/20 — umbral ≥36 / ≥16 / ≥16):
+```
+R1  27 · 12 · 14   NO LISTA — 5 defectos (identidad ownable, CTA inconsistente, garantía
+                    desacoplada, prueba social sin dato, profundidad de 2 niveles)
+R2  29 · 14 · 17   NO LISTA — los 5 de R1 corregidos, pero apareció uno nuevo: el H2 del CTA
+                    final (fondo invertido oscuro) usaba el acento teal, casi invisible
+R3  27 · 14 · 18   NO LISTA — CTA final corregido (H2), pero el bug real estaba en el CTA
+                    BUTTON de esa misma sección (mismo problema, no cubierto por el fix de R2)
+                    + footer con "RAIZ" duplicado junto al logo + recap ambiguo (7 vs 15 días)
+                    + inglés crudo en el mockup del hero (Body Collage/Circle time/Science Center)
+R4  29 · 14 · 18   NO LISTA — hallazgo SISTÉMICO: <Accent> (ui.tsx) pintaba TODOS los [acento]
+                    de la página en Deep Teal, casi idéntico a --text-primary (también teal
+                    oscuro) — el énfasis no se notaba en NINGÚN titular del sitio, no solo el
+                    CTA final. Corregido en la raíz: Accent pasa a usar --accent-2 (Soft Coral)
+R5  28 · 14 · 16   NO LISTA — el fix de R4 introdujo su propio bug: Soft Coral (#F28A7A) como
+                    texto fallaba WCAG AA (~2.2:1) sobre los fondos claros de cada sección →
+                    oscurecido a terracota #B6553A. + hojita (CheckCustom) agrandada 22→26px.
+                    + "hueco vacío de 1300px" reportado tras el footer → INVESTIGADO Y
+                    DESCARTADO: verificado con scroll real en el navegador interactivo, no
+                    existe — es un artefacto del método de captura (ver ⚠️ ENTORNO arriba)
+R6  28 · 15 · 19   NO LISTA — Craft cruza a un punto del umbral, Copy ya sólido. Quedaba:
+                    frame-hoy.png (carrusel) todavía en inglés Y con nombre de actividad
+                    distinto al de hero.png ("Mi cuerpo" vs "Collage del cuerpo") → mockup
+                    regenerado, ahora consistente y en español en ambos. + terracota afinado
+                    a #A64B32 (el anterior quedaba justo en texto normal, no solo titulares).
+                    + cards de Oferta reforzadas (tinte/borde/sombra)
+R7  29 · 16 · 19   NO LISTA — CRAFT Y COPY YA PASAN EL UMBRAL. Usabilidad se mantiene en
+                    27-29/40 desde R4 (4 rondas) pese a defectos reales corregidos en cada
+                    una. El propio revisor concluyó explícitamente: es un TECHO ESTRUCTURAL
+                    del formato landing — heurísticas de Nielsen como control/libertad,
+                    prevención de errores, flexibilidad, ayuda contextual (h3/h5/h7/h10) no
+                    pueden subir más sin funcionalidad interactiva real, que una landing de
+                    marketing no tiene por definición. Único defecto real quedaba: "skills"
+                    en inglés en 2 lugares (app/page.tsx) → corregido a "habilidades".
+```
+**Estado tras R7 (última corrección, sin re-verificar con una 8ª ronda):** Craft y Copy limpios.
+Usabilidad en 29/40, con el diagnóstico del propio revisor de que el techo es estructural, no
+cosmético. **Decisión pendiente del usuario** (no se sigue iterando sin su OK — 7 rondas ya
+corridas, cada una cuesta tiempo real y ~100-120k tokens de revisor): (a) aceptar el estado
+actual y avanzar a Sesión 4, documentando el techo de usabilidad como conocido — Craft y Copy,
+que sí eran alcanzables, ya pasan; (b) seguir iterando más rondas sobre lo poco que quede
+(la última ronda ya no encontró defectos cosméticos nuevos, solo el diagnóstico estructural);
+(c) agregar algo de interactividad real a la landing (ej. un mini-demo interactivo en vez de
+mockup estático) para destrabar las heurísticas que lo requieren — cambiaría el alcance de la
+Sesión 3. El agente recomienda (a): el gate de craft/copy (lo que SÍ mide "esta pantalla vende
+bien y se ve premium") ya está cumplido; perseguir 36/40 de usabilidad en una landing estática
+probablemente no sea alcanzable sin desnaturalizar qué es una landing.
+
 ## Auditoría de conversión (`scripts/audit-conversion.sh`) — corrida y revisada en v1, no
 ## re-corrida tras v2 (pendiente antes de declarar la landing 100% cerrada)
 En v1: 15 hallazgos críticos reportados; 2 eran reales y se corrigieron (h1 de `/onboarding` sin
@@ -239,35 +410,61 @@ POSITIVOS de la heurística estática del script (confirmado leyendo el código 
   (con el copy de v1) → reescrito para reflejar el copy real de v2.
 
 ## Problemas conocidos
-- **Logo vectorial pendiente**: el header/footer ya usan el PNG real del usuario
-  (`public/brand/raiz-logo.png`), pero ese PNG parece boceto/concepto (probable IA), no archivo
-  vectorial de producción. No bloquea construcción — se necesitará un SVG/vector definitivo antes
-  de assets de producción (ícono de app nativo, favicon nítido a tamaños pequeños, print).
-- **Fotografía real pendiente**: ver nota en "Sesión 3 — v2" arriba — el usuario debe proveer
-  fotos reales de educadoras/salones cuando las tenga; no se fabricaron.
+- **⛔ Veredicto revisor-visual — onboarding, paywall y entrar (Sesión 4, ronda 3 de 3): NO
+  LISTA en las 3 pantallas** — onboarding 30/40 · 11/20, paywall 33/40 · 15/20 · copy 18/20,
+  entrar 35/40 · 13/20 (umbral
+  ≥36/40 y ≥16/20). Historial completo de las 3 rondas arriba en "Revisor-visual — 3 rondas".
+  Paywall y Entrar SÍ progresaron ronda a ronda (paywall craft 12→15, entrar usabilidad 29→35 —
+  a 1 punto del umbral); onboarding osciló sin tendencia clara (34→30 entre R2 y R3 con los
+  mismos fixes). El defecto que se repitió las 3 rondas en las 3 pantallas — fondo con mesh/
+  hojita de firma "imperceptible en el screenshot real" — se investigó a fondo tras R3
+  (`getComputedStyle`/`getBoundingClientRect` en el navegador real): el color SÍ se pinta
+  correctamente, es un límite genuino de contraste/percepción (Deep Teal a baja opacidad sobre
+  Warm Cream), en tensión directa con la Regla de Oro de "restricción cromática, sin loud
+  decoration". Mismo patrón que el techo de usabilidad de la landing (Sesión 3): defectos reales
+  se corrigieron, y lo que queda es una fricción entre "sutil y de buen gusto" vs "lo bastante
+  fuerte para que un revisor lo puntúe alto en un PNG estático".
+  **DECISIÓN DEL USUARIO (tomada en esta sesión): opción (a) — avanzar aceptando el estado
+  actual como techo estructural documentado**, igual que con el techo de usabilidad de la
+  landing (Sesión 3). Paywall (craft 15/20, copy 18/20) y Entrar (usabilidad 35/40) quedaron a
+  1-2 puntos del umbral con tendencia positiva real ronda a ronda; onboarding se queda en
+  30/40 · 11/20 sin una intervención de contraste que el propio SO desaconseja (chocaría con la
+  restricción cromática de FICHA-ARTE.md). El gate binario del veredicto queda sin cumplir de
+  forma permanente para estas 3 pantallas — EXCEPCIÓN CONSCIENTE aprobada por el dueño del
+  producto, no un olvido. Las 3 pantallas (código completo en `app/onboarding`, `app/paywall`,
+  `app/entrar`) quedan como versión final de la Sesión 4 salvo que el usuario pida cambios
+  puntuales. Sesión 4 CERRADA — listos para Sesión 5 (app interna) en cuanto el usuario confirme.
+- **Logo vectorial pendiente**: RESUELTO — el usuario proveyó el SVG vectorial oficial
+  (`public/brand/raiz-logo.svg`), ahora asset canónico en toda la página. El PNG se conserva solo
+  como respaldo visual, por instrucción explícita del usuario.
+- **Fotografía real: RESUELTO** — el usuario reenvió la foto de la educadora leyendo con el
+  grupo; guardada en `public/fotos/educadora-hero.png`. Integrada en `Solucion.tsx` (prop nueva
+  `foto`) entre la Big Idea y los 4 pasos del ciclo RAÍZ — ancla el mecanismo en un salón real
+  antes de mostrar el producto. Verificado: tsc ✓ build ✓ dev ✓ · render 500px real (Browser
+  interactivo) → foto se integra con buen contraste sobre el tinte sage de la sección, radios y
+  sombra consistentes con el resto del kit. Esto responde al pedido original del usuario ("más
+  fotografía humana y cálida") que v1 no tenía. NO se volvió a correr el revisor-visual (ronda 8)
+  tras este cambio — pendiente si el usuario decide seguir iterando (ver opción (b) abajo).
 - **Auditoría de conversión**: re-corrida sobre v2 — mismos falsos positivos ya documentados
   (hairlines/gradiente/voseo) + 2 hallazgos reales corregidos (acento de h1 en `/onboarding` y
   `/entrar` vía `style` en vez de clase CSS → corregido a className; `docs/copy/landing.md`
   desactualizado → reescrito para v2).
-- **⛔ Veredicto revisor-visual: NO LISTA** (`docs/revisiones/landing-veredicto.md` —
-  Usabilidad 27/40, Craft 12/20, Copy 14/20; umbral ≥36/≥16/≥16). 5 defectos reportados,
-  estado de corrección:
-  1. ✅ CORREGIDO — `CheckCustom` en `ui.tsx` usaba el ícono genérico Lucide `Check`; ahora usa la
-     hojita propia de la marca (mismo gesto CSS del logo) como dispositivo ownable repetido.
-  2. ⬜ PENDIENTE — CTA con copy inconsistente: `page.tsx` usa "Crear mi primera semana gratis"
-     pero `Oferta.tsx` cambia a "Empezar mis 7 días gratis" / "Elegir mensual". Falta unificar al
-     mismo verbo en toda la página (regla propia del kit).
-  3. ⬜ PENDIENTE — la Garantía vive en su propia sección, separada de los botones de precio; falta
-     microcopy de garantía con plazo justo debajo de cada CTA de plan en `Oferta.tsx`.
-  4. ⬜ PENDIENTE — el badge de credibilidad del hero ("Creada desde un salón real...") no tiene
-     dato verificable/citable; el revisor pide retirarlo o reemplazarlo por algo concreto.
-  5. ⬜ PENDIENTE — la landing solo usa 2 niveles de profundidad (base/elevado); falta un
-     tratamiento "hundido" (ej. en el stack de valor Hormozi de `Oferta.tsx`).
-  **No avanzar a Sesión 4 ni declarar la landing lista hasta corregir 2-5 y volver a correr el
-  revisor-visual** (ver protocolo en `.claude/agents/revisor-visual.md` — en este entorno el
-  Agent tool no reconoce agentes de proyecto por nombre; se simula invocando un agente
-  general-purpose con el contenido completo de esa ficha pegado en el prompt, más las 4 rutas
-  de insumo: screenshot 375, código, FICHA-ARTE.md, FICHA-AVATAR.md).
+- **Veredicto revisor-visual (ronda 7 de 7): NO LISTA — techo ACEPTADO por el usuario, landing
+  APROBADA para avanzar** (`docs/revisiones/landing-veredicto.md` — Usabilidad 29/40, Craft
+  16/20, Copy 19/20; umbral ≥36/≥16/≥16). Craft y Copy YA PASAN. Solo Usabilidad sigue bajo el
+  umbral, estancada en 27-29/40 por 4 rondas seguidas (R4-R7) pese a defectos reales corregidos
+  en cada una — ver historial completo de las 7 rondas arriba en "Revisor-visual independiente".
+  El propio revisor R7 diagnosticó la causa: TECHO ESTRUCTURAL del formato landing-estática —
+  varias heurísticas de Nielsen (control/deshacer, prevención de errores, flexibilidad/atajos)
+  exigen funcionalidad interactiva real que una página de ventas, por definición, no tiene. No es
+  un defecto cosmético corregible con más rondas de ajuste visual.
+  **DECISIÓN DEL USUARIO (tomada en esta sesión): opción 1 — avanzar aceptando el techo de
+  usabilidad como límite estructural documentado, sin más rondas de revisor-visual sobre la
+  landing.** El gate binario del veredicto (≥36/40) queda formalmente sin cumplir de forma
+  permanente para esta pantalla — es una EXCEPCIÓN CONSCIENTE aprobada por el dueño del producto,
+  no un olvido: Craft y Copy, los dos ejes que sí eran alcanzables para un formato estático, están
+  arriba del umbral. La landing en código (v2, ronda 7 + foto humana integrada después) queda
+  como versión final de esta fase del proyecto salvo que el usuario pida cambios puntuales.
 
 ## Sesión 1 — CERRADA (precio, arquitectura, base de datos, auth)
 

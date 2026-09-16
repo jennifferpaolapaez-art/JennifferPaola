@@ -10,9 +10,13 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'motion/react';
 import type { LucideIcon } from 'lucide-react';
 
-/* ── <Accent> — la palabra que vende, en el acento del kit ─────────────────── */
+/* ── <Accent> — la palabra que vende ──────────────────────────────────────
+   Fix revisor-visual (ronda 4): Deep Teal sobre --text-primary (también teal-
+   oscuro) daba ~1.6:1 — el acento no se distinguía del texto normal en NINGÚN
+   titular del sitio. Se usa --accent-2 (Soft Coral) en su lugar: más contraste
+   Y responde al pedido del usuario de más presencia de coral en la landing. */
 export function Accent({ children }: { children: ReactNode }) {
-  return <span className="text-[var(--accent)]">{children}</span>;
+  return <span className="text-[var(--accent-2)]">{children}</span>;
 }
 
 /* ── <Kicker> — caps 12px/600 tracking +0.08em en acento (máx 1 por sección) ── */
@@ -80,11 +84,16 @@ export function CheckCustom() {
   return (
     <span
       aria-hidden="true"
-      className="mt-0.5 inline-flex size-[22px] shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--accent)_12%,transparent)]"
+      className="mt-0.5 inline-flex size-[26px] shrink-0 items-center justify-center rounded-full shadow-[var(--shadow-1)]"
+      style={{ background: 'var(--accent)' }}
     >
+      {/* Fix revisor-visual (ronda 2, agrandado ronda 5): el leaf en tinte 12% se leía como
+          bullet decorativo. Círculo SÓLIDO + hojita clara + tamaño mayor (26px, antes 22px)
+          = badge legible a tamaño real, sigue siendo la hojita (tilde de la í), no un check
+          genérico del sistema. */}
       <span
-        className="block h-[11px] w-2 rounded-tl-full rounded-br-full"
-        style={{ background: 'var(--accent)', transform: 'rotate(-45deg)' }}
+        className="block h-[13px] w-[9px] rounded-tl-full rounded-br-full"
+        style={{ background: 'var(--bg)', transform: 'rotate(-45deg)' }}
       />
     </span>
   );
