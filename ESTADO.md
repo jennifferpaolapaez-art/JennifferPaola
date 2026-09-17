@@ -741,6 +741,49 @@ regresión frente al modelo anterior. **Explícitamente NO construido en esta ro
 del usuario): generación de PDF, contenido generado por IA real, archivos de imprimibles reales,
 el paquete semanal agregado, la pantalla "Preparar mi semana".
 
+### Refinamiento del esquema (Sesión 5, ronda 4 — `observations`, arquitectura oficial)
+Regla dura del usuario, motivo del cambio: "la maestra puede observar sin saber cómo clasificar
+lo que vio. RAÍZ ayuda a organizarlo después." `observations` nunca se había implementado (solo
+un boceto de una línea en el esquema original de Sesión 1, `skills_relacionados[]` como array) —
+se construyó completo, con DOS caminos hacia el mismo historial:
+```
+observations           (id, child_id, activity_id?, fecha, origen: dirigida|espontanea,
+                        fuente: texto|voz|seleccion_rapida, nota_original,
+                        redaccion_profesional?, triggered_by_skill_id?)
+                        -- nota_original NUNCA se sobrescribe; redaccion_profesional vive aparte
+                        (reservado — el análisis real de IA llega en servicios externos, `30`)
+observation_skills      (observation_id, skill_id, origen: raiz|maestra|observacion_dirigida,
+                        estado: sugerido|aceptado|rechazado, evidencia_textual?)
+                        -- una observación tiene 0, 1 o varios skills. `origen`+`estado` en vez de
+                        dos booleanos independientes (ambigüedad que el usuario señaló
+                        explícitamente: "sugerido y no revisado" vs. "sugerido y rechazado" deben
+                        distinguirse sin adivinar) — así se conserva incluso qué sugerencias de
+                        RAÍZ se rechazaron, sin duplicar el resultado en otro lado
+```
+DOS caminos, un mismo historial: (a) DIRIGIDA — toca una habilidad ya sugerida o una
+micro-observación de opciones rápidas (`fuente: seleccion_rapida`, ej. Tijeras) → el skill queda
+`aceptado` de una vez, sin paso de sugerencia (`origen: observacion_dirigida`). (b) ESPONTÁNEA —
+escribe/dicta libremente SIN elegir ningún skill antes → RAÍZ analiza la nota y sugiere posibles
+skills (`origen: raiz`, `estado: sugerido`); la maestra acepta/rechaza cada uno (toggle), agrega
+otra área manualmente (`origen: maestra`), o guarda sin clasificar (0 filas en
+`observation_skills`, perfectamente válido). El progreso real del niño (`child_skills`/
+`Nino.skills[].estado`) sigue sin cambiar solo por acumular observaciones — decisión humana
+explícita, sin tocar en esta ronda.
+Implementado en `lib/seed-data.ts` (`Observacion`, `ObservacionSkill`, `OPCIONES_RAPIDAS_POR_SKILL`,
+`analizarNotaSimulado` — **simulación local por palabra clave, NUNCA IA real todavía**, con aviso
+explícito en la UI: "Análisis de ejemplo — el análisis real llega con el servicio de IA") +
+`app/observar/page.tsx` reescrita con 6 pasos (nino → camino → dirigida-nota /
+espontanea-entrada → espontanea-sugerencias → listo). "Hablar" (dictado por voz) queda deshabilitado
+con copy honesto ("muy pronto"), mismo patrón ya usado para Google OAuth en Sesión 4 — nunca se
+simula una capacidad que no existe. "Agregar foto" SÍ es funcional (preview local con
+`URL.createObjectURL`, sin subir a ningún backend todavía). Verificado: tsc ✓ build ✓ · recorrido
+completo en el navegador interactivo a 375px real — camino dirigido con opción rápida (Tijeras →
+"Cortes consecutivos sin ayuda" → guardado con skill aceptado automáticamente) y camino espontáneo
+(nota de ejemplo del usuario sobre Mateo/bloques → RAÍZ sugiere "Agarre de pinza" con la evidencia
+textual correcta → probado tanto aceptar como rechazar la sugerencia → pantalla final refleja
+correctamente "guardada sin clasificar" cuando el único skill queda rechazado). Sin regresión en
+niños foco/adaptaciones (sus `observationId?` siguen siendo la misma referencia opcional).
+
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).
   MFA disponible para la cuenta de la directora/dueña del programa (doc maestro sec. 59). Los

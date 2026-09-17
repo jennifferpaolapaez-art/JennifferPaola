@@ -40,6 +40,14 @@
 //      el contenido real de la observación vive únicamente en `observations`.
 //   6. Los bloques del día se DERIVAN de `RUTINA_PROGRAMA` (la configuración del salón), no se
 //      improvisan por día — ver esa sección más abajo.
+//   7. `observations` acepta DOS caminos (dirigida/espontánea, ver sección al final del archivo):
+//      la maestra puede observar sin saber cómo clasificar lo que vio — RAÍZ sugiere skills
+//      DESPUÉS, nunca antes. La relación observación↔skill vive en `ObservacionSkill` (nunca un
+//      `skill_id` único en la observación): cada relación tiene su propio `origen`
+//      (raiz/maestra/observacion_dirigida) y `estado` (sugerido/aceptado/rechazado) — nunca dos
+//      booleanos, para no confundir "no revisado" con "rechazado". `notaOriginal` nunca se
+//      sobrescribe; el progreso de un skill (`Nino.skills[].estado`) NUNCA cambia solo por
+//      acumular observaciones — sigue siendo una decisión humana explícita.
 
 export type Etapa = 'Infant' | 'Toddler' | 'Preschool' | 'Pre-K';
 export type EstadoSkill = 'dominado' | 'en_desarrollo' | 'no_observado';
@@ -1027,4 +1035,95 @@ export function focoTextoDestacado(actividad: Actividad): string {
     return `Foco: ${nino?.nombre ?? ''} — ${primerFoco.meta}`;
   }
   return `Foco: ${actividad.dominio}`;
+}
+
+/* ── OBSERVACIONES — 3ra función núcleo del MVP. Regla dura del usuario (Sesión 5, ronda 4):
+   "la maestra puede observar sin saber cómo clasificar lo que vio. RAÍZ ayuda a organizarlo
+   después." Dos caminos, un mismo historial, nunca 1 observación = 1 skill obligatorio:
+     (a) DIRIGIDA — nace de tocar una habilidad ya sugerida (o una micro-observación de opciones
+         rápidas, ej. Tijeras) — el skill queda aceptado de una vez, sin paso de sugerencia
+         (origen='observacion_dirigida', estado='aceptado').
+     (b) ESPONTÁNEA — la maestra escribe/dicta libremente SIN elegir ningún skill antes. RAÍZ
+         analiza la nota y SUGIERE posibles skills; la maestra acepta/rechaza/agrega, o guarda
+         sin clasificar. Una observación válida puede tener 0, 1 o varios skills relacionados. ── */
+export type OrigenObservacion = 'dirigida' | 'espontanea';
+export type FuenteObservacion = 'texto' | 'voz' | 'seleccion_rapida';
+
+export interface Observacion {
+  id: string;
+  ninoId: string;
+  /** Opcional — una observación espontánea puede surgir fuera de cualquier actividad programada. */
+  actividadId?: string;
+  fecha: string;
+  origen: OrigenObservacion;
+  fuente: FuenteObservacion;
+  /** Exactamente lo que escribió/dictó/eligió la maestra — NUNCA se sobrescribe. */
+  notaOriginal: string;
+  /** Versión objetiva/profesional que RAÍZ propondría — campo aparte, reservado: el análisis
+   * real de IA se conecta en la fase de servicios externos (`30-INTEGRACION-IA.md`), no aquí. */
+  redaccionProfesional?: string;
+  /** Si nació de tocar un skill puntual (observación dirigida). */
+  triggeredBySkillId?: string;
+}
+
+/** Distingue sin ambigüedad "RAÍZ lo sugirió y aún no se revisó" de "RAÍZ lo sugirió y se
+ * rechazó" (corrección del usuario, Sesión 5 ronda 4) — nunca dos booleanos independientes. */
+export type OrigenRelacionSkill = 'raiz' | 'maestra' | 'observacion_dirigida';
+export type EstadoRelacionSkill = 'sugerido' | 'aceptado' | 'rechazado';
+
+/** Relación entre UNA observación y UN skill — una observación puede tener cero, una o varias
+ * filas de estas. El fragmento de evidencia vive aquí (por relación), no en la nota completa. */
+export interface ObservacionSkill {
+  observacionId: string;
+  skillId: string;
+  nombreSkill: string;
+  origen: OrigenRelacionSkill;
+  estado: EstadoRelacionSkill;
+  evidenciaTextual?: string;
+}
+
+/** Micro-observación de opciones rápidas (observación DIRIGIDA, fuente `seleccion_rapida`) — hoy
+ * solo Tijeras tiene un set definido; el resto de habilidades cae a nota libre en ese mismo paso. */
+export const OPCIONES_RAPIDAS_POR_SKILL: Record<string, string[]> = {
+  tijeras: ['Pequeños recortes', 'Cortes consecutivos sin ayuda', 'Línea recta con ayuda', 'Línea recta independiente', 'No observado'],
+};
+
+interface PistaSkillDemo {
+  skillId: string;
+  nombre: string;
+  palabrasClave: string[];
+}
+
+/** Catálogo de palabras clave para la SIMULACIÓN LOCAL del análisis de RAÍZ sobre observaciones
+ * espontáneas — NO es IA real (eso llega con el servicio de IA en la fase de servicios externos).
+ * Sirve solo para demostrar la experiencia con reglas simples y controladas: una nota que no
+ * calce con ninguna palabra clave cae directo en "sin sugerencias", con la opción de guardar sin
+ * clasificar. Incluye dominios que un niño puntual puede no tener todavía en su catálogo de
+ * skills — RAÍZ puede proponer EMPEZAR a seguir un área nueva, no solo las ya trackeadas. */
+const CATALOGO_SUGERENCIAS_DEMO: PistaSkillDemo[] = [
+  { skillId: 'pinza', nombre: 'Agarre de pinza', palabrasClave: ['pinza', 'índice y pulgar', 'índice', 'pulgar'] },
+  { skillId: 'tijeras', nombre: 'Tijeras', palabrasClave: ['tijera', 'recort'] },
+  { skillId: 'numeros-6-8', nombre: 'Conteo 6–8', palabrasClave: ['contó', 'contando', 'número', 'conteo'] },
+  { skillId: 'palabras', nombre: 'Vocabulario de 2 palabras', palabrasClave: ['palabra', 'dijo', 'nombró', 'vocabulario'] },
+  { skillId: 'resolucion-problemas', nombre: 'Resolución de problemas', palabrasClave: ['resolv', 'solución', 'construyó', 'torre'] },
+  { skillId: 'interaccion-social', nombre: 'Interacción con pares', palabrasClave: ['compañer', 'amigo', 'junto a', 'otro niño'] },
+  { skillId: 'regulacion-emocional', nombre: 'Regulación emocional', palabrasClave: ['gritó', 'lloró', 'molestó', 'enojó', 'frustr'] },
+  { skillId: 'comunicacion-necesidades', nombre: 'Comunicación de necesidades', palabrasClave: ['pidió', 'quería', 'señaló que'] },
+];
+
+/** Simulación local (reglas simples por palabra clave) de lo que el análisis real de RAÍZ haría
+ * sobre una nota espontánea — NUNCA IA real todavía (ver comentario de `CATALOGO_SUGERENCIAS_DEMO`
+ * arriba). Devuelve como máximo una sugerencia por dominio, con el fragmento de la nota que la
+ * disparó como evidencia. */
+export function analizarNotaSimulado(nota: string): { skillId: string; nombre: string; evidenciaTextual: string }[] {
+  const oraciones = nota.split(/(?<=[.!?])\s+/).filter(Boolean);
+  const notaMin = nota.toLowerCase();
+  const encontradas: { skillId: string; nombre: string; evidenciaTextual: string }[] = [];
+  for (const pista of CATALOGO_SUGERENCIAS_DEMO) {
+    const clave = pista.palabrasClave.find((p) => notaMin.includes(p));
+    if (!clave) continue;
+    const oracion = oraciones.find((o) => o.toLowerCase().includes(clave)) ?? nota;
+    encontradas.push({ skillId: pista.skillId, nombre: pista.nombre, evidenciaTextual: oracion.trim() });
+  }
+  return encontradas;
 }
