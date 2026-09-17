@@ -2,14 +2,17 @@
 
 // PERFIL DEL NIÑO — "Conoce a cada niño" (message-match con frame-perfil.png de la landing).
 // Es una de las 3 funciones núcleo del MVP (ESTADO.md → Constitución): edad + skills con su
-// estado real, el dato que alimenta la diferenciación de Hoy y Semana.
+// estado real, el dato que alimenta la diferenciación de Hoy y Semana. Extendido en Módulo
+// Niños (Sesión 6, paso 3) con las capas del perfil real: datos básicos, cómo es, "Cuéntame
+// sobre este niño", y necesidades/apoyos — antes esta pantalla era de solo lectura.
 
-import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, type Variants } from 'motion/react';
-import { ArrowLeft } from 'lucide-react';
-import { AppShell, AvatarInicial, SkillBadge } from '@/components/app/shell';
-import { ninoPorId, TINT_HEX } from '@/lib/seed-data';
+import { ArrowLeft, Pencil } from 'lucide-react';
+import { AppShell, AvatarInicial, Colapsable, SkillBadge } from '@/components/app/shell';
+import { calcularEdadTexto, leerNinos, ninoPorId, TINT_HEX, type Nino } from '@/lib/seed-data';
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
 const item: Variants = {
@@ -19,7 +22,18 @@ const item: Variants = {
 
 export default function Perfil() {
   const params = useParams<{ id: string }>();
-  const nino = ninoPorId(params.id);
+  const router = useRouter();
+  const [ninos, setNinos] = useState<Nino[]>([]);
+  const [cargado, setCargado] = useState(false);
+
+  useEffect(() => {
+    setNinos(leerNinos());
+    setCargado(true);
+  }, []);
+
+  const nino = ninoPorId(params.id, ninos);
+
+  if (!cargado) return null;
 
   if (!nino) {
     return (
@@ -38,7 +52,7 @@ export default function Perfil() {
   return (
     <AppShell>
       <motion.div variants={lista} initial="hidden" animate="visible">
-        <motion.div variants={item} className="mb-2">
+        <motion.div variants={item} className="mb-2 flex items-center justify-between">
           <Link
             href="/ninos"
             aria-label="Volver a Niños"
@@ -46,6 +60,14 @@ export default function Perfil() {
           >
             <ArrowLeft size={18} aria-hidden="true" />
           </Link>
+          <button
+            type="button"
+            onClick={() => router.push(`/ninos/${nino.id}/editar`)}
+            className="flex items-center gap-1.5 rounded-[var(--radius-button)] bg-[var(--surface-2)] px-3.5 py-2 text-[13px] font-semibold text-[var(--text-primary)]"
+          >
+            <Pencil size={14} aria-hidden="true" />
+            Editar
+          </button>
         </motion.div>
 
         <motion.header variants={item} className="mb-6 flex items-center gap-4">
@@ -56,10 +78,85 @@ export default function Perfil() {
               {nino.nombre}
             </h1>
             <p className="mt-0.5 text-[14px] text-[var(--text-secondary)]">
-              {nino.edadTexto} · {nino.etapa}
+              {calcularEdadTexto(nino.fechaNacimiento)} · {nino.etapa}
             </p>
           </div>
         </motion.header>
+
+        <motion.div variants={item} className="mb-6 flex flex-col gap-3">
+          <Colapsable titulo="Datos básicos" subtitulo="Ingreso, asistencia e idiomas">
+            <dl className="flex flex-col gap-2 text-[14px]">
+              <div className="flex justify-between gap-3">
+                <dt className="text-[var(--text-secondary)]">Fecha de ingreso</dt>
+                <dd className="text-right font-medium text-[var(--text-primary)]">{nino.fechaIngreso}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-[var(--text-secondary)]">Días programados</dt>
+                <dd className="text-right font-medium text-[var(--text-primary)]">{nino.diasAsistencia.join(', ')}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-[var(--text-secondary)]">Idiomas</dt>
+                <dd className="text-right font-medium text-[var(--text-primary)]">{nino.idiomas.join(', ') || '—'}</dd>
+              </div>
+            </dl>
+          </Colapsable>
+
+          {(nino.intereses.length > 0 || nino.fortalezas.length > 0 || nino.preferencias.length > 0 || nino.formasComunicacion) && (
+            <Colapsable titulo="Cómo es" subtitulo="Intereses, fortalezas y preferencias">
+              {nino.intereses.length > 0 && (
+                <div className="mb-3">
+                  <p className="mb-1 text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--text-tertiary)]">Intereses</p>
+                  <p className="text-[14px] text-[var(--text-primary)]">{nino.intereses.join(', ')}</p>
+                </div>
+              )}
+              {nino.fortalezas.length > 0 && (
+                <div className="mb-3">
+                  <p className="mb-1 text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--text-tertiary)]">Fortalezas</p>
+                  <p className="text-[14px] text-[var(--text-primary)]">{nino.fortalezas.join(', ')}</p>
+                </div>
+              )}
+              {nino.preferencias.length > 0 && (
+                <div className="mb-3">
+                  <p className="mb-1 text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--text-tertiary)]">Preferencias</p>
+                  <p className="text-[14px] text-[var(--text-primary)]">{nino.preferencias.join(', ')}</p>
+                </div>
+              )}
+              {nino.formasComunicacion && (
+                <div>
+                  <p className="mb-1 text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--text-tertiary)]">Cómo se comunica</p>
+                  <p className="text-[14px] text-[var(--text-primary)]">{nino.formasComunicacion}</p>
+                </div>
+              )}
+            </Colapsable>
+          )}
+
+          {nino.notasIngresoOriginal && (
+            <Colapsable titulo="Cuéntame sobre este niño" subtitulo="En las palabras de la maestra">
+              <p className="text-[14px] leading-relaxed text-[var(--text-primary)]">{nino.notasIngresoOriginal}</p>
+            </Colapsable>
+          )}
+
+          {nino.necesidades.length > 0 && (
+            <Colapsable titulo="Necesidades y apoyos" subtitulo={`${nino.necesidades.length} registradas`} defaultAbierto>
+              <ul className="flex flex-col gap-3">
+                {nino.necesidades.map((n) => (
+                  <li key={n.id} className="rounded-[var(--radius-card)] bg-[var(--surface-2)] p-3.5">
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--accent)]">{n.categoria}</p>
+                    <p className="mt-0.5 text-[14px] font-medium text-[var(--text-primary)]">{n.descripcion}</p>
+                    {nino.apoyos
+                      .filter((a) => a.necesidadId === n.id && a.activa)
+                      .map((a) => (
+                        <p key={a.id} className="mt-2 text-[13px] leading-snug text-[var(--text-secondary)]">
+                          <span className="font-semibold text-[var(--text-primary)]">Apoyo: </span>
+                          {a.estrategia}
+                        </p>
+                      ))}
+                  </li>
+                ))}
+              </ul>
+            </Colapsable>
+          )}
+        </motion.div>
 
         <motion.h2 variants={item} className="mb-2 text-[16px] font-semibold text-[var(--text-primary)]">
           Habilidades

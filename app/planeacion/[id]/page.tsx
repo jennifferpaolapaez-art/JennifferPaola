@@ -265,8 +265,9 @@ export default function DetalleActividad() {
           </motion.p>
         )}
 
-        {/* ——— CAPA A: diferenciación por ETAPA — "Una experiencia, cuatro niveles" (se mantiene
-            tal cual el usuario la aprobó; aplica igual a Circle Time, Outdoor, STEAM...). ——— */}
+        {/* ——— CAPA A: diferenciación por ETAPA — "Una experiencia, cinco niveles" (se mantiene
+            tal cual el usuario la aprobó; aplica igual a Circle Time, Outdoor, STEAM...). Pasó de
+            4 a 5 niveles en Módulo Niños (Sesión 6, paso 3) al dividir Toddler en Jr/Sr. ——— */}
         {actividad.diferenciacion && (
           <motion.section
             variants={item}
@@ -274,7 +275,7 @@ export default function DetalleActividad() {
             className="mb-6 rounded-[var(--radius-card)] border-x border-b border-t-[3px] border-x-[color-mix(in_oklab,var(--text-tertiary)_16%,transparent)] border-b-[color-mix(in_oklab,var(--text-tertiary)_16%,transparent)] border-t-[var(--accent)] bg-[var(--surface)] p-6 shadow-[var(--shadow-2)]"
           >
             <h2 className="text-[19px] font-semibold text-[var(--text-primary)] [font-family:var(--font-display)]">
-              Una experiencia, cuatro niveles
+              Una experiencia, cinco niveles
             </h2>
             <p className="mt-1 text-[14px] text-[var(--text-secondary)]">
               Así participa cada nivel en <strong>{actividad.titulo}</strong>.

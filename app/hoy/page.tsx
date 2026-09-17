@@ -107,7 +107,7 @@ export default function Hoy() {
 
           {actividad.diferenciacion && (
             <>
-              <p className="mt-4 text-[13px] font-semibold text-[var(--text-primary)]">Una experiencia, cuatro niveles</p>
+              <p className="mt-4 text-[13px] font-semibold text-[var(--text-primary)]">Una experiencia, cinco niveles</p>
               <div className="mt-2 flex flex-wrap gap-2" role="tablist" aria-label="Bandas de edad">
                 {ETAPAS_ORDEN.map((etapa) => (
                   <EtapaChip key={etapa} etapa={etapa} activa={etapa === etapaActiva} onClick={() => setEtapaActiva(etapa)} />

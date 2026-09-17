@@ -37,7 +37,7 @@ oficial a partir de ahora:
 1. GitHub / respaldo del proyecto actual                    ← CERRADO (push verificado en remoto)
 2. Configuración del programa (metodología, etapas, rutina, idiomas, prioridades, tracks) ← CERRADO
 3. Módulo Niños real (crear/editar, DOB→edad automática, días, idioma, "Cuéntame sobre este niño")
-   ← EN CURSO
+   ← CERRADO
 4. Perfil completo del niño: evaluación inicial RAÍZ + evaluaciones/documentos externos +
    Plan Individual opcional — arquitectura APROBADA, ver sección siguiente
 5. Planeación CON o SIN niños (grupo-nivel si no hay niños; se enriquece si los hay)
@@ -912,10 +912,9 @@ niños foco/adaptaciones (sus `observationId?` siguen siendo la misma referencia
 ## Sesión 6, paso 2 — Configuración del programa (CERRADO)
 Primera pantalla real de creación/edición de la app (todo lo anterior era solo lectura). Construida
 en `app/configuracion/page.tsx`, 9 secciones plegables (`<Colapsable>`, reutilizado sin cambios):
-Mi programa (nombre + tipo), A quién enseño (`EtapaAtendida` — Infant/Toddler Jr/Toddler Sr/
-Preschool/Pre-K, tipo PROPIO de esta pantalla, deliberadamente separado del `Etapa` de 4 valores
-que usan las 18 actividades ya aprobadas — se reconcilian en los pasos 3/5, no antes, para no
-romper contenido ya aprobado), Cómo enseño (metodologías estructuradas + descripción libre),
+Mi programa (nombre + tipo), A quién enseño (en su momento un tipo `EtapaAtendida` propio,
+separado del `Etapa` de 4 valores de las 18 actividades — reconciliado en el paso 3, ver abajo:
+ya no existe, ambas pantallas comparten el mismo `Etapa` de 5 valores), Cómo enseño (metodologías estructuradas + descripción libre),
 Idiomas (`idiomasEnsenanza[]` + `idiomaSalidaDefault` — "bilingüe" ya NO es un valor de idioma,
 corrección del usuario), Qué quiero priorizar (lista sugerida + agregar propia, sin límite),
 Tracks opcionales (5 tracks controlados, ligados a `assessment_template.track`), Evaluaciones
@@ -929,6 +928,38 @@ Verificado: tsc ✓ build ✓ (18 rutas) · recorrido real en navegador a 375px 
 selección única confirmadas, editor de rutina probado (cambio de duración, guardado, recarga
 completa de página, el valor nuevo persiste correctamente vía localStorage). Sin regresión: las
 18 actividades de la semana demo siguen usando el `Etapa`/`Bloque` originales sin tocar.
+
+## Sesión 6, paso 3 — Módulo Niños real (CERRADO)
+Primer CRUD real de niños — antes `NINOS` era una constante fija y el Perfil (`/ninos/[id]`) era
+de solo lectura. Reconciliación clave de este paso: `Etapa` pasa de 4 a 5 valores (`Infant`,
+`Toddler Jr`, `Toddler Sr`, `Preschool`, `Pre-K`) — se dividió Toddler porque pedagógicamente 14 y
+32 meses no son lo mismo. Las 18 actividades de la semana demo ya tenían un bloque `Toddler:` en
+cada `diferenciacion` (12 bloques, verificado); se duplicó ese texto en `'Toddler Jr'`/
+`'Toddler Sr'` (sin perder contenido, sin inventar distinción todavía) para que `Record<Etapa,
+string>` siguiera siendo válido sin relajar el tipo. `EtapaAtendida`/`ETAPAS_ATENDIDAS_ORDEN` de
+Configuración desaparecen — ambas pantallas comparten `Etapa`/`ETAPAS_ORDEN`. Sofía se reclasificó
+de `'Toddler'` a `'Toddler Sr'` (25 meses, consistente con `etapaSugeridaPorEdad`). "Una
+experiencia, cuatro niveles" → "cinco niveles" en `/hoy` y `/planeacion/[id]`.
+Nuevo en `lib/seed-data.ts`: `Nino` gana `fechaNacimiento` (la edad SIEMPRE se calcula desde
+aquí vía `calcularEdadTexto` — el campo `edadTexto` fijo desaparece), `fechaIngreso`, `idiomas[]`,
+`intereses[]`, `fortalezas[]`, `preferencias[]`, `formasComunicacion?`, `notasIngresoOriginal?`/
+`notasIngresoResumen?` ("Cuéntame sobre este niño" — mismo patrón original/redacción que
+`Observacion`), y las entidades aprobadas de la arquitectura v2 `NecesidadNino`/`ApoyoNino` (con
+`origen` de 5 valores, hoy solo se ejercita `'maestra'`; la integridad referencial por FK
+excluyentes queda para cuando exista Supabase — un `origenReferenciaId?` simple basta mientras no
+hay base de datos real detrás). `leerNinos()`/`guardarNinos()` — localStorage, mismo patrón que
+`leerProgramaConfig` — reemplazan la constante fija PARA las pantallas del módulo (`/ninos`,
+`/ninos/[id]`, `/ninos/nuevo`, `/ninos/[id]/editar`); Hoy/Planeación/Observar/Niños-foco
+DELIBERADAMENTE siguen leyendo la semilla fija (`NINOS`) sin regresión — se reconcilian con el
+roster real en el paso 5 ("Planeación con o sin niños"), donde de todas formas se reescribe esa
+lógica. `Chip`/`SelectorConPersonalizado` se movieron de Configuración a `components/app/shell.tsx`
+(compartidos) + nuevo `EtiquetasLibres` (tags libres sin lista sugerida). Nuevo
+`components/app/nino-formulario.tsx` (`<NinoFormulario>`) compartido por crear y editar.
+Verificado: tsc ✓ build ✓ (19 rutas) · recorrido real en navegador — creación completa de un niño
+nuevo (DOB tecleada, edad calculada correctamente vía `.value` del input nativo, etapa sugerida
+automática y seleccionable, guardado, aparece en la lista agrupada por etapa correcta), edición
+precargada con todos los campos, Perfil de Sofía muestra sus 2 necesidades con su apoyo enlazado
+correctamente por `necesidadId`, Hoy y Planeación siguen sin regresión con las 5 etapas.
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).

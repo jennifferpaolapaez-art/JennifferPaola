@@ -11,10 +11,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, useReducedMotion, type Variants } from 'motion/react';
 import { ArrowLeft, ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import { AppShell, Colapsable, LeafCheck } from '@/components/app/shell';
+import { AppShell, Chip, Colapsable, LeafCheck, SelectorConPersonalizado } from '@/components/app/shell';
 import {
   BLOQUE_LABEL,
-  ETAPAS_ATENDIDAS_ORDEN,
+  ETAPAS_ORDEN,
   FRECUENCIA_EVALUACION_LABEL,
   IDIOMAS_ENSENANZA_SUGERIDOS,
   METODOLOGIAS,
@@ -27,7 +27,7 @@ import {
   type Bloque,
   type BloqueRutina,
   type DiaSemana,
-  type EtapaAtendida,
+  type Etapa,
   type FrecuenciaEvaluacion,
   type Metodologia,
   type PracticaAEvitar,
@@ -45,80 +45,6 @@ const DIAS: DiaSemana[] = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'];
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.05 } } };
 const item: Variants = { hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] } } };
-
-function Chip({ label, activo, onClick }: { label: string; activo: boolean; onClick: () => void }) {
-  return (
-    <motion.button
-      whileTap={{ scale: 0.96 }}
-      type="button"
-      aria-pressed={activo}
-      onClick={onClick}
-      className={`inline-flex min-h-11 items-center rounded-[var(--radius-button)] px-3.5 py-2 text-[13px] font-semibold transition-colors duration-150 ${
-        activo ? 'bg-[var(--accent)] text-[var(--bg)]' : 'bg-[var(--surface-2)] text-[var(--text-primary)]'
-      }`}
-    >
-      {label}
-    </motion.button>
-  );
-}
-
-/** Selector de varios elementos de una lista sugerida + posibilidad de agregar uno propio —
- * mismo patrón para idiomas de enseñanza y prioridades pedagógicas (regla del usuario: "no quiero
- * que sean exclusivamente texto libre si RAÍZ las va a usar para lógica, pero tampoco quiero
- * limitar cuántas puede elegir"). */
-function SelectorConPersonalizado({
-  sugeridos,
-  seleccionados,
-  onChange,
-  placeholderAgregar,
-}: {
-  sugeridos: string[];
-  seleccionados: string[];
-  onChange: (valores: string[]) => void;
-  placeholderAgregar: string;
-}) {
-  const [nuevo, setNuevo] = useState('');
-  const todas = Array.from(new Set([...sugeridos, ...seleccionados]));
-
-  function alternar(valor: string) {
-    onChange(seleccionados.includes(valor) ? seleccionados.filter((v) => v !== valor) : [...seleccionados, valor]);
-  }
-
-  function agregar() {
-    const v = nuevo.trim();
-    if (!v || seleccionados.includes(v)) return;
-    onChange([...seleccionados, v]);
-    setNuevo('');
-  }
-
-  return (
-    <div>
-      <div className="flex flex-wrap gap-2">
-        {todas.map((v) => (
-          <Chip key={v} label={v} activo={seleccionados.includes(v)} onClick={() => alternar(v)} />
-        ))}
-      </div>
-      <div className="mt-3 flex gap-2">
-        <input
-          value={nuevo}
-          onChange={(e) => setNuevo(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), agregar())}
-          placeholder={placeholderAgregar}
-          className="min-h-11 flex-1 rounded-[var(--radius-button)] border border-[color-mix(in_oklab,var(--text-tertiary)_28%,transparent)] bg-[var(--surface)] px-3.5 text-[14px] text-[var(--text-primary)] outline-none focus-visible:border-[var(--accent)]"
-        />
-        <button
-          type="button"
-          onClick={agregar}
-          disabled={!nuevo.trim()}
-          aria-label="Agregar"
-          className="flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-[var(--surface-2)] text-[var(--text-primary)] disabled:opacity-40"
-        >
-          <Plus size={18} aria-hidden="true" />
-        </button>
-      </div>
-    </div>
-  );
-}
 
 function BloqueEditor({
   bloqueItem,
@@ -326,7 +252,7 @@ export default function ConfiguracionPrograma() {
 
           <Colapsable titulo="A quién enseño" subtitulo="Edades y etapas que atiende tu programa">
             <div className="flex flex-wrap gap-2">
-              {ETAPAS_ATENDIDAS_ORDEN.map((e: EtapaAtendida) => (
+              {ETAPAS_ORDEN.map((e: Etapa) => (
                 <Chip key={e} label={e} activo={config.etapasAtendidas.includes(e)} onClick={() => alternarEnArray('etapasAtendidas', e)} />
               ))}
             </div>

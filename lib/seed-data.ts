@@ -49,7 +49,11 @@
 //      sobrescribe; el progreso de un skill (`Nino.skills[].estado`) NUNCA cambia solo por
 //      acumular observaciones — sigue siendo una decisión humana explícita.
 
-export type Etapa = 'Infant' | 'Toddler' | 'Preschool' | 'Pre-K';
+/** Reconciliado en Sesión 6, paso 3 (Módulo Niños) — antes era un tipo propio de Configuración
+ * (`EtapaAtendida`) separado de este, para no romper las 18 actividades demo. Ahora que se
+ * dividieron sus bloques de diferenciación en Toddler Jr/Sr, el tipo central ya soporta las 5
+ * etapas y `EtapaAtendida` desaparece (Configuración reutiliza este mismo tipo). */
+export type Etapa = 'Infant' | 'Toddler Jr' | 'Toddler Sr' | 'Preschool' | 'Pre-K';
 export type EstadoSkill = 'dominado' | 'en_desarrollo' | 'no_observado';
 
 export interface Skill {
@@ -59,12 +63,62 @@ export interface Skill {
   actualizado: string; // ISO
 }
 
+/** De dónde nace una necesidad o un apoyo del niño — mismos 5 orígenes que ya aprobamos para
+ * `AdaptacionIndividual`/`ObservacionSkill` (arquitectura del Perfil del niño v2). Hoy solo se
+ * ejercita 'maestra' (la maestra la registra directo en el perfil); los demás quedan reservados
+ * para cuando observaciones/evaluaciones/Plan Individual puedan generarlas automáticamente. */
+export type OrigenNecesidadApoyo = 'maestra' | 'observacion' | 'evaluacion_raiz' | 'evaluacion_externa' | 'plan_individual';
+
+/** NECESIDAD DEL NIÑO (capa permanente del perfil) — no vive solo como texto libre ni solo
+ * dentro de una actividad puntual; `activity_child_adaptations` puede después enlazar aquí en
+ * vez de reinventar el texto cada vez (arquitectura aprobada, Sesión 6). Nota sobre integridad
+ * referencial: la arquitectura aprobada pide columnas FK excluyentes por tipo de origen — eso se
+ * implementa al conectar Supabase (paso 8); mientras tanto, sin base de datos real detrás, un
+ * campo `origenReferenciaId?` simple es suficiente y no se sobre-diseña antes de tiempo. */
+export interface NecesidadNino {
+  id: string;
+  categoria: string;
+  descripcion: string;
+  estado: 'activa' | 'resuelta' | 'por_revisar';
+  origen: OrigenNecesidadApoyo;
+  origenReferenciaId?: string;
+  teacherConfirmed: boolean;
+  fechaCreacion: string;
+}
+
+/** APOYO/ESTRATEGIA que funciona para una necesidad — capa separada de la necesidad misma
+ * (regla del usuario: "necesidad → apoyo → adaptación específica cuando una actividad lo
+ * requiere"). */
+export interface ApoyoNino {
+  id: string;
+  necesidadId?: string;
+  estrategia: string;
+  activa: boolean;
+  origen: OrigenNecesidadApoyo;
+  teacherConfirmed: boolean;
+}
+
 export interface Nino {
   id: string;
   nombre: string;
   etapa: Etapa;
-  edadTexto: string; // "3 años 8 meses"
+  /** La edad SIEMPRE se calcula desde aquí (`calcularEdadTexto`) — nunca se guarda fija (regla
+   * del usuario, Módulo Niños: "la edad exacta de cada niño siempre se calcula por DOB"). */
+  fechaNacimiento: string; // ISO
+  fechaIngreso: string; // ISO
   colorTint: 'coral' | 'sage' | 'butter' | 'teal';
+  idiomas: string[];
+  intereses: string[];
+  fortalezas: string[];
+  preferencias: string[];
+  formasComunicacion?: string;
+  /** "Cuéntame sobre este niño" — mismo patrón que `Observacion.notaOriginal`/
+   * `redaccionProfesional`: la maestra escribe libre, RAÍZ puede organizar después, el original
+   * NUNCA se sobrescribe. */
+  notasIngresoOriginal?: string;
+  notasIngresoResumen?: string;
+  necesidades: NecesidadNino[];
+  apoyos: ApoyoNino[];
   skills: Skill[];
   /** Meta activa (si tiene foco hoy) — se muestra en Hoy/Niños foco. */
   metaActiva?: { skillId: string; nota: string };
@@ -74,13 +128,56 @@ export interface Nino {
   diasAsistencia: DiaSemana[];
 }
 
-export const NINOS: Nino[] = [
+/** Bandas de edad por defecto para sugerir la etapa desde el DOB — punto de partida razonable
+ * (0-12m Infant, 12-24m Toddler Jr, 24-36m Toddler Sr, 36-48m Preschool, 48m+ Pre-K), NO una
+ * regla clínica cerrada; la maestra siempre puede anular la sugerencia al crear/editar un niño. */
+export function edadEnMeses(fechaNacimiento: string, fechaReferencia: string = FECHA_HOY): number {
+  const nacimiento = new Date(`${fechaNacimiento}T00:00:00`);
+  const referencia = new Date(`${fechaReferencia}T00:00:00`);
+  let meses = (referencia.getFullYear() - nacimiento.getFullYear()) * 12 + (referencia.getMonth() - nacimiento.getMonth());
+  if (referencia.getDate() < nacimiento.getDate()) meses -= 1;
+  return Math.max(0, meses);
+}
+
+export function etapaSugeridaPorEdad(meses: number): Etapa {
+  if (meses < 12) return 'Infant';
+  if (meses < 24) return 'Toddler Jr';
+  if (meses < 36) return 'Toddler Sr';
+  if (meses < 48) return 'Preschool';
+  return 'Pre-K';
+}
+
+/** Texto de edad SIEMPRE calculado desde `fechaNacimiento` — nunca un valor guardado que se
+ * vuelve obsoleto (regla del usuario). */
+export function calcularEdadTexto(fechaNacimiento: string, fechaReferencia: string = FECHA_HOY): string {
+  const meses = edadEnMeses(fechaNacimiento, fechaReferencia);
+  const anios = Math.floor(meses / 12);
+  const mesesRestantes = meses % 12;
+  if (anios === 0) return `${meses} ${meses === 1 ? 'mes' : 'meses'}`;
+  if (mesesRestantes === 0) return `${anios} ${anios === 1 ? 'año' : 'años'}`;
+  return `${anios} ${anios === 1 ? 'año' : 'años'} ${mesesRestantes} ${mesesRestantes === 1 ? 'mes' : 'meses'}`;
+}
+
+/** Semilla — nunca se enseña vacía (32). `NINOS` (export activo, más abajo) lee de aquí por
+ * defecto y de `localStorage` cuando la maestra ya creó/editó niños reales (Módulo Niños,
+ * Sesión 6 paso 3). Fechas de nacimiento elegidas para que `calcularEdadTexto` reproduzca
+ * exactamente el `edadTexto` que ya se había mostrado y aprobado en sesiones anteriores. */
+const NINOS_SEMILLA: Nino[] = [
   {
     id: 'luca',
     nombre: 'Luca',
     etapa: 'Preschool',
-    edadTexto: '3 años 8 meses',
+    fechaNacimiento: '2023-01-15', // → "3 años 8 meses" al 2026-09-15
+    fechaIngreso: '2025-08-18',
     colorTint: 'coral',
+    idiomas: ['Español'],
+    intereses: ['Dinosaurios', 'Construir con bloques'],
+    fortalezas: ['Vocabulario amplio para su edad'],
+    preferencias: ['Prefiere actividades con las manos antes que con lápiz'],
+    formasComunicacion: 'Habla con oraciones completas en español.',
+    notasIngresoOriginal: 'Luca es muy curioso y le encanta que le expliquen "por qué" de las cosas. Le cuesta un poco esperar su turno en grupo.',
+    necesidades: [],
+    apoyos: [],
     metaActiva: { skillId: 'tijeras', nota: 'Tijeras' },
     diasAsistencia: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
     skills: [
@@ -94,8 +191,17 @@ export const NINOS: Nino[] = [
     id: 'zayne',
     nombre: 'Zayne',
     etapa: 'Pre-K',
-    edadTexto: '4 años 5 meses',
+    fechaNacimiento: '2022-04-15', // → "4 años 5 meses" al 2026-09-15
+    fechaIngreso: '2024-09-02',
     colorTint: 'sage',
+    idiomas: ['English', 'Español'],
+    intereses: ['Números y patrones', 'Juegos de mesa'],
+    fortalezas: ['Memoria para secuencias y rimas'],
+    preferencias: ['Prefiere retos con un objetivo claro'],
+    formasComunicacion: 'Bilingüe — cambia de idioma según con quién habla.',
+    notasIngresoOriginal: 'Zayne pregunta mucho "cuántos faltan" — le gusta contar todo. Se frustra un poco si algo no sale a la primera.',
+    necesidades: [],
+    apoyos: [],
     metaActiva: { skillId: 'numeros-6-8', nota: 'Números 6–8' },
     diasAsistencia: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
     skills: [
@@ -108,9 +214,40 @@ export const NINOS: Nino[] = [
   {
     id: 'sofia',
     nombre: 'Sofía',
-    etapa: 'Toddler',
-    edadTexto: '2 años 1 mes',
+    etapa: 'Toddler Sr',
+    fechaNacimiento: '2024-08-15', // → "2 años 1 mes" al 2026-09-15
+    fechaIngreso: '2026-02-10',
     colorTint: 'butter',
+    idiomas: ['Español'],
+    intereses: ['Bloques apilables', 'Canciones con gestos'],
+    fortalezas: ['Persistente — repite una torre varias veces hasta lograrlo'],
+    preferencias: ['Prefiere elegir entre 2 opciones en vez de responder abierto'],
+    formasComunicacion: 'Lenguaje expresivo limitado — usa gestos y palabras sueltas.',
+    notasIngresoOriginal: 'Sofía evita tocar texturas pegajosas (pega, pintura) — se pone tensa y aparta la mano. Prefiere señalar antes que hablar cuando algo es nuevo.',
+    necesidades: [
+      {
+        id: 'need-sofia-sensorial',
+        categoria: 'Sensorial',
+        descripcion: 'Sensibilidad al contacto con texturas pegajosas (pega, pintura).',
+        estado: 'activa',
+        origen: 'maestra',
+        teacherConfirmed: true,
+        fechaCreacion: '2026-02-10',
+      },
+      {
+        id: 'need-sofia-lenguaje',
+        categoria: 'Lenguaje',
+        descripcion: 'Lenguaje expresivo limitado — todavía no responde con oraciones.',
+        estado: 'activa',
+        origen: 'maestra',
+        teacherConfirmed: true,
+        fechaCreacion: '2026-02-10',
+      },
+    ],
+    apoyos: [
+      { id: 'apoyo-sofia-aplicador', necesidadId: 'need-sofia-sensorial', estrategia: 'Ofrecer un aplicador o guante en vez de contacto directo con pega/pintura.', activa: true, origen: 'maestra', teacherConfirmed: true },
+      { id: 'apoyo-sofia-opciones', necesidadId: 'need-sofia-lenguaje', estrategia: 'Permitir señalar o elegir entre dos imágenes en vez de exigir respuesta verbal.', activa: true, origen: 'maestra', teacherConfirmed: true },
+    ],
     diasAsistencia: ['Lun', 'Mar', 'Jue'],
     skills: [
       { id: 'palabras', nombre: 'Vocabulario de 2 palabras', estado: 'en_desarrollo', actualizado: '2026-09-05' },
@@ -121,8 +258,29 @@ export const NINOS: Nino[] = [
     id: 'mateo',
     nombre: 'Mateo',
     etapa: 'Infant',
-    edadTexto: '11 meses',
+    fechaNacimiento: '2025-10-15', // → "11 meses" al 2026-09-15
+    fechaIngreso: '2026-01-12',
     colorTint: 'teal',
+    idiomas: ['Español'],
+    intereses: ['Objetos que suenan', 'Gatear detrás de pelotas'],
+    fortalezas: ['Explora con las manos con mucha atención'],
+    preferencias: ['Se calma mejor en brazos que en el piso cuando está nuevo el entorno'],
+    formasComunicacion: 'Pre-verbal — balbuceo y señalar.',
+    notasIngresoOriginal: 'Mateo todavía no se sienta con apoyo total ni se sostiene de pie por sí solo. Le gusta que le narren lo que está pasando mientras explora.',
+    necesidades: [
+      {
+        id: 'need-mateo-postural',
+        categoria: 'Motricidad gruesa',
+        descripcion: 'Aún en desarrollo de sedestación independiente y bipedestación con apoyo.',
+        estado: 'activa',
+        origen: 'maestra',
+        teacherConfirmed: true,
+        fechaCreacion: '2026-01-12',
+      },
+    ],
+    apoyos: [
+      { id: 'apoyo-mateo-piso', necesidadId: 'need-mateo-postural', estrategia: 'Ofrecer apoyo directo o brazos de la maestra en actividades de piso, sin exigir sedestación sostenida.', activa: true, origen: 'maestra', teacherConfirmed: true },
+    ],
     diasAsistencia: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
     skills: [
       { id: 'gateo', nombre: 'Gateo cruzado', estado: 'dominado', actualizado: '2026-08-30' },
@@ -131,7 +289,44 @@ export const NINOS: Nino[] = [
   },
 ];
 
-export const ETAPAS_ORDEN: Etapa[] = ['Infant', 'Toddler', 'Preschool', 'Pre-K'];
+const NINOS_STORAGE_KEY = 'raiz_ninos';
+
+/** Lee el roster real desde este dispositivo — localStorage mientras no exista Supabase (paso 8
+ * del orden acordado), mismo patrón que `leerProgramaConfig`. Nunca lanza si el storage no está
+ * disponible (SSR/modo privado). */
+export function leerNinos(): Nino[] {
+  if (typeof window === 'undefined') return NINOS_SEMILLA;
+  try {
+    const guardado = window.localStorage.getItem(NINOS_STORAGE_KEY);
+    if (!guardado) return NINOS_SEMILLA;
+    const parseado = JSON.parse(guardado) as Nino[];
+    return Array.isArray(parseado) && parseado.length > 0 ? parseado : NINOS_SEMILLA;
+  } catch {
+    return NINOS_SEMILLA;
+  }
+}
+
+export function guardarNinos(ninos: Nino[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(NINOS_STORAGE_KEY, JSON.stringify(ninos));
+  } catch {
+    // Almacenamiento no disponible (modo privado/cuota) — la sesión sigue funcionando en memoria.
+  }
+}
+
+export function generarIdNino(): string {
+  return `nino-${Date.now()}`;
+}
+
+/** Export activo para las pantallas que TODAVÍA no leen el roster dinámico (Hoy/Planeación/
+ * Observar/Niños foco) — siguen apuntando a la semilla fija sin regresión. El roster editable de
+ * verdad vive en `leerNinos()`; las pantallas de Módulo Niños (`/ninos`, `/ninos/[id]`,
+ * `/ninos/nuevo`) ya lo usan. Reconciliar Hoy/Planeación/Observar con el roster dinámico es del
+ * paso 5 ("Planeación con o sin niños"), donde de todas formas se reescribe esa lógica. */
+export const NINOS: Nino[] = NINOS_SEMILLA;
+
+export const ETAPAS_ORDEN: Etapa[] = ['Infant', 'Toddler Jr', 'Toddler Sr', 'Preschool', 'Pre-K'];
 
 export const TINT_HEX: Record<Nino['colorTint'], string> = {
   teal: '#0D5C63',
@@ -140,12 +335,12 @@ export const TINT_HEX: Record<Nino['colorTint'], string> = {
   sage: '#4F6249',
 };
 
-export function ninoPorId(id: string): Nino | undefined {
-  return NINOS.find((n) => n.id === id);
+export function ninoPorId(id: string, ninos: Nino[] = NINOS): Nino | undefined {
+  return ninos.find((n) => n.id === id);
 }
 
-export function ninosConFocoHoy(): Nino[] {
-  return NINOS.filter((n) => n.metaActiva);
+export function ninosConFocoHoy(ninos: Nino[] = NINOS): Nino[] {
+  return ninos.filter((n) => n.metaActiva);
 }
 
 export type DiaSemana = 'Lun' | 'Mar' | 'Mié' | 'Jue' | 'Vie';
@@ -417,7 +612,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           },
           diferenciacion: {
             Infant: 'Escucha la canción y observa los gestos, con apoyo para tocarse partes del cuerpo.',
-            Toddler: 'Imita 1-2 gestos de la canción.',
+            'Toddler Jr': 'Imita 1-2 gestos de la canción.',
+            'Toddler Sr': 'Imita 1-2 gestos de la canción.',
             Preschool: 'Sigue la canción completa y nombra 1 parte del cuerpo.',
             'Pre-K': 'Propone otra parte del cuerpo para agregar a la canción.',
           },
@@ -440,7 +636,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           conexionTema: 'Primer contacto con el propio contorno — mañana esta misma silueta se llena de textura en Collage del cuerpo.',
           diferenciacion: {
             Infant: 'Se recuesta con apoyo mientras la maestra traza, sin expectativa de quedarse quieto.',
-            Toddler: 'Se acuesta un momento breve con ayuda.',
+            'Toddler Jr': 'Se acuesta un momento breve con ayuda.',
+            'Toddler Sr': 'Se acuesta un momento breve con ayuda.',
             Preschool: 'Se mantiene quieto mientras lo trazan y nombra 2 partes al verse.',
             'Pre-K': 'Ayuda a trazar la silueta de un compañero.',
           },
@@ -540,7 +737,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           },
           diferenciacion: {
             Infant: 'Escucha la canción, observa las imágenes, toca o señala partes del cuerpo con ayuda.',
-            Toddler: 'Señala, imita el gesto, repite una palabra si puede.',
+            'Toddler Jr': 'Señala, imita el gesto, repite una palabra si puede.',
+            'Toddler Sr': 'Señala, imita el gesto, repite una palabra si puede.',
             Preschool: 'Nombra la parte del cuerpo, responde preguntas simples, participa en la canción.',
             'Pre-K': 'Describe con una frase corta y relaciona la letra H con "head".',
           },
@@ -584,7 +782,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           preguntasGuia: ['¿Qué parte del cuerpo estás cubriendo?', '¿Para qué usamos esa parte?', '¿Qué falta en tu silueta?'],
           diferenciacion: {
             Infant: 'Explora texturas de tela sobre una silueta grande, con apoyo, sin necesidad de pegar.',
-            Toddler: 'Pega piezas grandes de tela con pega-stick en su propia silueta.',
+            'Toddler Jr': 'Pega piezas grandes de tela con pega-stick en su propia silueta.',
+            'Toddler Sr': 'Pega piezas grandes de tela con pega-stick en su propia silueta.',
             Preschool: 'Nombra cada parte del cuerpo mientras pega y recorta con tijeras.',
             'Pre-K': 'Escribe el nombre de 3 partes del cuerpo junto a su silueta.',
           },
@@ -633,7 +832,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           },
           diferenciacion: {
             Infant: 'Explora el pasto/superficie con apoyo, gateo o pasos asistidos.',
-            Toddler: 'Imita 1-2 movimientos simples (saltar, estirar) junto a la maestra.',
+            'Toddler Jr': 'Imita 1-2 movimientos simples (saltar, estirar) junto a la maestra.',
+            'Toddler Sr': 'Imita 1-2 movimientos simples (saltar, estirar) junto a la maestra.',
             Preschool: 'Sigue la secuencia completa de movimientos y los nombra.',
             'Pre-K': 'Propone un movimiento nuevo para que el grupo lo imite.',
           },
@@ -654,7 +854,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           conexionTema: 'Extiende "Mi cuerpo" de cabeza y manos (Circle Time) a la cara, con exploración científica propia.',
           diferenciacion: {
             Infant: 'Explora su reflejo con la maestra cerca; mira y toca el espejo.',
-            Toddler: 'Señala partes de su cara en el espejo cuando se le nombran.',
+            'Toddler Jr': 'Señala partes de su cara en el espejo cuando se le nombran.',
+            'Toddler Sr': 'Señala partes de su cara en el espejo cuando se le nombran.',
             Preschool: 'Nombra lo que ve y compara ambos lados de su cara.',
             'Pre-K': 'Describe la simetría de su cara con una frase completa.',
           },
@@ -733,7 +934,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           },
           diferenciacion: {
             Infant: 'Observa las ilustraciones grandes del libro mientras la maestra las muestra.',
-            Toddler: 'Señala el animal cuando se le pregunta "¿dónde está?".',
+            'Toddler Jr': 'Señala el animal cuando se le pregunta "¿dónde está?".',
+            'Toddler Sr': 'Señala el animal cuando se le pregunta "¿dónde está?".',
             Preschool: 'Responde qué puede hacer con sus pies.',
             'Pre-K': 'Anticipa qué animal viene después según la pista de la maestra.',
           },
@@ -753,7 +955,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           conexionTema: 'Compara tamaños del propio cuerpo — profundiza "mi cuerpo es mío y es distinto al de otros".',
           diferenciacion: {
             Infant: 'Explora la textura de la pintura con apoyo, sin expectativa de huella limpia.',
-            Toddler: 'Hace su huella con ayuda directa de la maestra.',
+            'Toddler Jr': 'Hace su huella con ayuda directa de la maestra.',
+            'Toddler Sr': 'Hace su huella con ayuda directa de la maestra.',
             Preschool: 'Hace su huella y nombra qué parte usó.',
             'Pre-K': 'Compara su huella con la de un compañero y describe la diferencia.',
           },
@@ -785,7 +988,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           preguntasGuia: ['What can you do like this animal?'],
           diferenciacion: {
             Infant: 'Observa las ilustraciones e imita gestos simples con ayuda.',
-            Toddler: 'Imita 1-2 movimientos del libro.',
+            'Toddler Jr': 'Imita 1-2 movimientos del libro.',
+            'Toddler Sr': 'Imita 1-2 movimientos del libro.',
             Preschool: 'Imita todos los movimientos e identifica al animal.',
             'Pre-K': 'Describe qué parte del cuerpo usa cada animal para moverse.',
           },
@@ -842,7 +1046,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           },
           diferenciacion: {
             Infant: 'Explora el objeto sensorial con la maestra, tocándolo y mirándolo.',
-            Toddler: 'Señala el ojo o la oreja cuando se le nombra.',
+            'Toddler Jr': 'Señala el ojo o la oreja cuando se le nombra.',
+            'Toddler Sr': 'Señala el ojo o la oreja cuando se le nombra.',
             Preschool: 'Cuenta hasta 5 mientras nombra cada sentido.',
             'Pre-K': 'Asocia cada sentido con un ejemplo propio ("veo con mis ojos el libro").',
           },
@@ -861,7 +1066,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           preguntasGuia: ['Where does it hurt?', 'What can the doctor check?'],
           diferenciacion: {
             Infant: 'Observa el juego y sostiene el estetoscopio con apoyo.',
-            Toddler: 'Imita "revisar" a un muñeco con el estetoscopio.',
+            'Toddler Jr': 'Imita "revisar" a un muñeco con el estetoscopio.',
+            'Toddler Sr': 'Imita "revisar" a un muñeco con el estetoscopio.',
             Preschool: 'Juega el rol de doctor o paciente y nombra una parte del cuerpo.',
             'Pre-K': 'Sostiene un diálogo corto de 2-3 turnos en el rol.',
           },
@@ -924,7 +1130,8 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           },
           diferenciacion: {
             Infant: 'Observa la silueta y las imágenes de la semana con apoyo.',
-            Toddler: 'Señala 1 palabra de la semana cuando se nombra.',
+            'Toddler Jr': 'Señala 1 palabra de la semana cuando se nombra.',
+            'Toddler Sr': 'Señala 1 palabra de la semana cuando se nombra.',
             Preschool: 'Nombra 2-3 palabras de la semana sin ayuda.',
             'Pre-K': 'Cuenta qué fue lo que más le gustó aprender, con una frase.',
           },
@@ -1141,10 +1348,8 @@ export function analizarNotaSimulado(nota: string): { skillId: string; nombre: s
    demás (rutina, evaluaciones, tracks, planeación con/sin niños): sin esto no existe un "salón"
    al que amarrar niños. Persistencia: localStorage por ahora (`raiz_programa_config`) — Supabase
    llega en el paso 8 del orden acordado con el usuario, después de que el núcleo esté sólido.
-   NOTA: `EtapaAtendida` es un tipo PROPIO de esta pantalla, deliberadamente separado de `Etapa`
-   (el que usan Nino/Actividad/diferenciacion en las 18 actividades ya aprobadas de la semana
-   demo) para no romperlas con la división Toddler Jr/Sr. Se reconcilian cuando se construya
-   Módulo Niños/Planeación (pasos 3 y 5 del orden acordado) — no antes. ── */
+   NOTA: reutiliza el tipo `Etapa` central (ya reconciliado en Módulo Niños, paso 3) — antes de
+   esa reconciliación esta pantalla tenía su propio `EtapaAtendida`, ya no existe. ── */
 
 export type TipoPrograma =
   | 'Home Daycare / Family Child Care'
@@ -1166,9 +1371,6 @@ export const METODOLOGIAS: Metodologia[] = [
   'Montessori', 'Montessori híbrido', 'Reggio Emilia', 'Play-based',
   'School Readiness / Academic', 'Emergent Curriculum', 'Otra',
 ];
-
-export type EtapaAtendida = 'Infant' | 'Toddler Jr' | 'Toddler Sr' | 'Preschool' | 'Pre-K';
-export const ETAPAS_ATENDIDAS_ORDEN: EtapaAtendida[] = ['Infant', 'Toddler Jr', 'Toddler Sr', 'Preschool', 'Pre-K'];
 
 /** Idiomas sugeridos para el multi-selector de "idiomas de enseñanza" — la maestra puede agregar
  * otros con texto libre (regla del usuario: "bilingüe" NO es un idioma, es 2+ idiomas juntos). */
@@ -1214,7 +1416,7 @@ export interface ProgramaConfig {
   tipoPrograma: TipoPrograma;
   metodologias: Metodologia[];
   metodologiaDescripcionAdicional?: string;
-  etapasAtendidas: EtapaAtendida[];
+  etapasAtendidas: Etapa[];
   idiomasEnsenanza: string[];
   idiomaSalidaDefault: string;
   prioridadesPedagogicas: string[];
