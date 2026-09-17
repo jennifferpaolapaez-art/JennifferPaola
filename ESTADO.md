@@ -35,8 +35,9 @@ datos de ejemplo fijos (`NINOS`/`RUTINA_PROGRAMA` son constantes en código; el 
 oficial a partir de ahora:
 ```
 1. GitHub / respaldo del proyecto actual                    ← CERRADO (push verificado en remoto)
-2. Configuración del programa (metodología, etapas, rutina, idiomas, prioridades, tracks) ← EN CURSO
+2. Configuración del programa (metodología, etapas, rutina, idiomas, prioridades, tracks) ← CERRADO
 3. Módulo Niños real (crear/editar, DOB→edad automática, días, idioma, "Cuéntame sobre este niño")
+   ← EN CURSO
 4. Perfil completo del niño: evaluación inicial RAÍZ + evaluaciones/documentos externos +
    Plan Individual opcional — arquitectura APROBADA, ver sección siguiente
 5. Planeación CON o SIN niños (grupo-nivel si no hay niños; se enriquece si los hay)
@@ -907,6 +908,27 @@ completo en el navegador interactivo a 375px real — camino dirigido con opció
 textual correcta → probado tanto aceptar como rechazar la sugerencia → pantalla final refleja
 correctamente "guardada sin clasificar" cuando el único skill queda rechazado). Sin regresión en
 niños foco/adaptaciones (sus `observationId?` siguen siendo la misma referencia opcional).
+
+## Sesión 6, paso 2 — Configuración del programa (CERRADO)
+Primera pantalla real de creación/edición de la app (todo lo anterior era solo lectura). Construida
+en `app/configuracion/page.tsx`, 9 secciones plegables (`<Colapsable>`, reutilizado sin cambios):
+Mi programa (nombre + tipo), A quién enseño (`EtapaAtendida` — Infant/Toddler Jr/Toddler Sr/
+Preschool/Pre-K, tipo PROPIO de esta pantalla, deliberadamente separado del `Etapa` de 4 valores
+que usan las 18 actividades ya aprobadas — se reconcilian en los pasos 3/5, no antes, para no
+romper contenido ya aprobado), Cómo enseño (metodologías estructuradas + descripción libre),
+Idiomas (`idiomasEnsenanza[]` + `idiomaSalidaDefault` — "bilingüe" ya NO es un valor de idioma,
+corrección del usuario), Qué quiero priorizar (lista sugerida + agregar propia, sin límite),
+Tracks opcionales (5 tracks controlados, ligados a `assessment_template.track`), Evaluaciones
+(trimestral/semestral/anual/personalizada, default trimestral), Mi rutina (editor completo de
+`RUTINA_PROGRAMA`: tipo de bloque incl. Música/Transición/Personalizado, nombre personalizado,
+hora, duración, días, activo/inactivo, reordenar ↑↓, agregar/eliminar), Preferencias (prácticas a
+evitar + texto libre). Persistencia: `localStorage` (`raiz_programa_config`) — Supabase llega en
+el paso 8 del orden acordado, no antes; mismo patrón ya usado por `/paywall` con las respuestas
+del onboarding. Entrada a la pantalla: ícono de engranaje en el header de `/ninos`.
+Verificado: tsc ✓ build ✓ (18 rutas) · recorrido real en navegador a 375px — multi-selección y
+selección única confirmadas, editor de rutina probado (cambio de duración, guardado, recarga
+completa de página, el valor nuevo persiste correctamente vía localStorage). Sin regresión: las
+18 actividades de la semana demo siguen usando el `Etapa`/`Bloque` originales sin tocar.
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).

@@ -6,7 +6,7 @@
 
 import Link from 'next/link';
 import { motion, type Variants } from 'motion/react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Settings } from 'lucide-react';
 import { AppShell, AvatarInicial } from '@/components/app/shell';
 import { ETAPAS_ORDEN, NINOS, TINT_HEX } from '@/lib/seed-data';
 
@@ -20,11 +20,20 @@ export default function Ninos() {
   return (
     <AppShell>
       <motion.div variants={lista} initial="hidden" animate="visible">
-        <motion.header variants={item} className="mb-6">
-          <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--accent)]">Tu grupo</p>
-          <h1 className="mt-1 text-balance text-[26px] font-bold leading-[1.15] text-[var(--text-primary)] [font-family:var(--font-display)]">
-            {NINOS.length} niños
-          </h1>
+        <motion.header variants={item} className="mb-6 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--accent)]">Tu grupo</p>
+            <h1 className="mt-1 text-balance text-[26px] font-bold leading-[1.15] text-[var(--text-primary)] [font-family:var(--font-display)]">
+              {NINOS.length} niños
+            </h1>
+          </div>
+          <Link
+            href="/configuracion"
+            aria-label="Configuración del programa"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)]"
+          >
+            <Settings size={20} aria-hidden="true" />
+          </Link>
         </motion.header>
 
         {ETAPAS_ORDEN.map((etapa) => {

@@ -162,7 +162,10 @@ export type Bloque =
   | 'lectura'
   | 'outdoor'
   | 'prek'
-  | 'cierre';
+  | 'cierre'
+  | 'musica'
+  | 'transicion'
+  | 'custom';
 
 export const BLOQUE_LABEL: Record<Bloque, string> = {
   circle: 'Circle Time',
@@ -173,6 +176,9 @@ export const BLOQUE_LABEL: Record<Bloque, string> = {
   outdoor: 'Outdoor / Movimiento',
   prek: 'Trabajo Pre-K',
   cierre: 'Cierre / Reflexión',
+  musica: 'Música / Movimiento',
+  transicion: 'Transición',
+  custom: 'Personalizado',
 };
 
 /** RUTINA CONFIGURADA DEL PROGRAMA — regla del usuario (Sesión 5 ronda 3): un día NUNCA improvisa
@@ -183,28 +189,31 @@ export const BLOQUE_LABEL: Record<Bloque, string> = {
  * bloques le tocan a cada día de la semana. */
 export interface BloqueRutina {
   bloque: Bloque;
+  /** Solo se usa cuando `bloque === 'custom'`. */
+  nombrePersonalizado?: string;
   horaAproximada: string;
   duracionMin: number;
   orden: number;
   dias: DiaSemana[];
+  activo: boolean;
 }
 
 export const RUTINA_PROGRAMA: BloqueRutina[] = [
-  { bloque: 'circle', horaAproximada: '9:30', duracionMin: 15, orden: 1, dias: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'] },
-  { bloque: 'principal', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Lun', 'Mar', 'Jue'] },
-  { bloque: 'steam', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Mié'] },
-  { bloque: 'centros', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Vie'] },
-  { bloque: 'outdoor', horaAproximada: '10:30', duracionMin: 30, orden: 3, dias: ['Lun', 'Mar', 'Jue'] },
-  { bloque: 'lectura', horaAproximada: '11:00', duracionMin: 20, orden: 3, dias: ['Mié'] },
-  { bloque: 'steam', horaAproximada: '11:30', duracionMin: 30, orden: 4, dias: ['Mar'] },
-  { bloque: 'prek', horaAproximada: '13:30', duracionMin: 30, orden: 4, dias: ['Mié'] },
-  { bloque: 'centros', horaAproximada: '15:30', duracionMin: 45, orden: 5, dias: ['Lun', 'Mar'] },
-  { bloque: 'cierre', horaAproximada: '15:00', duracionMin: 15, orden: 6, dias: ['Vie'] },
+  { bloque: 'circle', horaAproximada: '9:30', duracionMin: 15, orden: 1, dias: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], activo: true },
+  { bloque: 'principal', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Lun', 'Mar', 'Jue'], activo: true },
+  { bloque: 'steam', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Mié'], activo: true },
+  { bloque: 'centros', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Vie'], activo: true },
+  { bloque: 'outdoor', horaAproximada: '10:30', duracionMin: 30, orden: 3, dias: ['Lun', 'Mar', 'Jue'], activo: true },
+  { bloque: 'lectura', horaAproximada: '11:00', duracionMin: 20, orden: 3, dias: ['Mié'], activo: true },
+  { bloque: 'steam', horaAproximada: '11:30', duracionMin: 30, orden: 4, dias: ['Mar'], activo: true },
+  { bloque: 'prek', horaAproximada: '13:30', duracionMin: 30, orden: 4, dias: ['Mié'], activo: true },
+  { bloque: 'centros', horaAproximada: '15:30', duracionMin: 45, orden: 5, dias: ['Lun', 'Mar'], activo: true },
+  { bloque: 'cierre', horaAproximada: '15:00', duracionMin: 15, orden: 6, dias: ['Vie'], activo: true },
 ];
 
-/** Los bloques que le tocan a un día de la semana según la rutina configurada, en orden. */
-export function bloquesConfiguradosParaDia(dia: DiaSemana): BloqueRutina[] {
-  return RUTINA_PROGRAMA.filter((b) => b.dias.includes(dia)).sort((a, b) => a.orden - b.orden);
+/** Los bloques activos que le tocan a un día de la semana según la rutina configurada, en orden. */
+export function bloquesConfiguradosParaDia(dia: DiaSemana, rutina: BloqueRutina[] = RUTINA_PROGRAMA): BloqueRutina[] {
+  return rutina.filter((b) => b.activo && b.dias.includes(dia)).sort((a, b) => a.orden - b.orden);
 }
 
 /** De dónde salió una adaptación individual — para que RAÍZ sepa no solo QUÉ se hizo, sino POR
@@ -1126,4 +1135,132 @@ export function analizarNotaSimulado(nota: string): { skillId: string; nombre: s
     encontradas.push({ skillId: pista.skillId, nombre: pista.nombre, evidenciaTextual: oracion.trim() });
   }
   return encontradas;
+}
+
+/* ── CONFIGURACIÓN DEL PROGRAMA — Sesión 6, paso 2 del núcleo funcional. Es la raíz de todo lo
+   demás (rutina, evaluaciones, tracks, planeación con/sin niños): sin esto no existe un "salón"
+   al que amarrar niños. Persistencia: localStorage por ahora (`raiz_programa_config`) — Supabase
+   llega en el paso 8 del orden acordado con el usuario, después de que el núcleo esté sólido.
+   NOTA: `EtapaAtendida` es un tipo PROPIO de esta pantalla, deliberadamente separado de `Etapa`
+   (el que usan Nino/Actividad/diferenciacion en las 18 actividades ya aprobadas de la semana
+   demo) para no romperlas con la división Toddler Jr/Sr. Se reconcilian cuando se construya
+   Módulo Niños/Planeación (pasos 3 y 5 del orden acordado) — no antes. ── */
+
+export type TipoPrograma =
+  | 'Home Daycare / Family Child Care'
+  | 'Preschool'
+  | 'Pre-K'
+  | 'Child Care Center'
+  | 'Otro';
+
+export type Metodologia =
+  | 'Montessori'
+  | 'Montessori híbrido'
+  | 'Reggio Emilia'
+  | 'Play-based'
+  | 'School Readiness / Academic'
+  | 'Emergent Curriculum'
+  | 'Otra';
+
+export const METODOLOGIAS: Metodologia[] = [
+  'Montessori', 'Montessori híbrido', 'Reggio Emilia', 'Play-based',
+  'School Readiness / Academic', 'Emergent Curriculum', 'Otra',
+];
+
+export type EtapaAtendida = 'Infant' | 'Toddler Jr' | 'Toddler Sr' | 'Preschool' | 'Pre-K';
+export const ETAPAS_ATENDIDAS_ORDEN: EtapaAtendida[] = ['Infant', 'Toddler Jr', 'Toddler Sr', 'Preschool', 'Pre-K'];
+
+/** Idiomas sugeridos para el multi-selector de "idiomas de enseñanza" — la maestra puede agregar
+ * otros con texto libre (regla del usuario: "bilingüe" NO es un idioma, es 2+ idiomas juntos). */
+export const IDIOMAS_ENSENANZA_SUGERIDOS = ['English', 'Español'];
+
+export const PRIORIDADES_PEDAGOGICAS_SUGERIDAS = [
+  'Desarrollo socioemocional', 'Lenguaje y comunicación', 'Motricidad fina', 'Motricidad gruesa',
+  'Autonomía', 'Vocabulario bilingüe', 'Juego y exploración', 'Pre-literacy', 'Pre-math',
+  'School Readiness', 'Kindergarten Readiness', 'STEM/STEAM',
+];
+
+/** Tracks opcionales — entidades CONTROLADAS por RAÍZ (ligadas a `assessment_templates.track`),
+ * nunca texto libre de la maestra (regla del usuario, arquitectura del Perfil del niño v2). */
+export type TrackOpcional = 'kindergarten_readiness' | 'school_readiness' | 'pre_literacy' | 'pre_math' | 'bilingual_language_focus';
+
+export const TRACK_LABEL: Record<TrackOpcional, string> = {
+  kindergarten_readiness: 'Kindergarten Readiness',
+  school_readiness: 'School Readiness',
+  pre_literacy: 'Pre-literacy',
+  pre_math: 'Pre-math',
+  bilingual_language_focus: 'Bilingual / Language Focus',
+};
+
+export type FrecuenciaEvaluacion = 'trimestral' | 'semestral' | 'anual' | 'personalizada';
+export const FRECUENCIA_EVALUACION_LABEL: Record<FrecuenciaEvaluacion, string> = {
+  trimestral: 'Trimestral',
+  semestral: 'Semestral',
+  anual: 'Anual',
+  personalizada: 'Personalizada',
+};
+
+export type PracticaAEvitar = 'comida_sensorial' | 'glitter' | 'worksheets' | 'pantallas' | 'otro';
+export const PRACTICA_A_EVITAR_LABEL: Record<PracticaAEvitar, string> = {
+  comida_sensorial: 'Comida para actividades sensoriales',
+  glitter: 'Glitter',
+  worksheets: 'Worksheets',
+  pantallas: 'Pantallas',
+  otro: 'Otro',
+};
+
+export interface ProgramaConfig {
+  nombrePrograma: string;
+  tipoPrograma: TipoPrograma;
+  metodologias: Metodologia[];
+  metodologiaDescripcionAdicional?: string;
+  etapasAtendidas: EtapaAtendida[];
+  idiomasEnsenanza: string[];
+  idiomaSalidaDefault: string;
+  prioridadesPedagogicas: string[];
+  tracksActivos: TrackOpcional[];
+  frecuenciaEvaluacion: FrecuenciaEvaluacion;
+  frecuenciaEvaluacionMesesPersonalizada?: number;
+  practicasAEvitar: PracticaAEvitar[];
+  preferenciasGeneralesTexto?: string;
+  rutinaBloques: BloqueRutina[];
+}
+
+export const PROGRAMA_CONFIG_DEFAULT: ProgramaConfig = {
+  nombrePrograma: 'Mi salón',
+  tipoPrograma: 'Home Daycare / Family Child Care',
+  metodologias: [],
+  etapasAtendidas: [],
+  idiomasEnsenanza: [],
+  idiomaSalidaDefault: 'Español',
+  prioridadesPedagogicas: [],
+  tracksActivos: [],
+  frecuenciaEvaluacion: 'trimestral',
+  practicasAEvitar: [],
+  rutinaBloques: RUTINA_PROGRAMA,
+};
+
+const PROGRAMA_CONFIG_STORAGE_KEY = 'raiz_programa_config';
+
+/** Lee la configuración guardada en este dispositivo — sin Supabase todavía (paso 8 del orden
+ * acordado), localStorage es la persistencia interina, igual que ya hace `/paywall` con las
+ * respuestas del onboarding. Nunca lanza si el storage no está disponible (SSR/privado). */
+export function leerProgramaConfig(): ProgramaConfig {
+  if (typeof window === 'undefined') return PROGRAMA_CONFIG_DEFAULT;
+  try {
+    const guardado = window.localStorage.getItem(PROGRAMA_CONFIG_STORAGE_KEY);
+    if (!guardado) return PROGRAMA_CONFIG_DEFAULT;
+    return { ...PROGRAMA_CONFIG_DEFAULT, ...JSON.parse(guardado) } as ProgramaConfig;
+  } catch {
+    return PROGRAMA_CONFIG_DEFAULT;
+  }
+}
+
+export function guardarProgramaConfig(config: ProgramaConfig): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(PROGRAMA_CONFIG_STORAGE_KEY, JSON.stringify(config));
+  } catch {
+    // Almacenamiento no disponible (modo privado/cuota) — la sesión sigue funcionando en memoria.
+  }
 }
