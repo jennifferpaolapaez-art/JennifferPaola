@@ -25,12 +25,49 @@ real, imprimibles reales, paquete semanal, pantalla "Preparar mi semana". Gate d
 sobre `/hoy` (4 rondas, previas a ambas correcciones pedagógicas) sigue como techo estructural
 aceptado — ver "Problemas conocidos".
 
-**Sesión 6 (servicios externos) — EN CURSO.** Único tramo de la secuencia maestra donde el usuario
-ejecuta acciones manuales (crear cuentas, autorizar, pagar) — el agente guía paso a paso, nunca ve
-ni pide secretos. Orden fijo (`SECUENCIA-MAESTRA-CONSTRUCCION.md` §Paso 6): 1) Git/GitHub → 2)
-Supabase (datos+RLS+auth real) → 3) IA real por servidor → 4) Vercel → 5) Resend → 6) Dominio → 7)
-Hotmart. Arrancando por (1): el repositorio de este proyecto vive solo en local (`git remote -v`
-vacío, una sola rama `master`) — sin respaldo remoto todavía.
+**⚠️ SECUENCIA REPLANIFICADA por el usuario (tras cerrar la Puerta de Etapa de Sesión 5) — cosa
+juzgada, no volver a la secuencia genérica de servicios externos sin que el usuario lo pida.**
+El usuario detectó correctamente que la app interna de Sesión 5 es un vertical slice mínimo
+(Planeación→Hoy→actividad→adaptaciones/foco→observación), NO el núcleo funcional completo de
+RAÍZ — y que conectar Supabase/Auth/IA real/Hotmart ahora congelaría un esquema construido sobre
+datos de ejemplo fijos (`NINOS`/`RUTINA_PROGRAMA` son constantes en código; el Perfil del niño en
+`app/ninos/[id]/page.tsx` es de solo lectura — no hay dónde crear/editar un niño todavía). Orden
+oficial a partir de ahora:
+```
+1. GitHub / respaldo del proyecto actual                    ← EN CURSO
+2. Configuración del programa (metodología, etapas, rutina, idiomas, prioridades, tracks)
+3. Módulo Niños real (crear/editar, DOB→edad automática, días, idioma, "Cuéntame sobre este niño")
+4. Perfil completo del niño: evaluación inicial RAÍZ + evaluaciones/documentos externos +
+   Plan Individual opcional (ver diseño detallado más abajo, PENDIENTE DE APROBAR)
+5. Planeación CON o SIN niños (grupo-nivel si no hay niños; se enriquece si los hay)
+6. Observaciones como módulo independiente (mismo sistema de Sesión 5 ronda 4, entrada propia)
+7. Progreso / Reportes (vista de lectura sobre lo ya acumulado)
+   — núcleo funcional sólido antes de continuar —
+8. Supabase + Auth real
+9. IA real
+10. Publicación (Vercel)
+11. Dominio
+12. Cobro (Hotmart)
+```
+Centros/Inventario, imprimibles, PDF, paquete semanal y "Preparar mi semana" NO se eliminan —
+siguen como fase posterior ya decidida en la Constitución del Producto (Sesión 1), fuera de este
+punch list. **Regla explícita del usuario: NO avanzar a Supabase ni construir la arquitectura del
+punto 4 hasta que apruebe la propuesta de diseño** (ver sección siguiente).
+
+### Diseño pendiente de aprobar — Perfil completo del niño (punto 4)
+Antes de escribir una sola línea de este módulo, el agente debe responder y el usuario aprobar:
+(A) cómo se genera una evaluación periódica como snapshot del perfil vivo; (B) cómo conservar qué
+evidencia justificó cada resultado; (C) cómo incorporar skills nuevos al cambiar de edad/etapa sin
+perder el historial de los anteriores; (D) cómo evitar reevaluar manualmente desde cero cada vez;
+(E) cómo lograr que RAÍZ prellene la mayor parte del borrador con evidencia ya acumulada; (F) cómo
+conectar resultados de evaluación con la siguiente planeación; (G) cómo mantener separadas las
+evaluaciones RAÍZ (`assessment_templates` versionadas) de los documentos/evaluaciones externas
+(ASQ-3, IFSP, IEP, speech/OT/PT — RAÍZ nunca diagnostica, solo usa lo pedagógicamente relevante);
+(H) cómo integrar el Plan Individual sin obligar a que todo niño tenga uno. Entidades mínimas a
+representar: `skills_catalog`, `assessment_templates`, `assessment_template_skills`,
+`child_skills`, `child_assessments`, `child_assessment_results`, `external_assessments`,
+`individual_plans`, `individual_goals`, más `observations`/`observation_skills`/`evidence` ya
+construidas en la ronda 4 de Sesión 5 (se reutilizan, no se duplican).
 
 ### Puerta de Etapa — App interna (Sesión 5)
 1. Objetivo: entregar Perfil→Planeación→Observación→Próxima planeación con datos semilla reales.
