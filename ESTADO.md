@@ -34,11 +34,11 @@ datos de ejemplo fijos (`NINOS`/`RUTINA_PROGRAMA` son constantes en código; el 
 `app/ninos/[id]/page.tsx` es de solo lectura — no hay dónde crear/editar un niño todavía). Orden
 oficial a partir de ahora:
 ```
-1. GitHub / respaldo del proyecto actual                    ← EN CURSO
-2. Configuración del programa (metodología, etapas, rutina, idiomas, prioridades, tracks)
+1. GitHub / respaldo del proyecto actual                    ← CERRADO (push verificado en remoto)
+2. Configuración del programa (metodología, etapas, rutina, idiomas, prioridades, tracks) ← EN CURSO
 3. Módulo Niños real (crear/editar, DOB→edad automática, días, idioma, "Cuéntame sobre este niño")
 4. Perfil completo del niño: evaluación inicial RAÍZ + evaluaciones/documentos externos +
-   Plan Individual opcional (ver diseño detallado más abajo, PENDIENTE DE APROBAR)
+   Plan Individual opcional — arquitectura APROBADA, ver sección siguiente
 5. Planeación CON o SIN niños (grupo-nivel si no hay niños; se enriquece si los hay)
 6. Observaciones como módulo independiente (mismo sistema de Sesión 5 ronda 4, entrada propia)
 7. Progreso / Reportes (vista de lectura sobre lo ya acumulado)
@@ -51,23 +51,83 @@ oficial a partir de ahora:
 ```
 Centros/Inventario, imprimibles, PDF, paquete semanal y "Preparar mi semana" NO se eliminan —
 siguen como fase posterior ya decidida en la Constitución del Producto (Sesión 1), fuera de este
-punch list. **Regla explícita del usuario: NO avanzar a Supabase ni construir la arquitectura del
-punto 4 hasta que apruebe la propuesta de diseño** (ver sección siguiente).
+punch list.
 
-### Diseño pendiente de aprobar — Perfil completo del niño (punto 4)
-Antes de escribir una sola línea de este módulo, el agente debe responder y el usuario aprobar:
-(A) cómo se genera una evaluación periódica como snapshot del perfil vivo; (B) cómo conservar qué
-evidencia justificó cada resultado; (C) cómo incorporar skills nuevos al cambiar de edad/etapa sin
-perder el historial de los anteriores; (D) cómo evitar reevaluar manualmente desde cero cada vez;
-(E) cómo lograr que RAÍZ prellene la mayor parte del borrador con evidencia ya acumulada; (F) cómo
-conectar resultados de evaluación con la siguiente planeación; (G) cómo mantener separadas las
-evaluaciones RAÍZ (`assessment_templates` versionadas) de los documentos/evaluaciones externas
-(ASQ-3, IFSP, IEP, speech/OT/PT — RAÍZ nunca diagnostica, solo usa lo pedagógicamente relevante);
-(H) cómo integrar el Plan Individual sin obligar a que todo niño tenga uno. Entidades mínimas a
-representar: `skills_catalog`, `assessment_templates`, `assessment_template_skills`,
-`child_skills`, `child_assessments`, `child_assessment_results`, `external_assessments`,
-`individual_plans`, `individual_goals`, más `observations`/`observation_skills`/`evidence` ya
-construidas en la ronda 4 de Sesión 5 (se reutilizan, no se duplican).
+### Arquitectura APROBADA — Perfil completo del niño (v2, negociada en 3 rondas con el usuario)
+Cosa juzgada — no rediseñar salvo que el usuario lo pida. Entidades finales:
+```
+programs           += idiomas_ensenanza[], idioma_salida_default, tracks_activos[],
+                       frecuencia_evaluacion  (idioma_trabajo YA vive en `staff`, Sesión 1 —
+                       no se duplica en programs)
+children            += idiomas[], intereses[], fortalezas[], formas_comunicacion,
+                       notas_ingreso_original, notas_ingreso_resumen? (mismo patrón que
+                       observations.nota_original/redaccion_profesional — nunca se sobrescribe),
+                       frecuencia_evaluacion_override?, fecha_ultima_evaluacion_aprobada?,
+                       fecha_proxima_evaluacion (calculada), idioma_reporte_preferido?
+skills_catalog       += rango_edad_meses_min/max, politica_revision (una_vez_dominado|
+                       seguimiento_periodico|desarrollo_continuo), evidencia_requerida
+                       (una_demostracion_clara|multiples_contextos|consistencia_repetida),
+                       veces_minimas? (SOLO si evidencia_requerida=consistencia_repetida — nunca
+                       una regla universal de "N observaciones"), contextos_recomendados[]
+
+assessment_templates       (id, rango_edad_meses_min/max, etapa, track: null=core|track_id,
+                            version, vigente) — INMUTABLE tras el primer uso; un cambio siempre
+                            crea versión nueva, nunca edita la existente
+assessment_template_skills (assessment_template_id, skill_id, orden)
+
+child_skills          -- ESTADO ACTUAL, dos ejes separados:
+                          estado_desarrollo: desconocido|en_desarrollo|dominado
+                          estado_evidencia:  no_observado|insuficiente|suficiente|contradictoria
+child_skill_events    -- HISTORIAL: child_id, skill_id, estado_desarrollo_anterior/nuevo,
+                          estado_evidencia_anterior/nuevo, fecha, fuente, observation_id?,
+                          child_assessment_id?, confirmado_por_maestra
+
+child_needs     (child_id, categoria, descripcion, estado: activa|resuelta|por_revisar, origen,
+                 teacher_confirmed) + columnas FK EXCLUYENTES en vez de referencia genérica:
+                 observation_id? / child_assessment_id? / external_assessment_id? /
+                 external_assessment_finding_id? / individual_plan_id? (exactamente una NOT NULL
+                 si origen≠'maestra' — integridad referencial real en Postgres/Supabase)
+child_supports  (child_id, child_need_id?, estrategia, activa) — mismo patrón de FK excluyentes
+
+child_assessments          (child_id, tipo: ingreso|periodica, fecha, estado: borrador|aprobada,
+                            aprobada_por, aprobada_en, edad_al_momento_meses, etapa_al_momento)
+child_assessment_results   (child_assessment_id, skill_id, assessment_template_id,
+                            estado_desarrollo, estado_evidencia, sugerido_por_raiz,
+                            editado_por_maestra)
+child_assessment_result_evidence (..._result_id, observation_id?, evidence_id?,
+                            external_assessment_id?, external_assessment_finding_id?)
+
+observations, observation_skills, evidence   -- sin cambios (Sesión 5 ronda 4)
+
+external_assessments          (child_id, tipo: ASQ-3|IFSP|IEP|speech_language|OT|PT|otro,
+                               nombre_instrumento, fecha, profesional_o_entidad, resumen,
+                               areas_relevantes[], recomendaciones, archivo_url,
+                               permiso_uso_pedagogico) — RAÍZ nunca diagnostica, nunca reproduce
+                               el instrumento propietario completo
+external_assessment_findings   (external_assessment_id, tipo_hallazgo, area, resumen,
+                               recomendacion, skill_id?, teacher_confirmed) — hallazgos puntuales
+                               citables sin convertir el documento completo en resultado propio
+
+individual_plans   (child_id, estado, motivo, origen) — 0 filas = sin Plan Individual, válido
+individual_goals    (individual_plan_id, skill_id?, descripcion, estado, estrategias,
+                    siguiente_paso)
+individual_goal_evidence (individual_goal_id, observation_id?, evidence_id?)
+
+child_reports   (child_id, tipo, periodo_inicio/fin, estado: borrador|aprobado,
+                contenido_snapshot, based_on_child_assessment_id?, idioma, version, pdf_url?
+                reservado) — congelado tras aprobar; un cambio posterior en datos vivos NUNCA
+                altera un reporte ya aprobado; versión nueva en vez de sobrescribir
+
+rutina_bloques, dias_plan, activities                       -- sin cambios (Sesión 5 ronda 3)
+activity_child_adaptations (+ child_support_id? nuevo)
+activity_child_focus        (ya tenía individual_goal_id?/skill_id? — sin cambios)
+```
+Regla de próxima evaluación (decisión técnica, no configurable — evita exponerle a la maestra una
+regla que no necesita decidir): `fecha_proxima_evaluacion` = (`fecha_ultima_evaluacion_aprobada` o
+`fecha_ingreso` si aún no tiene ninguna) + (`frecuencia_evaluacion_override` del niño, si existe,
+si no la del programa). "Reportes" y "Progreso" quedan separados a propósito: progreso es una
+vista dinámica sobre datos vivos; `child_reports` es el snapshot congelado y versionado que sí se
+puede aprobar/compartir sin que cambie después.
 
 ### Puerta de Etapa — App interna (Sesión 5)
 1. Objetivo: entregar Perfil→Planeación→Observación→Próxima planeación con datos semilla reales.
