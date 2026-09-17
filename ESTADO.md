@@ -17,11 +17,38 @@ configurada, adaptaciones/niños foco relacionales, asistencia con estado, impri
 negociado punto por punto con el usuario y ejecutado — ver "Refinamiento del esquema (Sesión 5,
 ronda 3)" en Sesión 1 y "Sesión 5 → Arquitectura de datos" abajo. Build verde. **Sesión 5
 funcionalmente completa — pendiente que el usuario la recorra completa y confirme antes de pasar a
-Sesión 6** (regla propia del usuario: "no avances a otra sesión todavía"). Explícitamente NO
+Sesión 6** — el usuario recorrió Hoy/Planeación/Observar en el navegador interactivo (dirigida con
+opciones rápidas y espontánea con análisis simulado, ambos caminos probados de punta a punta) y
+confirmó avanzar. **Sesión 5 CERRADA con Puerta de Etapa aprobada** (ver abajo). Explícitamente NO
 construido todavía (por instrucción del usuario): generación de PDF, contenido generado por IA
 real, imprimibles reales, paquete semanal, pantalla "Preparar mi semana". Gate del revisor-visual
-sobre `/hoy` (4 rondas, previas a ambas correcciones pedagógicas) sigue pendiente de decisión — ver
-"Problemas conocidos".
+sobre `/hoy` (4 rondas, previas a ambas correcciones pedagógicas) sigue como techo estructural
+aceptado — ver "Problemas conocidos".
+
+**Sesión 6 (servicios externos) — EN CURSO.** Único tramo de la secuencia maestra donde el usuario
+ejecuta acciones manuales (crear cuentas, autorizar, pagar) — el agente guía paso a paso, nunca ve
+ni pide secretos. Orden fijo (`SECUENCIA-MAESTRA-CONSTRUCCION.md` §Paso 6): 1) Git/GitHub → 2)
+Supabase (datos+RLS+auth real) → 3) IA real por servidor → 4) Vercel → 5) Resend → 6) Dominio → 7)
+Hotmart. Arrancando por (1): el repositorio de este proyecto vive solo en local (`git remote -v`
+vacío, una sola rama `master`) — sin respaldo remoto todavía.
+
+### Puerta de Etapa — App interna (Sesión 5)
+1. Objetivo: entregar Perfil→Planeación→Observación→Próxima planeación con datos semilla reales.
+2. Archivos del SO leídos: 32, 53, RUBRICAS-DE-PANTALLA, CHECKLIST-CIERRE (por pantalla, sesión a sesión).
+3. Rutas: `/hoy`, `/semana`, `/planeacion`, `/planeacion/[id]`, `/ninos`, `/ninos/[id]`,
+   `/ninos-foco`, `/observar` (reconstruida con 2 caminos en ronda 4).
+4. Protagonista por pantalla: Hoy=rutina del día+actividad actual; Planeación=todos los bloques de
+   la semana; Actividad=las 3 capas (etapa/adaptación/foco); Niños=roster y perfil; Observar=
+   registrar sin necesitar saber clasificar.
+5. Acción primaria: Hoy→"Registrar observación de hoy"; Planeación→abrir un bloque; Observar→
+   guardar (dirigida o espontánea).
+6. Evidencia: tsc ✓ build ✓ (18 rutas) en cada ronda · revisor-visual sobre `/hoy` 4 rondas
+   (24→27→34→28/40 · 12→15→15→14/20, techo estructural documentado y aceptado) · recorrido
+   completo en navegador interactivo a 375px real, ambos caminos de Observar verificados end to end.
+7. Riesgos/pendientes: gate `/hoy` bajo umbral (aceptado como excepción); printables/PDF/IA
+   real/paquete semanal/"Preparar mi semana" quedan para fases posteriores, no para Sesión 6.
+8. Veredicto: **aprobable** (excepción consciente documentada, no bloqueante).
+9. Siguiente etapa: Sesión 6, servicios externos — conectar lo ya construido a infraestructura real.
 
 ## Sesión 4 — Onboarding, paywall y login
 - **Alcance de esta sesión** (SECUENCIA MAESTRA: página de ventas → onboarding → paywall →
