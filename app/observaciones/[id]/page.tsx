@@ -1,23 +1,26 @@
 'use client';
 
-// DETALLE DE UNA OBSERVACIÓN (Sesión 6, paso 6) — regla del usuario: distinguir siempre NOTA
-// ORIGINAL (lo que la maestra realmente escribió/eligió, NUNCA se sobrescribe) de REDACCIÓN
-// PROFESIONAL (solo si existe — la IA real llega en la fase de servicios externos), SKILLS
-// RELACIONADOS con su estado real (aceptado/rechazado/sugerido — un "sugerido" sigue pendiente de
-// revisión, no se disfraza de aceptado), EVIDENCIA (solo el nombre del archivo, sin fingir
-// almacenamiento real todavía) y CONTEXTO (actividad/bloque/fecha, si nació dentro de una).
+// DETALLE DE UNA OBSERVACIÓN (Sesión 6, paso 6 → 6b) — muestra como PRINCIPAL la observación
+// profesional (o la nota original si todavía no hay redacción confirmada — regla del usuario:
+// "mantener mi nota" no convierte la nota subjetiva en redacción profesional, así que puede no
+// existir), con "Ver nota original" para revisar exactamente lo que la maestra escribió/dictó
+// (NUNCA se sobrescribe). SKILLS RELACIONADOS con su estado real — un "sugerido" se puede
+// Aceptar/Rechazar directo desde aquí, para que nunca quede pendiente para siempre solo porque la
+// maestra ya salió de la pantalla anterior. EVIDENCIA (solo el nombre del archivo, sin fingir
+// almacenamiento real) y CONTEXTO (actividad/bloque/fecha, si nació dentro de una).
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, type Variants } from 'motion/react';
-import { ArrowLeft, Paperclip } from 'lucide-react';
-import { AppShell, AvatarInicial } from '@/components/app/shell';
+import { ArrowLeft, Paperclip, X } from 'lucide-react';
+import { AppShell, AvatarInicial, LeafCheck } from '@/components/app/shell';
 import {
   leerNinos,
   leerObservaciones,
   skillsDeObservacion,
   leerObservacionSkills,
+  actualizarEstadoObservacionSkill,
   actividadYPlanPorId,
   TINT_HEX,
   BLOQUE_LABEL,
@@ -51,6 +54,7 @@ export default function DetalleObservacion() {
   const [observaciones, setObservaciones] = useState<Observacion[]>([]);
   const [skills, setSkills] = useState<ObservacionSkill[]>([]);
   const [cargado, setCargado] = useState(false);
+  const [verNotaOriginal, setVerNotaOriginal] = useState(false);
 
   useEffect(() => {
     setNinos(leerNinos());
@@ -77,8 +81,14 @@ export default function DetalleObservacion() {
     );
   }
 
+  function revisarSkill(skillId: string, nuevoEstado: 'aceptado' | 'rechazado') {
+    setSkills(actualizarEstadoObservacionSkill(observacion!.id, skillId, nuevoEstado));
+  }
+
   const skillsRelacionados = skillsDeObservacion(observacion.id, skills);
   const contexto = observacion.actividadId ? actividadYPlanPorId(observacion.actividadId) : undefined;
+  const observacionPrincipal = observacion.redaccionProfesional ?? observacion.notaOriginal;
+  const tieneRedaccionPropia = !!observacion.redaccionProfesional;
 
   return (
     <AppShell>
@@ -107,16 +117,23 @@ export default function DetalleObservacion() {
         </motion.header>
 
         <motion.section variants={item} className="mb-5 rounded-[var(--radius-card)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-          <Etiqueta>Nota original</Etiqueta>
-          <p className="mt-2 text-[15px] leading-relaxed text-[var(--text-primary)]">{observacion.notaOriginal}</p>
+          <Etiqueta>{tieneRedaccionPropia ? 'Observación profesional' : 'Nota'}</Etiqueta>
+          <p className="mt-2 text-[15px] leading-relaxed text-[var(--text-primary)]">{observacionPrincipal}</p>
+          {tieneRedaccionPropia && (
+            <button
+              type="button"
+              onClick={() => setVerNotaOriginal((v) => !v)}
+              className="mt-3 text-[13px] font-semibold text-[var(--accent)] underline"
+            >
+              {verNotaOriginal ? 'Ocultar nota original' : 'Ver nota original'}
+            </button>
+          )}
+          {tieneRedaccionPropia && verNotaOriginal && (
+            <p className="mt-2 rounded-[var(--radius-button)] bg-[var(--surface-2)] p-3 text-[14px] leading-relaxed text-[var(--text-secondary)]">
+              {observacion.notaOriginal}
+            </p>
+          )}
         </motion.section>
-
-        {observacion.redaccionProfesional && (
-          <motion.section variants={item} className="mb-5 rounded-[var(--radius-card)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-            <Etiqueta>Redacción profesional</Etiqueta>
-            <p className="mt-2 text-[15px] leading-relaxed text-[var(--text-primary)]">{observacion.redaccionProfesional}</p>
-          </motion.section>
-        )}
 
         {skillsRelacionados.length > 0 && (
           <motion.section variants={item} className="mb-5">
@@ -133,6 +150,26 @@ export default function DetalleObservacion() {
                       </span>
                     </div>
                     {s.evidenciaTextual && <p className="mt-1.5 text-[13px] leading-snug text-[var(--text-secondary)]">Evidencia: “{s.evidenciaTextual}”</p>}
+                    {s.estado === 'sugerido' && (
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => revisarSkill(s.skillId, 'aceptado')}
+                          className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-button)] bg-[var(--surface-2)] text-[13px] font-semibold text-[var(--text-primary)]"
+                        >
+                          <LeafCheck size={13} />
+                          Aceptar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => revisarSkill(s.skillId, 'rechazado')}
+                          className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-button)] bg-[var(--surface-2)] text-[13px] font-semibold text-[var(--text-primary)]"
+                        >
+                          <X size={13} aria-hidden="true" />
+                          Rechazar
+                        </button>
+                      </div>
+                    )}
                   </li>
                 );
               })}
@@ -140,11 +177,11 @@ export default function DetalleObservacion() {
           </motion.section>
         )}
 
-        {observacion.evidenciaArchivoNombre && (
+        {observacion.evidencia && (
           <motion.section variants={item} className="mb-5 flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-4">
             <Paperclip size={18} className="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
             <div className="min-w-0">
-              <p className="truncate text-[14px] font-medium text-[var(--text-primary)]">{observacion.evidenciaArchivoNombre}</p>
+              <p className="truncate text-[14px] font-medium text-[var(--text-primary)]">{observacion.evidencia.nombreArchivo}</p>
               <p className="text-[12px] text-[var(--text-tertiary)]">Referencia guardada — el archivo real todavía no se adjunta (sin almacenamiento conectado).</p>
             </div>
           </motion.section>

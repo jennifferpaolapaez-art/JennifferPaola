@@ -2225,10 +2225,20 @@ export interface Observacion {
   triggeredBySkillId?: string;
   /** Quién la registró — ver `STAFF_ACTUAL_ID`. */
   autorId: string;
-  /** Solo el NOMBRE del archivo adjunto — nunca la URL temporal del navegador (se pierde igual al
-   * recargar) ni se simula almacenamiento real todavía (regla del usuario, mismo patrón que
-   * evaluaciones externas). */
-  evidenciaArchivoNombre?: string;
+  /** La entidad es EVIDENCIA en general, no "foto" (regla del usuario, Sesión 6 paso 6b) — hoy
+   * solo el tipo `foto` es real; el resto queda reservado en `TipoEvidencia` sin construirse. */
+  evidencia?: Evidencia;
+}
+
+/** Reservado para cuando existan más formas de evidencia — hoy solo `foto` tiene UI real. */
+export type TipoEvidencia = 'foto' | 'trabajo_nino' | 'audio' | 'video' | 'documento';
+
+/** Solo el NOMBRE del archivo — nunca la URL temporal del navegador (se pierde igual al recargar)
+ * ni se simula almacenamiento real todavía (regla del usuario, mismo patrón que evaluaciones
+ * externas: "no fingir almacenamiento real"). */
+export interface Evidencia {
+  tipo: TipoEvidencia;
+  nombreArchivo: string;
 }
 
 /** Distingue sin ambigüedad "RAÍZ lo sugirió y aún no se revisó" de "RAÍZ lo sugirió y se
@@ -2286,6 +2296,7 @@ const CATALOGO_SUGERENCIAS_DEMO: PistaSkillDemo[] = [
   { skillId: 'numeros-6-8', nombre: 'Conteo 6–8', palabrasClave: ['contó', 'contando', 'número', 'conteo'] },
   { skillId: 'palabras', nombre: 'Vocabulario de 2 palabras', palabrasClave: ['palabra', 'dijo', 'nombró', 'vocabulario'] },
   { skillId: 'resolucion-problemas', nombre: 'Resolución de problemas', palabrasClave: ['resolv', 'solución', 'construyó', 'torre'] },
+  { skillId: 'colores', nombre: 'Reconoce colores', palabrasClave: ['color', 'amarillo', 'azul', 'rojo', 'verde', 'morado', 'rosa', 'marrón', 'negro', 'blanco', 'gris', 'naranja'] },
   { skillId: 'interaccion-social', nombre: 'Interacción con pares', palabrasClave: ['compañer', 'amigo', 'junto a', 'otro niño'] },
   { skillId: 'regulacion-emocional', nombre: 'Regulación emocional', palabrasClave: ['gritó', 'lloró', 'molestó', 'enojó', 'frustr'] },
   { skillId: 'comunicacion-necesidades', nombre: 'Comunicación de necesidades', palabrasClave: ['pidió', 'quería', 'señaló que'] },
@@ -2306,6 +2317,196 @@ export function analizarNotaSimulado(nota: string): { skillId: string; nombre: s
     encontradas.push({ skillId: pista.skillId, nombre: pista.nombre, evidenciaTextual: oracion.trim() });
   }
   return encontradas;
+}
+
+/* ── REDACCIÓN PROFESIONAL SIMULADA (Sesión 6, paso 6b) — "RAÍZ organizó tu observación": la
+   maestra puede escribir como habla; RAÍZ propone una versión objetiva, la maestra la revisa
+   antes de guardar. NUNCA IA real todavía — reglas controladas y explícitas, igual que
+   `analizarNotaSimulado`. `notaOriginal` JAMÁS se toca; esto solo genera lo que se OFRECE como
+   `redaccionProfesional`, y la maestra decide si lo usa, lo edita, o no lo usa todavía (regla del
+   usuario: "mantener mi nota" no convierte la nota subjetiva en redacción profesional — la deja
+   pendiente). Regla de oro: describe hechos observables (qué hizo/dijo/se vio-escuchó), nunca
+   sentimientos o intenciones inferidas; nunca inventa un hecho que la maestra no describió. */
+
+/** Etiquetas de juicio — se ELIMINAN por completo de la redacción, nunca se reformulan en otra
+ * frase ("mostró comportamiento grosero" sigue siendo un juicio, no un hecho). */
+const ETIQUETAS_SUBJETIVAS_DEMO = [
+  'grosero', 'grosera', 'malcriado', 'malcriada', 'terco', 'terca',
+  'agresivo', 'agresiva', 'llorón', 'llorona', 'perezoso', 'perezosa', 'malo', 'mala',
+];
+
+/** Generalizaciones sin un hecho puntual documentado ("grita mucho", "siempre se pelea") — se
+ * excluyen igual que las etiquetas: no hay un momento concreto que describir, y repetirlas como
+ * si fueran un hecho de HOY sería tan impreciso como la etiqueta misma (regla del usuario: "no se
+ * transforma en algo más específico que lo realmente dicho" — la respuesta correcta es omitir, no
+ * inventar el momento exacto). */
+const GENERALIZACIONES_SIN_INSTANCIA_DEMO: RegExp[] = [
+  /\bgrita\s+mucho\b/i, /\bllora\s+mucho\b/i, /\bpega\s+mucho\b/i, /\bmuerde\s+mucho\b/i,
+  /\bsiempre\s+(se\s+)?\w+/i, /\btodo\s+el\s+tiempo\b/i, /\bnunca\s+\w+/i,
+];
+
+/** Frases de conflicto AMBIGUAS — no describen qué pasó, así que nunca se convierten en "empujó"/
+ * "mordió"/etc. por sí solas. Se excluyen de la redacción por defecto; la pantalla puede ofrecer
+ * (sin obligar) una aclaración de opción múltiple — si la maestra la responde, ESE hecho concreto
+ * sí se incluye. Nunca se inventa la respuesta. */
+interface FraseAmbiguaDemo {
+  patron: RegExp;
+  pregunta: string;
+  opciones: string[];
+}
+const FRASES_AMBIGUAS_DEMO: FraseAmbiguaDemo[] = [
+  {
+    patron: /se\s+pele[oó]|se\s+pelearon|hubo\s+un\s+conflicto|tuvieron\s+un\s+problema/i,
+    pregunta: '¿Qué observaste exactamente durante el conflicto?',
+    opciones: ['Gritó', 'Empujó', 'Mordió', 'Quitó un objeto', 'Lloró'],
+  },
+];
+
+const FRASE_POR_OPCION_ACLARACION: Record<string, string> = {
+  Gritó: 'gritó durante una interacción con un compañero',
+  Empujó: 'empujó a un compañero',
+  Mordió: 'mordió a un compañero',
+  'Quitó un objeto': 'quitó un objeto a un compañero',
+  Lloró: 'lloró durante una interacción con un compañero',
+};
+
+const NUMEROS_TEXTO_DEMO: Record<string, string> = { '1': 'un', '2': 'dos', '3': 'tres', '4': 'cuatro', '5': 'cinco', '6': 'seis', '7': 'siete', '8': 'ocho', '9': 'nueve', '10': 'diez' };
+function numeroATexto(valor: string): string {
+  return NUMEROS_TEXTO_DEMO[valor.trim()] ?? valor.trim();
+}
+
+/** Reemplaza cualquier OTRO nombre del roster (nunca el niño observado) por "un compañero" — la
+ * regla se define aquí, no acoplada a `/observar`, para poder reutilizarse después en reportes/
+ * evaluaciones narrativas/My Learning Journey (regla del usuario, Sesión 6 paso 6b). Como hoy no
+ * guardamos género estructurado, usa siempre la forma neutra "un compañero" — no inventa género.
+ * `notaOriginal` nunca pasa por aquí; esto solo transforma lo que se OFRECE como redacción. */
+export function anonimizarNombresDeOtros(texto: string, ninoObservadoId: string, ninos: Nino[]): string {
+  let resultado = texto;
+  for (const n of ninos) {
+    if (n.id === ninoObservadoId) continue;
+    const patronNombre = new RegExp(`\\b${n.nombre}\\b`, 'gi');
+    resultado = resultado.replace(patronNombre, 'un compañero');
+  }
+  return resultado;
+}
+
+interface HechoDetectado {
+  indice: number;
+  texto: string;
+}
+
+/** Reglas de hecho observable — controladas y explícitas (ninguna IA real). Cada regla busca un
+ * patrón concreto y produce SOLO la frase correspondiente a lo que la maestra escribió; lo que no
+ * calza con ninguna regla y no es etiqueta/generalización/ambigüedad simplemente no entra a la
+ * redacción (nunca se inventa para "completar" — la nota original queda igual de completa). */
+function detectarHechos(textoAnonimizado: string): HechoDetectado[] {
+  const hechos: HechoDetectado[] = [];
+  const reglas: { patron: RegExp; frase: (m: RegExpMatchArray) => string }[] = [
+    { patron: /jug[oó]\s+con\s+bloques/i, frase: () => 'jugó con bloques' },
+    { patron: /se\s+(?:lo|los|la|las)\s+meti[oó]\s+a\s+la\s+boca/i, frase: () => 'se llevó los bloques a la boca' },
+    { patron: /(?:hizo\s+una\s+pila\s+(?:de|con)\s+(\d+)\s+bloques|apil[oó]\s+(\d+)\s+bloques)/i, frase: (m) => `apiló ${numeroATexto(m[1] || m[2])} bloques` },
+    { patron: /cont[oó]\s+([\d]+(?:[,\s]+[\d]+)*)/i, frase: (m) => `contó "${m[1].trim().replace(/[,\s]+/g, ', ')}" mientras los colocaba` },
+    { patron: /dijo\s+(amarillo|azul|rojo|verde|morado|rosa|marrón|negro|blanco|gris|naranja)/i, frase: (m) => `nombró el color ${m[1].toLowerCase()}` },
+    { patron: /se\s+fue\s+a\s+jugar\s+con\s+(un\s+compañero|una\s+compañera|[a-záéíóúñ]+)/i, frase: (m) => `se fue a jugar con ${m[1].toLowerCase()}` },
+  ];
+  for (const regla of reglas) {
+    const match = textoAnonimizado.match(regla.patron);
+    if (match && match.index !== undefined) {
+      hechos.push({ indice: match.index, texto: regla.frase(match) });
+    }
+  }
+  return hechos.sort((a, b) => a.indice - b.indice);
+}
+
+export interface RedaccionSugerida {
+  texto: string;
+  /** Partes de la nota que NO entraron a la redacción, con el motivo — transparencia (regla del
+   * usuario: nunca ocultar por qué algo no aparece como hecho profesional). */
+  excluidas: { fragmento: string; motivo: string }[];
+  /** Si hay algo ambiguo que la maestra PUEDE aclarar (nunca obligatorio) — ver `FRASES_AMBIGUAS_DEMO`. */
+  aclaracionDisponible?: { fragmento: string; pregunta: string; opciones: string[] };
+}
+
+/** Genera la redacción profesional SUGERIDA (nunca definitiva hasta que la maestra la confirme).
+ * `respuestaAclaracion` es la opción que la maestra ya eligió, si la pidió — permite regenerar
+ * incluyendo ese hecho concreto sin re-preguntar. */
+export function generarRedaccionProfesionalSimulada(
+  notaOriginal: string,
+  ninoObservadoId: string,
+  ninos: Nino[],
+  respuestaAclaracion?: string
+): RedaccionSugerida {
+  const nino = ninos.find((n) => n.id === ninoObservadoId);
+  const nombreNino = nino?.nombre ?? 'El niño';
+  const anonimizado = anonimizarNombresDeOtros(notaOriginal, ninoObservadoId, ninos);
+
+  const excluidas: RedaccionSugerida['excluidas'] = [];
+  for (const etiqueta of ETIQUETAS_SUBJETIVAS_DEMO) {
+    if (new RegExp(`\\b${etiqueta}\\b`, 'i').test(anonimizado)) {
+      excluidas.push({ fragmento: etiqueta, motivo: 'juicio, no hecho observable' });
+    }
+  }
+  for (const patron of GENERALIZACIONES_SIN_INSTANCIA_DEMO) {
+    const m = anonimizado.match(patron);
+    if (m) excluidas.push({ fragmento: m[0], motivo: 'generalización sin un momento concreto' });
+  }
+
+  let aclaracionDisponible: RedaccionSugerida['aclaracionDisponible'];
+  const hechos = detectarHechos(anonimizado);
+  for (const fa of FRASES_AMBIGUAS_DEMO) {
+    const m = anonimizado.match(fa.patron);
+    if (!m || m.index === undefined) continue;
+    if (respuestaAclaracion && FRASE_POR_OPCION_ACLARACION[respuestaAclaracion]) {
+      hechos.push({ indice: m.index, texto: FRASE_POR_OPCION_ACLARACION[respuestaAclaracion] });
+    } else {
+      excluidas.push({ fragmento: m[0], motivo: 'no describe qué ocurrió exactamente' });
+      aclaracionDisponible = { fragmento: m[0], pregunta: fa.pregunta, opciones: fa.opciones };
+    }
+  }
+  hechos.sort((a, b) => a.indice - b.indice);
+
+  if (hechos.length === 0) {
+    return { texto: '', excluidas, aclaracionDisponible };
+  }
+  return { texto: unirHechosEnParrafo(hechos, nombreNino), excluidas, aclaracionDisponible };
+}
+
+/** Agrupa los hechos en oraciones de hasta 3 (con "y" antes del último de cada grupo) en vez de
+ * una sola oración larga con comas — más legible y más cercano a cómo se redacta un reporte real. */
+function unirHechosEnParrafo(hechos: HechoDetectado[], nombreNino: string): string {
+  const TAMANO_GRUPO = 3;
+  const oraciones: string[] = [];
+  for (let i = 0; i < hechos.length; i += TAMANO_GRUPO) {
+    const grupo = hechos.slice(i, i + TAMANO_GRUPO).map((h) => h.texto);
+    if (grupo.length === 1) {
+      oraciones.push(grupo[0]);
+    } else {
+      const ultimo = grupo[grupo.length - 1];
+      const resto = grupo.slice(0, -1).join(', ');
+      oraciones.push(`${resto} y ${ultimo}`);
+    }
+  }
+  const primera = `${nombreNino} ${oraciones[0]}.`;
+  const siguientes = oraciones.slice(1).map((o) => `${o.charAt(0).toUpperCase()}${o.slice(1)}.`);
+  return [primera, ...siguientes].join(' ');
+}
+
+/** Camino dirigido de opciones rápidas (Sesión 6 paso 6b, regla del usuario: "no hace falta
+ * obligar a pasar por un proceso largo de reformulación" cuando la opción YA es objetiva) — RAÍZ
+ * genera una redacción simple de una frase, sin paso de confirmación aparte. */
+export function generarRedaccionMicroObservacion(nombreNino: string, nombreSkill: string, opcionTexto: string): string {
+  return `${nombreNino} realizó ${opcionTexto.toLowerCase()} durante la actividad relacionada con ${nombreSkill.toLowerCase()}.`;
+}
+
+/** Cambia el estado de UNA fila de skill de una observación YA GUARDADA (Aceptar/Rechazar desde
+ * el detalle) — regla del usuario: "no quiero que una sugerencia quede eternamente pendiente
+ * porque la maestra salió de la pantalla anterior". No toca `Nino.skills`. */
+export function actualizarEstadoObservacionSkill(observacionId: string, skillId: string, nuevoEstado: EstadoRelacionSkill): ObservacionSkill[] {
+  const actualizados = leerObservacionSkills().map((s) =>
+    s.observacionId === observacionId && s.skillId === skillId ? { ...s, estado: nuevoEstado } : s
+  );
+  guardarObservacionSkills(actualizados);
+  return actualizados;
 }
 
 /* ── CONFIGURACIÓN DEL PROGRAMA — Sesión 6, paso 2 del núcleo funcional. Es la raíz de todo lo
@@ -2457,6 +2658,10 @@ export const OBSERVACIONES_SEMILLA: Observacion[] = [
     origen: 'espontanea',
     fuente: 'texto',
     notaOriginal: 'Sofía señaló la imagen de "more" cuando quería más bloques, y después dijo "más" con claridad. Se quedó jugando junto a Luca un buen rato, mirando lo que él construía.',
+    // Ejemplo poblado de la mejora de Sesión 6 paso 6b: redacción ya confirmada, con "Luca"
+    // anonimizado a "un compañero" — así el detalle muestra "Ver nota original" desde el primer
+    // vistazo, sin que el usuario tenga que generar una nueva para verlo.
+    redaccionProfesional: 'Sofía señaló una imagen para pedir más bloques y después dijo "más" con claridad. Jugó junto a un compañero, observando lo que él construía.',
     autorId: STAFF_ACTUAL_ID,
   },
   {

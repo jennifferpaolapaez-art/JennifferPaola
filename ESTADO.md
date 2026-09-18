@@ -1304,6 +1304,79 @@ exista una cuenta real sin roster (paso 8, Supabase). `/ninos-foco` (basado en `
 sigue sin conectarse al nuevo mecanismo de observación con contexto — nota menor ya señalada en
 el cierre del paso 5, no bloqueante.
 
+### Sesión 6, paso 6b — Redacción profesional simulada, anonimización y aclaraciones (CERRADO)
+El usuario pidió mejorar el recorrido de Observaciones (sin tocar el motor ya aprobado): que RAÍZ
+ayude a convertir una nota rápida y coloquial en una observación profesional y objetiva, antes de
+analizar skills. Flujo nuevo: escribir/hablar → RAÍZ conserva `notaOriginal` → **"RAÍZ organizó tu
+observación"** (nota original + redacción sugerida) → maestra usa/edita/mantiene → RAÍZ analiza
+áreas SOBRE la redacción confirmada → aceptar/rechazar/agregar → evidencia → guardar.
+
+**4 precisiones del usuario, todas incorporadas:**
+1. "Mantener mi nota" NUNCA copia `notaOriginal` a `redaccionProfesional` — la deja `undefined`
+   (pendiente) en vez de arriesgar una nota subjetiva en un reporte futuro.
+2. La ambigüedad no siempre bloquea: si ya hay suficientes hechos objetivos, RAÍZ redacta con lo
+   que tiene y ofrece la aclaración como OPCIONAL ("¿es relevante? o se excluye") — nunca obliga a
+   responder para poder guardar.
+3. La entidad es `Evidencia` (`tipo: TipoEvidencia` — hoy solo `foto` real; `trabajo_nino`/
+   `audio`/`video`/`documento` reservados sin construirse), no "foto" — `Observacion.
+   evidenciaArchivoNombre` se reemplazó por `Observacion.evidencia?: Evidencia`.
+4. `anonimizarNombresDeOtros()` vive en `lib/seed-data.ts` como función standalone (recibe
+   `ninos`, no acoplada a `/observar`) para poder reutilizarse después en reportes/evaluaciones
+   narrativas/My Learning Journey — no se construyó esa reutilización todavía, solo se evitó el
+   acople. Sin género estructurado, siempre usa "un compañero" (nunca inventa género).
+
+**Nuevo en `lib/seed-data.ts`** (todo simulación local con reglas controladas — NUNCA IA real,
+mismo patrón que `analizarNotaSimulado`): `generarRedaccionProfesionalSimulada()` — anonimiza,
+detecta hechos observables por patrón (`detectarHechos`), EXCLUYE por completo etiquetas
+subjetivas (`ETIQUETAS_SUBJETIVAS_DEMO`: grosero, malcriado, terco, agresivo...) y generalizaciones
+sin instancia concreta (`GENERALIZACIONES_SIN_INSTANCIA_DEMO`: "grita mucho", "siempre...") —
+nunca las reformula, las omite — y ofrece aclaración opcional para frases ambiguas de conflicto
+(`FRASES_AMBIGUAS_DEMO`) sin inventar el verbo si la maestra no lo confirma. Agrupa los hechos en
+oraciones de hasta 3 (`unirHechosEnParrafo`) en vez de una sola oración larga con comas.
+`generarRedaccionMicroObservacion()` — plantilla de una frase para el camino rápido de opciones
+(regla del usuario: "no hace falta un proceso largo cuando la opción ya es objetiva"), con vista
+previa en vivo ("RAÍZ escribirá: …") antes de guardar. `actualizarEstadoObservacionSkill()` —
+Aceptar/Rechazar un skill `sugerido` desde una observación YA guardada. Nuevo patrón `colores` en
+`CATALOGO_SUGERENCIAS_DEMO` (faltaba pese a que el catálogo de skills ya lo tenía).
+
+**`app/observar/page.tsx`**: nuevo paso `'redaccion'` ("RAÍZ organizó tu observación") compartido
+por el camino dirigido de texto libre y el espontáneo (la micro-observación de opciones rápidas
+NO pasa por aquí — genera su redacción sola, sin frenar la rapidez). Acciones: ✓ Usar esta
+redacción / ✎ Editar (revela textarea) / ↩ Mantener mi nota. El análisis de skills corre sobre
+`redaccionConfirmada ?? notaEnRevision` — nunca sobre juicios ya descartados. `<TogleEscribirHablar>`
+y `<BloqueEvidencia>` extraídos como componentes locales reutilizados en los 3 puntos de entrada de
+texto libre (antes solo existían en la espontánea). "Hablar" sigue deshabilitado, sin simular
+transcripción falsa.
+
+**`app/observaciones/[id]/page.tsx`**: la redacción profesional (si existe) es el bloque
+PRINCIPAL, con "Ver nota original" para revisar exactamente lo escrito/dictado; skills en estado
+`sugerido` ganan botones Aceptar/Rechazar directo ahí. `FilaObservacion` (shell.tsx) también
+prioriza la redacción sobre la nota cruda en el resumen del historial.
+
+**Verificado**: tsc ✓ · build ✓ (25 rutas) · prueba en vivo EXACTA con la nota de validación del
+usuario ("mateo jugo con bloques y se los metio a la boca despues hizo una pila con 3 bloques,
+conto 1 2 3 al hacerlo y dijo amarillo, despues se fue a jugar con luca y se pelearon, mateo es
+grosero y grita mucho") — confirmado punto por punto:
+1. `notaOriginal` quedó exactamente igual (con los errores de tipeo).
+2. "Luca" no aparece en la redacción — quedó "un compañero".
+3. "grosero" desapareció, listado en "No incluimos: … (juicio, no hecho observable)".
+4. "grita mucho" no se convirtió en nada más específico — excluido igual, con el motivo real
+   ("generalización sin un momento concreto").
+5. "se pelearon" no generó ninguna acción inventada — excluido con aclaración OPCIONAL ofrecida
+   (Gritó/Empujó/Mordió/Quitó un objeto/Lloró + "No es necesario").
+6. Los hechos claros quedaron organizados en 2-3 oraciones cortas y coherentes.
+7. Elegí "Gritó" en la aclaración → se regeneró incluyendo "Gritó durante una interacción con un
+   compañero." y lo quitó de la lista de excluidos.
+8. Al analizar, aparecieron 5 áreas (Conteo 6–8, Vocabulario, Reconoce colores, Interacción con
+   pares, Regulación emocional) — todas en `sugerido`, ninguna auto-aceptada.
+9. Acepté 2, rechacé 1, agregué evidencia (`silueta-mateo.jpg`) y guardé.
+10. El detalle mostró la observación profesional primero, con "Ver nota original" funcionando, los
+    3 estados de skill correctos, y pude Aceptar "Interacción con pares" directo desde ahí — sin
+    tocar `raiz_ninos` (confirmado: la clave nunca se creó en localStorage durante toda la prueba).
+Sin regresión verificada en la micro-observación de tijeras (sigue guardando directo, ahora con
+redacción automática) y en el historial/perfil (siguen mostrando lo mismo, con la redacción como
+resumen). Datos de prueba limpiados de localStorage al terminar.
+
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).
   MFA disponible para la cuenta de la directora/dueña del programa (doc maestro sec. 59). Los

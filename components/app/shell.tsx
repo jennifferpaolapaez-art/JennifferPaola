@@ -383,7 +383,7 @@ export function FilaObservacion({
             {ORIGEN_OBSERVACION_LABEL[observacion.origen]}
           </span>
         </div>
-        <p className="mt-1 truncate text-[14px] text-[var(--text-secondary)]">{observacion.notaOriginal}</p>
+        <p className="mt-1 truncate text-[14px] text-[var(--text-secondary)]">{observacion.redaccionProfesional ?? observacion.notaOriginal}</p>
         {relevantes.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {relevantes.map((s) => (
