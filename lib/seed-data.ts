@@ -841,6 +841,118 @@ export const PREGUNTAS_OBSERVABLES_DEMO: PreguntaObservable[] = [
       { id: 'escribe_independiente', texto: 'Escribe su nombre independientemente', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
     ],
   },
+
+  // Sesión 6 paso 4 ronda 3 — REGLA DEL USUARIO: la misma familia visual (pregunta observable +
+  // radios/casillas compactos + "Aún no observado" siempre disponible + estado_desarrollo/
+  // estado_evidencia como resultado SECUNDARIO derivado, nunca como botones grandes principales)
+  // aplica a TODAS las edades, no solo Preschool/Pre-K — el contenido cambia por etapa, la
+  // experiencia no. Cubre los 4 skills CORE de Infant y los 4 de Toddler Sr para que las
+  // evaluaciones de Mateo (~11 meses) y Sofía (Toddler Sr) usen la misma experiencia de punta a
+  // punta, sin caer de vuelta en el selector grande. Sigue siendo contenido DEMO.
+  {
+    id: 'preg-gateo',
+    skillId: 'gateo',
+    texto: '¿Qué has observado cuando se desplaza por el piso?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: 'se_arrastra', texto: 'Se arrastra o repta para moverse', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'gatea_mismo_lado', texto: 'Gatea moviendo brazo y pierna del mismo lado', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'gatea_cruzado_intenta', texto: 'Gatea cruzado (brazo y pierna opuestos), pero pierde el patrón seguido', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'gatea_cruzado_sostenido', texto: 'Gatea cruzado de forma sostenida y coordinada', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+    ],
+  },
+  {
+    id: 'preg-pinza',
+    skillId: 'pinza',
+    texto: '¿Cómo toma objetos pequeños?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: 'agarre_palmar', texto: 'Los toma con toda la mano (agarre palmar)', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'agarre_rastrillo', texto: 'Los rastrilla con los dedos hacia la palma', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'pinza_inferior', texto: 'Usa el pulgar y el índice, aunque de forma torpe', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'pinza_superior', texto: 'Toma objetos pequeños con precisión, con la punta de los dedos', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+    ],
+  },
+  {
+    id: 'preg-balbuceo',
+    skillId: 'balbuceo-comunicativo',
+    texto: '¿Qué sonidos o balbuceos has escuchado?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: 'vocaliza_sueltos', texto: 'Vocaliza sonidos sueltos (ej. "ahh", "ehh")', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'balbucea_repetido', texto: 'Balbucea sílabas repetidas (ej. "ba-ba-ba")', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'balbucea_variado', texto: 'Balbucea combinando distintas sílabas, imitando la entonación del habla', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'balbuceo_intencional', texto: 'Balbucea mirando o señalando, como si buscara comunicar algo', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+    ],
+  },
+  {
+    id: 'preg-apego',
+    skillId: 'apego-seguro',
+    texto: '¿Cómo se comporta con la maestra cuando algo lo inquieta?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: 'se_calma_en_brazos', texto: 'Se calma al tomarlo en brazos, tras un momento de angustia', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'busca_maestra', texto: 'Busca activamente a la maestra cuando se siente inseguro', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'base_segura', texto: 'Usa a la maestra como base segura — se aleja a explorar y regresa a revisar', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'explora_con_confianza', texto: 'Explora con confianza sabiendo que puede volver a la maestra en cualquier momento', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+    ],
+  },
+  {
+    id: 'preg-palabras',
+    skillId: 'palabras',
+    texto: '¿Cómo se comunica verbalmente?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: 'palabras_sueltas', texto: 'Usa palabras sueltas (1 palabra por vez)', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'combina_2', texto: 'Combina 2 palabras (ej. "más leche")', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'combina_2_frecuente', texto: 'Combina 2–3 palabras con frecuencia', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'frases_cortas', texto: 'Forma frases cortas de 3 o más palabras', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+    ],
+  },
+  {
+    id: 'preg-apilar',
+    skillId: 'apilar',
+    texto: '¿Cuántos bloques apila?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: 'apila_2', texto: 'Apila 2 bloques', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'apila_3', texto: 'Apila 3 bloques', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'apila_4', texto: 'Apila 4 bloques', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+      { id: 'apila_5_mas', texto: 'Apila 5 o más bloques con control', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+    ],
+  },
+  {
+    id: 'preg-instrucciones',
+    skillId: 'sigue-instrucciones-simples',
+    texto: 'Cuando le das una instrucción sencilla, ¿qué hace?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: 'con_gesto', texto: 'La sigue solo si va acompañada de un gesto o señal', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'a_veces_sin_gesto', texto: 'A veces la sigue sin gesto, sin ser consistente', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'un_paso_consistente', texto: 'Sigue instrucciones de 1 paso de forma consistente', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+      { id: 'dos_pasos', texto: 'Sigue instrucciones de 2 pasos relacionados (ej. "recoge el bloque y dámelo")', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+    ],
+  },
+  {
+    id: 'preg-alimentacion',
+    skillId: 'autonomia-alimentacion',
+    texto: '¿Cómo come con cuchara?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: 'sostiene_ayuda', texto: 'Sostiene la cuchara pero necesita ayuda para llevarla a la boca', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'come_con_derrames', texto: 'Se lleva comida a la boca solo, con derrames frecuentes', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'come_pocos_derrames', texto: 'Come solo con pocos derrames', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'come_consistente', texto: 'Come solo de forma consistente, sin ayuda', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+    ],
+  },
 ];
 
 export function preguntaObservablePorSkill(skillId: string): PreguntaObservable | undefined {

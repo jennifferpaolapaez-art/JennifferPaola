@@ -39,7 +39,8 @@ oficial a partir de ahora:
 3. Módulo Niños real (crear/editar, DOB→edad automática, días, idioma, "Cuéntame sobre este niño")
    ← CERRADO
 4. Perfil completo del niño: evaluación inicial RAÍZ + evaluaciones/documentos externos +
-   Plan Individual opcional — CERRADO, ver sección de cierre más abajo
+   Plan Individual opcional — CERRADO por completo (arquitectura + experiencia de evaluación por
+   preguntas observables, validada en Infant/Toddler/Preschool/Pre-K), ver sección de cierre
 5. Planeación CON o SIN niños (grupo-nivel si no hay niños; se enriquece si los hay)
 6. Observaciones como módulo independiente (mismo sistema de Sesión 5 ronda 4, entrada propia)
 7. Progreso / Reportes (vista de lectura sobre lo ya acumulado)
@@ -1090,11 +1091,55 @@ mapeada). Guardé el borrador y confirmé en localStorage que las 3 respuestas p
 respuestas marcadas se ven pre-seleccionadas (Rojo/A/"Copia su nombre..." con `aria-pressed=true`,
 Naranja/K con `false`). Datos de prueba limpiados de localStorage al terminar.
 
-**Pendiente de decisión del usuario** (no se declara unilateralmente): si con estos 6 casos
-(tijeras, números×3, juego cooperativo, colores, letras, nombre) la EXPERIENCIA de evaluación por
-preguntas observables queda aprobada como definitiva antes de pasar al paso 5 (Planeación con/sin
-niños) — el contenido pedagógico (preguntas, opciones, umbrales) sigue siendo DEMO, pendiente de
-una ronda de revisión aparte.
+### Sesión 6, paso 4, ronda 3 — Infant y Toddler con la misma familia visual (CERRADO)
+El usuario aprobó la DIRECCIÓN de la experiencia (preguntas observables) vista con Luca y fijó una
+regla explícita, con vigencia permanente para todo el catálogo, no solo para esta ronda:
+
+**⚠️ REGLA DEL USUARIO — LA MISMA LÓGICA VISUAL APLICA A TODAS LAS EDADES.** El contenido (las
+preguntas) cambia por etapa — Infant tiene preguntas de bebé, Toddler las suyas, Preschool/Pre-K
+las suyas — pero la EXPERIENCIA nunca cambia: (1) pregunta observable en lenguaje simple, (2)
+radios compactos para respuesta única o casillas/chips compactos para selección múltiple, (3)
+progresiones cuando corresponda, (4) "Aún no observado" siempre disponible como primera opción,
+(5) `estadoDesarrollo`/`estadoEvidencia` son un RESULTADO SECUNDARIO que RAÍZ deriva, nunca la
+forma PRINCIPAL de responder — el selector grande "Desconocido/En desarrollo/Dominado" +
+"No observado/Insuficiente/Suficiente/Contradictoria" NO vuelve a ser la interacción primaria,
+tampoco para bebés. Ese selector grande sigue existiendo solo como corrección manual secundaria
+detrás de "Editar" (ya lo era desde ronda 2) para cuando la maestra necesita ajustar a mano lo que
+RAÍZ sugirió. Aplica hacia adelante a cualquier skill/etapa que se agregue después.
+
+Para probarlo sin construir el catálogo completo, se agregaron 8 `PreguntaObservable` nuevas en
+`lib/seed-data.ts` cubriendo los 4 skills CORE de Infant (gateo, pinza, balbuceo-comunicativo,
+apego-seguro) y los 4 CORE de Toddler Sr (palabras, apilar, sigue-instrucciones-simples,
+autonomia-alimentacion) — mismo patrón `seleccion_unica` progresiva que tijeras/nombre, sin
+selección múltiple en este grupo porque ninguna de estas conductas se presta a un conteo (no
+aplica "cuántas veces gatea cruzado"). Contenido DEMO, mismo aviso que el resto del catálogo.
+
+Verificado: tsc ✓ · build ✓ (23 rutas) · recorrido real en navegador — evaluación periódica de
+Mateo (Infant, 11 meses) muestra las 4 preguntas nuevas en sus 4 dominios, con "Gateo cruzado"
+sugiriendo Dominado (coincide con su skill ya registrado) y "Balbuceo comunicativo"/"Apego seguro"
+en Desconocido (sin dato previo, como corresponde); evaluación periódica de Sofía (Toddler Sr, 25
+meses) muestra las 4 suyas, con "Apila 4+ bloques" sugiriendo Dominado y "Vocabulario de 2
+palabras" en En desarrollo — ambas coinciden exacto con los skills que Mateo/Sofía ya tenían en su
+perfil. Cero botones grandes visibles como interacción principal en ninguna de las dos. localStorage
+limpio (no se guardó borrador, solo se generó la vista).
+
+### Catálogo Pedagógico Oficial RAÍZ (FASE FUTURA — no construida, decisión documentada ahora)
+El usuario dejó fijado, antes de cerrar esta experiencia, cuándo y cómo se construye el contenido
+REAL (no la UX, que ya queda aprobada): todo lo que existe hoy en `SKILLS_CATALOG`,
+`ASSESSMENT_TEMPLATES`, `ASSESSMENT_TEMPLATE_SKILLS` y `PREGUNTAS_OBSERVABLES_DEMO` — skills,
+preguntas, progresiones, rangos de edad, prerrequisitos y criterios de evidencia — es DEMO. Antes
+de usar RAÍZ con evaluaciones reales de clientes, hay una fase dedicada y aparte, **"Catálogo
+Pedagógico Oficial RAÍZ"**, donde se construyen/revisan las evaluaciones definitivas por
+edad/etapa. Ese catálogo debe quedar terminado, revisado y VERSIONADO antes de evaluaciones
+reales. Regla dura para la IA una vez conectada (paso 9, IA real): la IA nunca inventa una
+evaluación distinta cada vez — usa exclusivamente las plantillas oficiales versionadas, y su rol
+es prellenar, interpretar evidencia, sugerir qué falta observar, preparar revisiones periódicas, y
+conectar resultados con la planeación — nunca generar contenido pedagógico nuevo por su cuenta.
+
+**Decisión del usuario**: con Infant + Toddler confirmados con la misma UX, la EXPERIENCIA de
+evaluación por preguntas observables queda APROBADA Y CERRADA por ahora — el contenido pedagógico
+(preguntas, opciones, umbrales) sigue DEMO hasta la fase de Catálogo Pedagógico Oficial. Sesión 6
+paso 4 queda cerrado por completo; siguiente paso oficial: paso 5, Planeación con/sin niños.
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).
