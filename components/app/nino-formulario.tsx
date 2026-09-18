@@ -133,6 +133,10 @@ export function NinoFormulario({
       skills: ninoExistente?.skills ?? [],
       metaActiva: ninoExistente?.metaActiva,
       diasAsistencia,
+      fechaUltimaEvaluacionAprobada: ninoExistente?.fechaUltimaEvaluacionAprobada,
+      evaluaciones: ninoExistente?.evaluaciones ?? [],
+      evaluacionesExternas: ninoExistente?.evaluacionesExternas ?? [],
+      planIndividual: ninoExistente?.planIndividual,
     };
     onGuardar(nino);
   }

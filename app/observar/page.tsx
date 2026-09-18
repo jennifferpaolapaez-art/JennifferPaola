@@ -220,7 +220,7 @@ export default function Observar() {
                     className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 text-left shadow-[var(--shadow-1)] transition-opacity active:opacity-90"
                   >
                     <span className="text-[15px] font-medium text-[var(--text-primary)]">{s.nombre}</span>
-                    <SkillBadge estado={s.estado} />
+                    <SkillBadge estadoDesarrollo={s.estadoDesarrollo} estadoEvidencia={s.estadoEvidencia} />
                   </button>
                 </li>
               ))}

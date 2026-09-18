@@ -54,13 +54,30 @@
  * dividieron sus bloques de diferenciación en Toddler Jr/Sr, el tipo central ya soporta las 5
  * etapas y `EtapaAtendida` desaparece (Configuración reutiliza este mismo tipo). */
 export type Etapa = 'Infant' | 'Toddler Jr' | 'Toddler Sr' | 'Preschool' | 'Pre-K';
-export type EstadoSkill = 'dominado' | 'en_desarrollo' | 'no_observado';
+
+/** Sesión 6, paso 4 (Perfil completo del niño) — separa DOS preguntas que antes vivían mezcladas
+ * en un solo `EstadoSkill` de 3 valores: ¿QUÉ SABEMOS que el niño puede hacer? (estadoDesarrollo)
+ * vs. ¿CUÁNTA EVIDENCIA tenemos para sostenerlo? (estadoEvidencia). Corrección explícita del
+ * usuario — evita que RAÍZ confunda "no lo hemos observado" con "está en desarrollo". */
+export type EstadoDesarrollo = 'desconocido' | 'en_desarrollo' | 'dominado';
+export type EstadoEvidencia = 'no_observado' | 'insuficiente' | 'suficiente' | 'contradictoria';
 
 export interface Skill {
   id: string;
   nombre: string;
-  estado: EstadoSkill;
+  estadoDesarrollo: EstadoDesarrollo;
+  estadoEvidencia: EstadoEvidencia;
   actualizado: string; // ISO
+}
+
+/** Traduce los dos ejes a UNA etiqueta/tono para mostrar (badges, listas) — nunca se muestran los
+ * dos campos crudos por separado en la UI, pero la lógica interna sí los mantiene separados. */
+export function etiquetaSkill(estadoDesarrollo: EstadoDesarrollo, estadoEvidencia: EstadoEvidencia): { label: string; tono: 'dominado' | 'en_desarrollo' | 'sin_evidencia' } {
+  if (estadoDesarrollo === 'dominado') return { label: 'Dominado', tono: 'dominado' };
+  if (estadoDesarrollo === 'en_desarrollo') return { label: 'En desarrollo', tono: 'en_desarrollo' };
+  if (estadoEvidencia === 'insuficiente') return { label: 'Necesita más evidencia', tono: 'sin_evidencia' };
+  if (estadoEvidencia === 'contradictoria') return { label: 'Evidencia contradictoria', tono: 'sin_evidencia' };
+  return { label: 'Aún no observado', tono: 'sin_evidencia' };
 }
 
 /** De dónde nace una necesidad o un apoyo del niño — mismos 5 orígenes que ya aprobamos para
@@ -98,6 +115,140 @@ export interface ApoyoNino {
   teacherConfirmed: boolean;
 }
 
+/* ── EVALUACIONES (Sesión 6, paso 4 — Perfil completo del niño) ──
+   Catálogo/plantillas de ESTE archivo son DATOS DE EJEMPLO para probar el mecanismo — el usuario
+   confirmó explícitamente que el contenido pedagógico oficial (skills definitivos, rangos de
+   edad, prerrequisitos, políticas de evidencia, Core Developmental Profile, tracks) se revisa en
+   una ronda aparte más adelante. Lo que SÍ es definitivo aquí es la ARQUITECTURA: catálogo fijo y
+   versionado + evaluación que se prellena con lo ya sabido + aprobación humana obligatoria. */
+
+export type PoliticaRevision = 'una_vez_dominado' | 'seguimiento_periodico' | 'desarrollo_continuo';
+export type EvidenciaRequerida = 'una_demostracion_clara' | 'multiples_contextos' | 'consistencia_repetida';
+
+/** Base pedagógica ESTABLE — la IA nunca decide qué skills corresponden a una edad; siempre lee
+ * de aquí. IDs estables entre versiones de plantilla. */
+export interface SkillCatalogEntry {
+  id: string;
+  dominio: string;
+  nombre: string;
+  rangoEdadMesesMin: number;
+  rangoEdadMesesMax: number;
+  prerrequisitos: string[];
+  politicaRevision: PoliticaRevision;
+  evidenciaRequerida: EvidenciaRequerida;
+  /** SOLO tiene sentido cuando `evidenciaRequerida === 'consistencia_repetida'` — nunca una regla
+   * universal de "N observaciones" (corrección explícita del usuario). */
+  vecesMinimas?: number;
+  contextosRecomendados: string[];
+}
+
+/** Una versión de plantilla = una fila propia e INMUTABLE una vez usada por una evaluación real
+ * (regla del usuario). Un cambio futuro crea v1.1/v2.0, nunca edita esta fila. `track: null` =
+ * CORE obligatorio para esa banda de edad; con track, es opcional y solo aplica si el programa lo
+ * activó en Configuración. */
+export interface AssessmentTemplate {
+  id: string;
+  rangoEdadMesesMin: number;
+  rangoEdadMesesMax: number;
+  etapa: Etapa;
+  track: TrackOpcional | null;
+  version: string;
+  vigente: boolean;
+}
+
+export interface AssessmentTemplateSkill {
+  assessmentTemplateId: string;
+  skillId: string;
+  orden: number;
+}
+
+export type TipoEvaluacion = 'ingreso' | 'periodica';
+export type EstadoEvaluacion = 'borrador' | 'aprobada';
+
+/** UN resultado = un skill dentro de UNA evaluación — nunca se toca después de aprobada (queda
+ * congelado, es historia). */
+export interface ResultadoEvaluacion {
+  id: string;
+  skillId: string;
+  assessmentTemplateId: string;
+  estadoDesarrollo: EstadoDesarrollo;
+  estadoEvidencia: EstadoEvidencia;
+  /** RAÍZ lo prellenó a partir del estado ya conocido — no significa que lo inventó. */
+  sugeridoPorRaiz: boolean;
+  /** La maestra cambió el valor sugerido antes de aprobar. */
+  editadoPorMaestra: boolean;
+}
+
+/** UNA evaluación = snapshot fechado del perfil vivo (responde "cómo se genera una evaluación
+ * periódica" de la arquitectura aprobada). Puede quedar en `borrador` indefinidamente — nunca
+ * obliga a completarse de una sola vez (regla del usuario, Sesión 6 paso 4). */
+export interface EvaluacionNino {
+  id: string;
+  tipo: TipoEvaluacion;
+  fecha: string;
+  estado: EstadoEvaluacion;
+  aprobadaPor?: string;
+  aprobadaEn?: string;
+  edadAlMomentoMeses: number;
+  etapaAlMomento: Etapa;
+  resultados: ResultadoEvaluacion[];
+}
+
+export type TipoEvaluacionExterna = 'ASQ-3' | 'IFSP' | 'IEP' | 'speech_language' | 'OT' | 'PT' | 'otro';
+
+/** Hallazgo puntual DENTRO de un documento externo — permite citar una recomendación concreta sin
+ * convertir el documento completo en un resultado propio de RAÍZ (regla del usuario). */
+export interface HallazgoEvaluacionExterna {
+  id: string;
+  area: string;
+  resumen: string;
+  recomendacion?: string;
+  skillId?: string;
+}
+
+/** Evaluación o documento externo (ASQ-3, IEP, IFSP, speech/OT/PT...) — SEPARADA de las
+ * evaluaciones propias de RAÍZ, nunca mezclada. RAÍZ no diagnostica; solo guarda lo
+ * pedagógicamente relevante que la maestra decide registrar. Sin almacenamiento real todavía
+ * (regla del usuario): no se adjunta el archivo original, solo metadatos + resumen. */
+export interface EvaluacionExterna {
+  id: string;
+  tipo: TipoEvaluacionExterna;
+  nombreInstrumento: string;
+  fecha: string;
+  profesionalOEntidad?: string;
+  resumen?: string;
+  recomendaciones?: string;
+  permisoUsoPedagogico: boolean;
+  hallazgos: HallazgoEvaluacionExterna[];
+}
+
+export type EstadoPlanIndividual = 'activo' | 'pausado' | 'cerrado';
+export type EstadoMetaIndividual = 'por_trabajar' | 'en_progreso' | 'casi' | 'alcanzado';
+
+/** UNA meta dentro del Plan Individual — RAÍZ nunca la marca `alcanzado` sola (regla del
+ * usuario); solo puede sugerir revisar cuando hay evidencia, la maestra decide. */
+export interface MetaIndividual {
+  id: string;
+  skillId?: string;
+  descripcion: string;
+  estado: EstadoMetaIndividual;
+  estrategias?: string;
+  siguientePaso?: string;
+  fechaActualizacion: string;
+}
+
+/** Plan Individual — OPCIONAL, vive dentro del perfil del niño (nunca un módulo aparte que
+ * aparece después). Una necesidad/adaptación NUNCA lo crea automáticamente — la maestra decide
+ * cuándo. Simplificación de esta ronda: un plan activo a la vez por niño (el historial de planes
+ * cerrados queda para una ronda futura si hace falta). */
+export interface PlanIndividual {
+  id: string;
+  fechaCreacion: string;
+  estado: EstadoPlanIndividual;
+  motivo?: string;
+  metas: MetaIndividual[];
+}
+
 export interface Nino {
   id: string;
   nombre: string;
@@ -126,6 +277,12 @@ export interface Nino {
    * presencia REAL de cada día vive aparte, en ASISTENCIA_HOY (regla del usuario, Sesión 5
    * ronda 3: nunca mezclar planificación con realidad). */
   diasAsistencia: DiaSemana[];
+  /** Evaluación de RAÍZ — historial completo, cada una es un snapshot congelado tras aprobar.
+   * "Próxima evaluación" se calcula (ver `calcularFechaProximaEvaluacion`), no se guarda fija. */
+  fechaUltimaEvaluacionAprobada?: string;
+  evaluaciones: EvaluacionNino[];
+  evaluacionesExternas: EvaluacionExterna[];
+  planIndividual?: PlanIndividual;
 }
 
 /** Bandas de edad por defecto para sugerir la etapa desde el DOB — punto de partida razonable
@@ -180,11 +337,13 @@ const NINOS_SEMILLA: Nino[] = [
     apoyos: [],
     metaActiva: { skillId: 'tijeras', nota: 'Tijeras' },
     diasAsistencia: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
+    evaluaciones: [],
+    evaluacionesExternas: [],
     skills: [
-      { id: 'tijeras', nombre: 'Tijeras', estado: 'en_desarrollo', actualizado: '2026-09-08' },
-      { id: 'numeros-1-8', nombre: 'Números 1–8', estado: 'dominado', actualizado: '2026-08-20' },
-      { id: 'colores', nombre: 'Reconoce colores', estado: 'dominado', actualizado: '2026-08-15' },
-      { id: 'nombre', nombre: 'Escritura de nombre', estado: 'no_observado', actualizado: '2026-07-01' },
+      { id: 'tijeras', nombre: 'Tijeras', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente', actualizado: '2026-09-08' },
+      { id: 'numeros-1-8', nombre: 'Números 1–8', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente', actualizado: '2026-08-20' },
+      { id: 'colores', nombre: 'Reconoce colores', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente', actualizado: '2026-08-15' },
+      { id: 'nombre', nombre: 'Escritura de nombre', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado', actualizado: '2026-07-01' },
     ],
   },
   {
@@ -204,11 +363,13 @@ const NINOS_SEMILLA: Nino[] = [
     apoyos: [],
     metaActiva: { skillId: 'numeros-6-8', nota: 'Números 6–8' },
     diasAsistencia: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
+    evaluaciones: [],
+    evaluacionesExternas: [],
     skills: [
-      { id: 'numeros-6-8', nombre: 'Conteo 6–8', estado: 'en_desarrollo', actualizado: '2026-09-09' },
-      { id: 'rima', nombre: 'Identifica rimas', estado: 'dominado', actualizado: '2026-08-28' },
-      { id: 'nombre-propio', nombre: 'Escritura de nombre', estado: 'dominado', actualizado: '2026-08-01' },
-      { id: 'tijeras-z', nombre: 'Tijeras', estado: 'dominado', actualizado: '2026-07-20' },
+      { id: 'numeros-6-8', nombre: 'Conteo 6–8', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente', actualizado: '2026-09-09' },
+      { id: 'rima', nombre: 'Identifica rimas', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente', actualizado: '2026-08-28' },
+      { id: 'nombre-propio', nombre: 'Escritura de nombre', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente', actualizado: '2026-08-01' },
+      { id: 'tijeras', nombre: 'Tijeras', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente', actualizado: '2026-07-20' },
     ],
   },
   {
@@ -249,9 +410,80 @@ const NINOS_SEMILLA: Nino[] = [
       { id: 'apoyo-sofia-opciones', necesidadId: 'need-sofia-lenguaje', estrategia: 'Permitir señalar o elegir entre dos imágenes en vez de exigir respuesta verbal.', activa: true, origen: 'maestra', teacherConfirmed: true },
     ],
     diasAsistencia: ['Lun', 'Mar', 'Jue'],
+    fechaUltimaEvaluacionAprobada: '2026-02-12',
+    evaluaciones: [
+      {
+        id: 'eval-sofia-ingreso',
+        tipo: 'ingreso',
+        fecha: '2026-02-10',
+        estado: 'aprobada',
+        aprobadaPor: 'maestra',
+        aprobadaEn: '2026-02-12',
+        edadAlMomentoMeses: 17,
+        etapaAlMomento: 'Toddler Jr',
+        resultados: [
+          {
+            id: 'res-sofia-ingreso-palabras',
+            skillId: 'palabras',
+            assessmentTemplateId: 'tpl-toddler-jr-core-v1',
+            estadoDesarrollo: 'desconocido',
+            estadoEvidencia: 'no_observado',
+            sugeridoPorRaiz: false,
+            editadoPorMaestra: true,
+          },
+          {
+            id: 'res-sofia-ingreso-apilar',
+            skillId: 'apilar',
+            assessmentTemplateId: 'tpl-toddler-jr-core-v1',
+            estadoDesarrollo: 'en_desarrollo',
+            estadoEvidencia: 'suficiente',
+            sugeridoPorRaiz: false,
+            editadoPorMaestra: true,
+          },
+        ],
+      },
+    ],
+    evaluacionesExternas: [
+      {
+        id: 'ext-sofia-speech',
+        tipo: 'speech_language',
+        nombreInstrumento: 'Evaluación de lenguaje (clínica privada)',
+        fecha: '2026-01-15',
+        profesionalOEntidad: 'Speech-Language Pathologist',
+        resumen: 'Lenguaje expresivo por debajo de lo esperado para la edad; comprensión dentro de rango típico.',
+        recomendaciones: 'Fomentar elección con apoyo visual; ampliar vocabulario con repetición en contexto natural.',
+        permisoUsoPedagogico: true,
+        hallazgos: [
+          {
+            id: 'hallazgo-sofia-lenguaje',
+            area: 'Lenguaje expresivo',
+            resumen: 'Usa menos de 10 palabras espontáneas de forma consistente.',
+            recomendacion: 'Ofrecer opciones de 2 en vez de preguntas abiertas.',
+            skillId: 'palabras',
+          },
+        ],
+      },
+    ],
+    planIndividual: {
+      id: 'plan-sofia',
+      fechaCreacion: '2026-02-12',
+      estado: 'activo',
+      motivo: 'Seguimiento de lenguaje expresivo tras evaluación externa.',
+      metas: [
+        {
+          id: 'meta-sofia-vocabulario',
+          skillId: 'palabras',
+          descripcion: 'Ampliar vocabulario expresivo a 20+ palabras espontáneas.',
+          estado: 'en_progreso',
+          estrategias: 'Ofrecer 2 opciones con apoyo visual; celebrar cualquier intento verbal, no solo la palabra exacta.',
+          siguientePaso: 'Observar en Circle Time y Centros durante 2 semanas antes de revisar el estado de la meta.',
+          fechaActualizacion: '2026-08-01',
+        },
+      ],
+    },
     skills: [
-      { id: 'palabras', nombre: 'Vocabulario de 2 palabras', estado: 'en_desarrollo', actualizado: '2026-09-05' },
-      { id: 'apilar', nombre: 'Apila 4+ bloques', estado: 'dominado', actualizado: '2026-08-22' },
+      { id: 'palabras', nombre: 'Vocabulario de 2 palabras', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente', actualizado: '2026-09-05' },
+      { id: 'apilar', nombre: 'Apila 4+ bloques', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente', actualizado: '2026-08-22' },
     ],
   },
   {
@@ -282,9 +514,11 @@ const NINOS_SEMILLA: Nino[] = [
       { id: 'apoyo-mateo-piso', necesidadId: 'need-mateo-postural', estrategia: 'Ofrecer apoyo directo o brazos de la maestra en actividades de piso, sin exigir sedestación sostenida.', activa: true, origen: 'maestra', teacherConfirmed: true },
     ],
     diasAsistencia: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
+    evaluaciones: [],
+    evaluacionesExternas: [],
     skills: [
-      { id: 'gateo', nombre: 'Gateo cruzado', estado: 'dominado', actualizado: '2026-08-30' },
-      { id: 'pinza', nombre: 'Agarre de pinza', estado: 'en_desarrollo', actualizado: '2026-09-10' },
+      { id: 'gateo', nombre: 'Gateo cruzado', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente', actualizado: '2026-08-30' },
+      { id: 'pinza', nombre: 'Agarre de pinza', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente', actualizado: '2026-09-10' },
     ],
   },
 ];
@@ -327,6 +561,164 @@ export function generarIdNino(): string {
 export const NINOS: Nino[] = NINOS_SEMILLA;
 
 export const ETAPAS_ORDEN: Etapa[] = ['Infant', 'Toddler Jr', 'Toddler Sr', 'Preschool', 'Pre-K'];
+
+/* ── CATÁLOGO Y PLANTILLAS DE EJEMPLO (Sesión 6, paso 4) — el usuario confirmó explícitamente
+   que este contenido es DEMO para probar el mecanismo, no el catálogo pedagógico oficial de
+   RAÍZ (eso se revisa en una ronda aparte: skills definitivos, rangos, prerrequisitos, políticas
+   de evidencia, Core Developmental Profile, tracks). ── */
+export const SKILLS_CATALOG: SkillCatalogEntry[] = [
+  { id: 'gateo', dominio: 'motricidad_gruesa', nombre: 'Gateo cruzado', rangoEdadMesesMin: 6, rangoEdadMesesMax: 12, prerrequisitos: [], politicaRevision: 'una_vez_dominado', evidenciaRequerida: 'una_demostracion_clara', contextosRecomendados: ['Piso libre', 'Outdoor'] },
+  { id: 'pinza', dominio: 'motricidad_fina', nombre: 'Agarre de pinza', rangoEdadMesesMin: 8, rangoEdadMesesMax: 14, prerrequisitos: [], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros', 'Comidas'] },
+  { id: 'balbuceo-comunicativo', dominio: 'comunicacion_lenguaje', nombre: 'Balbuceo comunicativo', rangoEdadMesesMin: 4, rangoEdadMesesMax: 12, prerrequisitos: [], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Circle Time', 'Juego libre'] },
+  { id: 'apego-seguro', dominio: 'socioemocional', nombre: 'Busca a la maestra como base segura', rangoEdadMesesMin: 3, rangoEdadMesesMax: 12, prerrequisitos: [], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Transiciones', 'Llegada'] },
+
+  { id: 'palabras', dominio: 'comunicacion_lenguaje', nombre: 'Vocabulario de 2 palabras', rangoEdadMesesMin: 12, rangoEdadMesesMax: 36, prerrequisitos: ['balbuceo-comunicativo'], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Circle Time', 'Centros'] },
+  { id: 'apilar', dominio: 'motricidad_fina', nombre: 'Apila 4+ bloques', rangoEdadMesesMin: 12, rangoEdadMesesMax: 30, prerrequisitos: ['pinza'], politicaRevision: 'una_vez_dominado', evidenciaRequerida: 'una_demostracion_clara', contextosRecomendados: ['Centros'] },
+  { id: 'camina-independiente', dominio: 'motricidad_gruesa', nombre: 'Camina independientemente', rangoEdadMesesMin: 10, rangoEdadMesesMax: 18, prerrequisitos: [], politicaRevision: 'una_vez_dominado', evidenciaRequerida: 'una_demostracion_clara', contextosRecomendados: ['Outdoor'] },
+  { id: 'juego-paralelo', dominio: 'interaccion_social', nombre: 'Juego paralelo junto a otro niño', rangoEdadMesesMin: 18, rangoEdadMesesMax: 30, prerrequisitos: [], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros', 'Outdoor'] },
+  { id: 'sigue-instrucciones-simples', dominio: 'comunicacion_lenguaje', nombre: 'Sigue instrucciones de 1 paso', rangoEdadMesesMin: 24, rangoEdadMesesMax: 36, prerrequisitos: ['palabras'], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Transiciones', 'Circle Time'] },
+  { id: 'autonomia-alimentacion', dominio: 'autonomia', nombre: 'Come solo con cuchara', rangoEdadMesesMin: 18, rangoEdadMesesMax: 36, prerrequisitos: [], politicaRevision: 'una_vez_dominado', evidenciaRequerida: 'una_demostracion_clara', contextosRecomendados: ['Comidas'] },
+
+  { id: 'tijeras', dominio: 'motricidad_fina', nombre: 'Uso de tijeras', rangoEdadMesesMin: 36, rangoEdadMesesMax: 60, prerrequisitos: ['pinza'], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'consistencia_repetida', vecesMinimas: 3, contextosRecomendados: ['Actividad principal', 'Centros'] },
+  { id: 'numeros-1-8', dominio: 'pre_math', nombre: 'Reconoce números 1–8', rangoEdadMesesMin: 36, rangoEdadMesesMax: 48, prerrequisitos: [], politicaRevision: 'una_vez_dominado', evidenciaRequerida: 'una_demostracion_clara', contextosRecomendados: ['Centros', 'Circle Time'] },
+  { id: 'colores', dominio: 'cognicion', nombre: 'Reconoce colores', rangoEdadMesesMin: 30, rangoEdadMesesMax: 42, prerrequisitos: [], politicaRevision: 'una_vez_dominado', evidenciaRequerida: 'una_demostracion_clara', contextosRecomendados: ['Cualquier actividad'] },
+  { id: 'nombre', dominio: 'pre_literacy', nombre: 'Escritura de su nombre', rangoEdadMesesMin: 42, rangoEdadMesesMax: 60, prerrequisitos: [], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Pre-K Table', 'Centros'] },
+  { id: 'juego-cooperativo', dominio: 'interaccion_social', nombre: 'Juego cooperativo con un rol compartido', rangoEdadMesesMin: 36, rangoEdadMesesMax: 54, prerrequisitos: ['juego-paralelo'], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros', 'Outdoor'] },
+
+  { id: 'numeros-6-8', dominio: 'pre_math', nombre: 'Conteo 6–8', rangoEdadMesesMin: 48, rangoEdadMesesMax: 60, prerrequisitos: ['numeros-1-8'], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros', 'Circle Time'] },
+  { id: 'rima', dominio: 'pre_literacy', nombre: 'Identifica rimas', rangoEdadMesesMin: 48, rangoEdadMesesMax: 60, prerrequisitos: [], politicaRevision: 'una_vez_dominado', evidenciaRequerida: 'una_demostracion_clara', contextosRecomendados: ['Circle Time'] },
+  { id: 'nombre-propio', dominio: 'pre_literacy', nombre: 'Escritura de nombre propio', rangoEdadMesesMin: 48, rangoEdadMesesMax: 60, prerrequisitos: ['nombre'], politicaRevision: 'una_vez_dominado', evidenciaRequerida: 'una_demostracion_clara', contextosRecomendados: ['Pre-K Table'] },
+
+  { id: 'reconocimiento-letras', dominio: 'pre_literacy', nombre: 'Reconoce letras de su nombre', rangoEdadMesesMin: 48, rangoEdadMesesMax: 60, prerrequisitos: [], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Pre-K Table', 'Circle Time'] },
+  { id: 'conteo-cantidades', dominio: 'pre_math', nombre: 'Asocia cantidad con número', rangoEdadMesesMin: 48, rangoEdadMesesMax: 60, prerrequisitos: ['numeros-6-8'], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros'] },
+
+  { id: 'resolucion-problemas', dominio: 'cognicion', nombre: 'Resolución de problemas', rangoEdadMesesMin: 24, rangoEdadMesesMax: 60, prerrequisitos: [], politicaRevision: 'desarrollo_continuo', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros', 'STEAM'] },
+  { id: 'interaccion-social', dominio: 'interaccion_social', nombre: 'Interacción con pares', rangoEdadMesesMin: 18, rangoEdadMesesMax: 60, prerrequisitos: [], politicaRevision: 'desarrollo_continuo', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros', 'Outdoor'] },
+  { id: 'regulacion-emocional', dominio: 'socioemocional', nombre: 'Regulación emocional', rangoEdadMesesMin: 12, rangoEdadMesesMax: 60, prerrequisitos: [], politicaRevision: 'desarrollo_continuo', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Cualquier momento'] },
+  { id: 'comunicacion-necesidades', dominio: 'comunicacion_lenguaje', nombre: 'Comunicación de necesidades', rangoEdadMesesMin: 12, rangoEdadMesesMax: 60, prerrequisitos: [], politicaRevision: 'desarrollo_continuo', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Cualquier momento'] },
+];
+
+/** Cada versión = fila propia (INMUTABLE tras el primer uso). `track: null` = CORE obligatorio;
+ * con track, solo aplica si `programs.tracks_activos` lo incluye. */
+export const ASSESSMENT_TEMPLATES: AssessmentTemplate[] = [
+  { id: 'tpl-infant-core-v1', rangoEdadMesesMin: 0, rangoEdadMesesMax: 12, etapa: 'Infant', track: null, version: '1.0', vigente: true },
+  { id: 'tpl-toddler-jr-core-v1', rangoEdadMesesMin: 12, rangoEdadMesesMax: 24, etapa: 'Toddler Jr', track: null, version: '1.0', vigente: true },
+  { id: 'tpl-toddler-sr-core-v1', rangoEdadMesesMin: 24, rangoEdadMesesMax: 36, etapa: 'Toddler Sr', track: null, version: '1.0', vigente: true },
+  { id: 'tpl-preschool-core-v1', rangoEdadMesesMin: 36, rangoEdadMesesMax: 48, etapa: 'Preschool', track: null, version: '1.0', vigente: true },
+  { id: 'tpl-prek-core-v1', rangoEdadMesesMin: 48, rangoEdadMesesMax: 60, etapa: 'Pre-K', track: null, version: '1.0', vigente: true },
+  { id: 'tpl-prek-kinder-readiness-v1', rangoEdadMesesMin: 48, rangoEdadMesesMax: 60, etapa: 'Pre-K', track: 'kindergarten_readiness', version: '1.0', vigente: true },
+];
+
+export const ASSESSMENT_TEMPLATE_SKILLS: AssessmentTemplateSkill[] = [
+  { assessmentTemplateId: 'tpl-infant-core-v1', skillId: 'gateo', orden: 1 },
+  { assessmentTemplateId: 'tpl-infant-core-v1', skillId: 'pinza', orden: 2 },
+  { assessmentTemplateId: 'tpl-infant-core-v1', skillId: 'balbuceo-comunicativo', orden: 3 },
+  { assessmentTemplateId: 'tpl-infant-core-v1', skillId: 'apego-seguro', orden: 4 },
+
+  { assessmentTemplateId: 'tpl-toddler-jr-core-v1', skillId: 'camina-independiente', orden: 1 },
+  { assessmentTemplateId: 'tpl-toddler-jr-core-v1', skillId: 'palabras', orden: 2 },
+  { assessmentTemplateId: 'tpl-toddler-jr-core-v1', skillId: 'apilar', orden: 3 },
+  { assessmentTemplateId: 'tpl-toddler-jr-core-v1', skillId: 'juego-paralelo', orden: 4 },
+
+  { assessmentTemplateId: 'tpl-toddler-sr-core-v1', skillId: 'palabras', orden: 1 },
+  { assessmentTemplateId: 'tpl-toddler-sr-core-v1', skillId: 'apilar', orden: 2 },
+  { assessmentTemplateId: 'tpl-toddler-sr-core-v1', skillId: 'sigue-instrucciones-simples', orden: 3 },
+  { assessmentTemplateId: 'tpl-toddler-sr-core-v1', skillId: 'autonomia-alimentacion', orden: 4 },
+
+  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'tijeras', orden: 1 },
+  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'numeros-1-8', orden: 2 },
+  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'colores', orden: 3 },
+  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'nombre', orden: 4 },
+  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'juego-cooperativo', orden: 5 },
+
+  { assessmentTemplateId: 'tpl-prek-core-v1', skillId: 'numeros-6-8', orden: 1 },
+  { assessmentTemplateId: 'tpl-prek-core-v1', skillId: 'rima', orden: 2 },
+  { assessmentTemplateId: 'tpl-prek-core-v1', skillId: 'nombre-propio', orden: 3 },
+  { assessmentTemplateId: 'tpl-prek-core-v1', skillId: 'tijeras', orden: 4 },
+
+  { assessmentTemplateId: 'tpl-prek-kinder-readiness-v1', skillId: 'reconocimiento-letras', orden: 1 },
+  { assessmentTemplateId: 'tpl-prek-kinder-readiness-v1', skillId: 'conteo-cantidades', orden: 2 },
+];
+
+/** Plantillas CORE + tracks que apliquen para una etapa, dado lo que el programa activó en
+ * Configuración — nunca decidido por la IA en el momento. */
+export function plantillasAplicables(etapa: Etapa, tracksActivos: TrackOpcional[]): AssessmentTemplate[] {
+  return ASSESSMENT_TEMPLATES.filter((t) => t.vigente && t.etapa === etapa && (t.track === null || tracksActivos.includes(t.track)));
+}
+
+/** Genera el BORRADOR de una evaluación: prellena cada skill con el estado ya conocido
+ * (`sugeridoPorRaiz=true`) o, si nunca se ha observado, lo deja explícito como desconocido/no
+ * observado — nunca inventa. La maestra puede guardar el borrador incompleto y volver después
+ * (regla del usuario, Sesión 6 paso 4). */
+export function generarBorradorEvaluacion(nino: Nino, tipo: TipoEvaluacion, tracksActivos: TrackOpcional[]): EvaluacionNino {
+  const edadMeses = edadEnMeses(nino.fechaNacimiento);
+  const plantillas = plantillasAplicables(nino.etapa, tracksActivos);
+  const resultados: ResultadoEvaluacion[] = [];
+  const vistos = new Set<string>();
+  for (const plantilla of plantillas) {
+    const skillsPlantilla = ASSESSMENT_TEMPLATE_SKILLS.filter((s) => s.assessmentTemplateId === plantilla.id).sort((a, b) => a.orden - b.orden);
+    for (const ts of skillsPlantilla) {
+      if (vistos.has(ts.skillId)) continue;
+      vistos.add(ts.skillId);
+      const actual = nino.skills.find((s) => s.id === ts.skillId);
+      resultados.push({
+        id: `res-${generarIdNino()}-${ts.skillId}`,
+        skillId: ts.skillId,
+        assessmentTemplateId: plantilla.id,
+        estadoDesarrollo: actual?.estadoDesarrollo ?? 'desconocido',
+        estadoEvidencia: actual?.estadoEvidencia ?? 'no_observado',
+        sugeridoPorRaiz: !!actual,
+        editadoPorMaestra: false,
+      });
+    }
+  }
+  return {
+    id: `eval-${generarIdNino()}`,
+    tipo,
+    fecha: FECHA_HOY,
+    estado: 'borrador',
+    edadAlMomentoMeses: edadMeses,
+    etapaAlMomento: nino.etapa,
+    resultados,
+  };
+}
+
+/** Aprueba una evaluación: congela el snapshot (nunca se vuelve a tocar) y SOLO entonces
+ * actualiza el perfil vivo (`nino.skills`) — nunca antes, nunca automáticamente (regla del
+ * usuario: RAÍZ no marca skills como logrados sin aprobación humana). */
+export function aprobarEvaluacion(nino: Nino, evaluacion: EvaluacionNino, aprobadaPor: string = 'maestra'): Nino {
+  const evaluacionAprobada: EvaluacionNino = { ...evaluacion, estado: 'aprobada', aprobadaPor, aprobadaEn: FECHA_HOY };
+  const skillsActualizados = [...nino.skills];
+  for (const r of evaluacion.resultados) {
+    const catalogo = SKILLS_CATALOG.find((c) => c.id === r.skillId);
+    const nuevoSkill: Skill = {
+      id: r.skillId,
+      nombre: catalogo?.nombre ?? r.skillId,
+      estadoDesarrollo: r.estadoDesarrollo,
+      estadoEvidencia: r.estadoEvidencia,
+      actualizado: FECHA_HOY,
+    };
+    const idx = skillsActualizados.findIndex((s) => s.id === r.skillId);
+    if (idx >= 0) skillsActualizados[idx] = nuevoSkill;
+    else skillsActualizados.push(nuevoSkill);
+  }
+  return {
+    ...nino,
+    skills: skillsActualizados,
+    evaluaciones: [...nino.evaluaciones.filter((e) => e.id !== evaluacion.id), evaluacionAprobada],
+    fechaUltimaEvaluacionAprobada: FECHA_HOY,
+  };
+}
+
+/** "Última evaluación aprobada + frecuencia → próxima revisión" — regla técnica ya aprobada
+ * (nunca configurable, evita exponerle a la maestra una decisión que no necesita tomar). */
+export function calcularFechaProximaEvaluacion(nino: Nino, frecuencia: FrecuenciaEvaluacion, mesesPersonalizados?: number): string {
+  const referencia = nino.fechaUltimaEvaluacionAprobada ?? nino.fechaIngreso;
+  const meses = frecuencia === 'trimestral' ? 3 : frecuencia === 'semestral' ? 6 : frecuencia === 'anual' ? 12 : (mesesPersonalizados ?? 3);
+  const d = new Date(`${referencia}T00:00:00`);
+  d.setMonth(d.getMonth() + meses);
+  return d.toISOString().slice(0, 10);
+}
 
 export const TINT_HEX: Record<Nino['colorTint'], string> = {
   teal: '#0D5C63',

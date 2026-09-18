@@ -54,7 +54,7 @@ export default function NinosFoco() {
                     <p className="text-[16px] font-semibold text-[var(--text-primary)]">{n.nombre}</p>
                     <p className="mt-0.5 text-[14px] text-[var(--text-secondary)]">{n.metaActiva?.nota}</p>
                   </div>
-                  {skill && <SkillBadge estado={skill.estado} />}
+                  {skill && <SkillBadge estadoDesarrollo={skill.estadoDesarrollo} estadoEvidencia={skill.estadoEvidencia} />}
                   <ChevronRight size={18} className="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
                 </Link>
               </motion.li>

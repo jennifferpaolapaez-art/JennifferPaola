@@ -10,6 +10,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { CalendarDays, ChevronDown, Home, Plus, Users, X } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { etiquetaSkill, type EstadoDesarrollo, type EstadoEvidencia } from '@/lib/seed-data';
 
 const NAV = [
   { id: 'hoy', label: 'Hoy', href: '/hoy', icono: Home },
@@ -74,19 +75,22 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 /* ── <SkillBadge> — chip de estado que ABRAZA su contenido (49 §4), texto + color
-   (nunca solo color — daltonismo). Usado en Perfil y en Niños foco. ── */
-export function SkillBadge({ estado }: { estado: 'dominado' | 'en_desarrollo' | 'no_observado' }) {
+   (nunca solo color — daltonismo). Usado en Perfil y en Niños foco. Sesión 6 paso 4: recibe los
+   DOS ejes separados (desarrollo/evidencia) y los traduce a UNA etiqueta vía `etiquetaSkill` —
+   nunca vuelve a mezclarlos en un solo campo guardado. ── */
+export function SkillBadge({ estadoDesarrollo, estadoEvidencia }: { estadoDesarrollo: EstadoDesarrollo; estadoEvidencia: EstadoEvidencia }) {
+  const { label, tono } = etiquetaSkill(estadoDesarrollo, estadoEvidencia);
   const cfg = {
-    dominado: { label: 'Dominado', bg: 'color-mix(in oklab, var(--sage) 16%, transparent)', color: 'var(--sage)' },
-    en_desarrollo: { label: 'En desarrollo', bg: 'color-mix(in oklab, var(--butter) 16%, transparent)', color: 'var(--butter)' },
-    no_observado: { label: 'Aún no observado', bg: 'color-mix(in oklab, var(--coral) 14%, transparent)', color: 'var(--coral)' },
-  }[estado];
+    dominado: { bg: 'color-mix(in oklab, var(--sage) 16%, transparent)', color: 'var(--sage)' },
+    en_desarrollo: { bg: 'color-mix(in oklab, var(--butter) 16%, transparent)', color: 'var(--butter)' },
+    sin_evidencia: { bg: 'color-mix(in oklab, var(--coral) 14%, transparent)', color: 'var(--coral)' },
+  }[tono];
   return (
     <span
       className="inline-flex w-fit items-center rounded-[var(--radius-button)] px-2.5 py-1 text-[12px] font-semibold"
       style={{ background: cfg.bg, color: cfg.color }}
     >
-      {cfg.label}
+      {label}
     </span>
   );
 }

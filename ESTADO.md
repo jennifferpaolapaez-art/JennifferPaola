@@ -39,7 +39,7 @@ oficial a partir de ahora:
 3. Módulo Niños real (crear/editar, DOB→edad automática, días, idioma, "Cuéntame sobre este niño")
    ← CERRADO
 4. Perfil completo del niño: evaluación inicial RAÍZ + evaluaciones/documentos externos +
-   Plan Individual opcional — arquitectura APROBADA, ver sección siguiente
+   Plan Individual opcional — CERRADO, ver sección de cierre más abajo
 5. Planeación CON o SIN niños (grupo-nivel si no hay niños; se enriquece si los hay)
 6. Observaciones como módulo independiente (mismo sistema de Sesión 5 ronda 4, entrada propia)
 7. Progreso / Reportes (vista de lectura sobre lo ya acumulado)
@@ -960,6 +960,60 @@ nuevo (DOB tecleada, edad calculada correctamente vía `.value` del input nativo
 automática y seleccionable, guardado, aparece en la lista agrupada por etapa correcta), edición
 precargada con todos los campos, Perfil de Sofía muestra sus 2 necesidades con su apoyo enlazado
 correctamente por `necesidadId`, Hoy y Planeación siguen sin regresión con las 5 etapas.
+
+## Sesión 6, paso 4 — Perfil completo del niño (CERRADO)
+Construye la arquitectura v2 aprobada: catálogo de skills + plantillas versionadas + evaluación
+inicial/periódica con prellenado y aprobación humana + evaluaciones externas + Plan Individual.
+**El usuario confirmó explícitamente que `SKILLS_CATALOG`/`ASSESSMENT_TEMPLATES` son datos DEMO
+para probar el mecanismo — el catálogo pedagógico oficial (skills definitivos, rangos, políticas
+de evidencia, Core Developmental Profile, tracks) se revisa en una ronda aparte.**
+
+Cambio de fondo en `Skill`: `estado` (3 valores, ambiguo) se separa en `estadoDesarrollo`
+(desconocido|en_desarrollo|dominado) + `estadoEvidencia` (no_observado|insuficiente|suficiente|
+contradictoria) — corrección explícita del usuario para no confundir "no observado" con "en
+desarrollo". `etiquetaSkill()` traduce los dos ejes a una sola etiqueta para la UI; `SkillBadge`
+(shell.tsx) y sus 3 consumidores (`/ninos/[id]`, `/ninos-foco`, `/observar`) actualizados. Los 12
+skills de los 4 niños semilla se migraron 1:1 (mismo estado visible, ahora en dos campos); se
+unificó `tijeras-z` (Zayne) → `tijeras` (mismo skill que Luca, sin motivo real para IDs distintos).
+
+Nuevo en `lib/seed-data.ts`: `SkillCatalogEntry` (dominio, rango de edad en meses, prerrequisitos,
+`politicaRevision`, `evidenciaRequerida` + `vecesMinimas?` SOLO si evidenciaRequerida=
+consistencia_repetida — nunca una regla universal de "N observaciones", corrección del usuario) —
+`SKILLS_CATALOG` con ~24 entradas cubriendo las 5 etapas + track Kindergarten Readiness.
+`AssessmentTemplate` (versión INMUTABLE tras el primer uso; `track: null`=CORE obligatorio, con
+track=opcional solo si `programs.tracksActivos` lo incluye) + `AssessmentTemplateSkill` — 6
+plantillas v1.0 (una CORE por etapa + 1 track para Pre-K). `plantillasAplicables()`,
+`generarBorradorEvaluacion()` (prellena con `nino.skills` actual, nunca inventa — si no hay dato
+previo queda explícito desconocido/no_observado), `aprobarEvaluacion()` (congela el snapshot y
+SOLO ENTONCES sincroniza `nino.skills` — nunca antes, nunca automático), y
+`calcularFechaProximaEvaluacion()` (última aprobada, o fecha de ingreso si nunca hubo una, +
+frecuencia del programa — regla técnica fija, no configurable). `EvaluacionNino`/
+`ResultadoEvaluacion` viven anidados en cada `Nino` (sin store aparte); igual `EvaluacionExterna`/
+`HallazgoEvaluacionExterna` y `PlanIndividual`/`MetaIndividual` — todo persiste vía
+`leerNinos()`/`guardarNinos()` ya existentes, sin nuevas claves de localStorage.
+
+Pantallas nuevas: `/ninos/[id]/evaluacion/[evalId]` (evalId='nueva' genera el borrador al vuelo;
+revisar/editar con chips de desarrollo+evidencia por skill; "Guardar borrador" no toca el perfil
+vivo, "Aprobar evaluación" sí — nunca automático, regla del usuario); `/ninos/[id]/evaluacion-
+externa/nueva` (ASQ-3/IFSP/IEP/speech/OT/PT + hallazgos puntuales opcionales — **sin adjuntar
+archivo, con aviso explícito en pantalla de que el almacenamiento real llega después**, regla del
+usuario); `/ninos/[id]/plan-individual` (crear solo por acción explícita — una necesidad NUNCA lo
+crea sola; metas con estado por_trabajar/en_progreso/casi/alcanzado, cambiado SIEMPRE a mano).
+Perfil (`/ninos/[id]`) gana 3 secciones: Evaluaciones (historial + próxima evaluación visible +
+botón generar), Evaluaciones externas, Plan Individual.
+
+Sofía (seed) queda con una evaluación de ingreso aprobada, una evaluación externa con 1 hallazgo,
+y un Plan Individual con 1 meta — para que el mecanismo se vea poblado desde el primer vistazo
+(32, "nunca se enseña vacía"), no solo en pantallas vacías.
+
+Verificado: tsc ✓ build ✓ (23 rutas) · recorrido real en navegador — evaluación periódica generada
+para Sofía (4 skills de la plantilla Toddler Sr, 2 prellenadas correctamente desde su perfil
+actual), guardar borrador confirmado que NO toca `nino.skills`, aprobar confirmado que SÍ
+sincroniza el perfil vivo (pasó de 2 a 4 skills) y recalcula la próxima evaluación
+(2026-05-12 → 2026-12-15), evaluación aprobada anterior se ve correctamente de solo lectura,
+evaluación externa y su hallazgo renderizan bien con el aviso de "no se adjunta todavía", Plan
+Individual de Sofía editable (cambié una meta a "Alcanzado" a mano) y el de Luca ofrece "Crear"
+sin haberse generado solo pese a que Luca no tiene necesidades registradas.
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).

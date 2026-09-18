@@ -10,9 +10,25 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, type Variants } from 'motion/react';
-import { ArrowLeft, Pencil } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Pencil, Plus } from 'lucide-react';
 import { AppShell, AvatarInicial, Colapsable, SkillBadge } from '@/components/app/shell';
-import { calcularEdadTexto, leerNinos, ninoPorId, TINT_HEX, type Nino } from '@/lib/seed-data';
+import {
+  calcularEdadTexto,
+  calcularFechaProximaEvaluacion,
+  leerNinos,
+  leerProgramaConfig,
+  ninoPorId,
+  TINT_HEX,
+  type Nino,
+} from '@/lib/seed-data';
+
+const ESTADO_EVAL_LABEL: Record<string, string> = { borrador: 'Borrador', aprobada: 'Aprobada' };
+const ESTADO_META_LABEL: Record<string, string> = {
+  por_trabajar: 'Por trabajar',
+  en_progreso: 'En progreso',
+  casi: 'Casi',
+  alcanzado: 'Alcanzado',
+};
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
 const item: Variants = {
@@ -32,6 +48,7 @@ export default function Perfil() {
   }, []);
 
   const nino = ninoPorId(params.id, ninos);
+  const programaConfig = leerProgramaConfig();
 
   if (!cargado) return null;
 
@@ -156,6 +173,112 @@ export default function Perfil() {
               </ul>
             </Colapsable>
           )}
+
+          <Colapsable
+            titulo="Evaluaciones"
+            subtitulo={
+              nino.evaluaciones.length > 0
+                ? `${nino.evaluaciones.length} en el historial · próxima ${calcularFechaProximaEvaluacion(nino, programaConfig.frecuenciaEvaluacion, programaConfig.frecuenciaEvaluacionMesesPersonalizada)}`
+                : 'Todavía no tiene evaluación inicial'
+            }
+          >
+            {nino.evaluaciones.length > 0 ? (
+              <ul className="mb-3 flex flex-col gap-2">
+                {[...nino.evaluaciones].reverse().map((ev) => (
+                  <li key={ev.id}>
+                    <Link
+                      href={`/ninos/${nino.id}/evaluacion/${ev.id}`}
+                      className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-3.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[14px] font-medium text-[var(--text-primary)]">
+                          {ev.tipo === 'ingreso' ? 'Evaluación de ingreso' : 'Evaluación periódica'}
+                        </p>
+                        <p className="text-[12px] text-[var(--text-secondary)]">{ev.fecha} · {ESTADO_EVAL_LABEL[ev.estado]}</p>
+                      </div>
+                      <ChevronRight size={16} className="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mb-3 text-[13px] text-[var(--text-secondary)]">
+                La evaluación inicial se prellena con lo que ya sabes — puedes dejarla en borrador y completarla poco a poco.
+              </p>
+            )}
+            <Link
+              href={`/ninos/${nino.id}/evaluacion/nueva?tipo=${nino.evaluaciones.length > 0 ? 'periodica' : 'ingreso'}`}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-button)] border-2 border-dashed border-[color-mix(in_oklab,var(--accent)_45%,transparent)] text-[14px] font-semibold text-[var(--accent)]"
+            >
+              <Plus size={16} aria-hidden="true" />
+              {nino.evaluaciones.length > 0 ? 'Generar evaluación periódica' : 'Generar evaluación inicial'}
+            </Link>
+          </Colapsable>
+
+          <Colapsable
+            titulo="Evaluaciones externas"
+            subtitulo={nino.evaluacionesExternas.length > 0 ? `${nino.evaluacionesExternas.length} registradas` : 'ASQ-3, IEP, IFSP, speech, OT, PT...'}
+          >
+            {nino.evaluacionesExternas.length > 0 && (
+              <ul className="mb-3 flex flex-col gap-2">
+                {nino.evaluacionesExternas.map((ext) => (
+                  <li key={ext.id} className="rounded-[var(--radius-card)] bg-[var(--surface-2)] p-3.5">
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--accent)]">{ext.tipo}</p>
+                    <p className="mt-0.5 text-[14px] font-medium text-[var(--text-primary)]">{ext.nombreInstrumento}</p>
+                    <p className="text-[12px] text-[var(--text-secondary)]">{ext.fecha}{ext.profesionalOEntidad ? ` · ${ext.profesionalOEntidad}` : ''}</p>
+                    {ext.resumen && <p className="mt-2 text-[13px] leading-snug text-[var(--text-secondary)]">{ext.resumen}</p>}
+                    {ext.hallazgos.length > 0 && (
+                      <ul className="mt-2 flex flex-col gap-1.5">
+                        {ext.hallazgos.map((h) => (
+                          <li key={h.id} className="text-[13px] leading-snug text-[var(--text-secondary)]">
+                            <span className="font-semibold text-[var(--text-primary)]">{h.area}: </span>
+                            {h.resumen}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link
+              href={`/ninos/${nino.id}/evaluacion-externa/nueva`}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-button)] border-2 border-dashed border-[color-mix(in_oklab,var(--accent)_45%,transparent)] text-[14px] font-semibold text-[var(--accent)]"
+            >
+              <Plus size={16} aria-hidden="true" />
+              Agregar evaluación externa
+            </Link>
+            <p className="mt-3 text-[12px] text-[var(--text-tertiary)]">
+              El documento original todavía no se adjunta — solo el resumen. Cuando conectemos almacenamiento real podrás subirlo aquí.
+            </p>
+          </Colapsable>
+
+          <Colapsable titulo="Plan Individual" subtitulo={nino.planIndividual ? `${nino.planIndividual.metas.length} meta(s) activa(s)` : 'Opcional — no todos los niños lo necesitan'}>
+            {nino.planIndividual ? (
+              <>
+                <ul className="mb-3 flex flex-col gap-2">
+                  {nino.planIndividual.metas.map((m) => (
+                    <li key={m.id} className="rounded-[var(--radius-card)] bg-[var(--surface-2)] p-3.5">
+                      <p className="text-[14px] font-medium text-[var(--text-primary)]">{m.descripcion}</p>
+                      <p className="mt-1 text-[12px] font-semibold text-[var(--accent)]">{ESTADO_META_LABEL[m.estado]}</p>
+                      {m.siguientePaso && <p className="mt-1 text-[13px] leading-snug text-[var(--text-secondary)]">Siguiente paso: {m.siguientePaso}</p>}
+                    </li>
+                  ))}
+                </ul>
+                <Link href={`/ninos/${nino.id}/plan-individual`} className="text-[13px] font-semibold text-[var(--accent)] underline">
+                  Ver y editar Plan Individual
+                </Link>
+              </>
+            ) : (
+              <Link
+                href={`/ninos/${nino.id}/plan-individual`}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-button)] border-2 border-dashed border-[color-mix(in_oklab,var(--accent)_45%,transparent)] text-[14px] font-semibold text-[var(--accent)]"
+              >
+                <Plus size={16} aria-hidden="true" />
+                Crear Plan Individual
+              </Link>
+            )}
+          </Colapsable>
         </motion.div>
 
         <motion.h2 variants={item} className="mb-2 text-[16px] font-semibold text-[var(--text-primary)]">
@@ -169,7 +292,7 @@ export default function Perfil() {
               className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
             >
               <span className="text-[15px] font-medium text-[var(--text-primary)]">{s.nombre}</span>
-              <SkillBadge estado={s.estado} />
+              <SkillBadge estadoDesarrollo={s.estadoDesarrollo} estadoEvidencia={s.estadoEvidencia} />
             </motion.li>
           ))}
         </ul>
