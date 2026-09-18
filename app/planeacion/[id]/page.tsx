@@ -7,12 +7,12 @@
 // quedan plegados por defecto (regla del usuario: "primero veo lo esencial, después expando").
 // Las 3 capas (etapa / adaptación individual / niño foco) siguen SIEMPRE separadas entre sí.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, type Variants } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
 import { AppShell, AvatarInicial, Colapsable, EtapaChip, LeafCheck } from '@/components/app/shell';
-import { actividadPorId, ninoPorId, ETAPAS_ORDEN, TINT_HEX, BLOQUE_LABEL, type Etapa } from '@/lib/seed-data';
+import { actividadPorId, ninoPorId, leerNinos, planeacionPorNumero, ETAPAS_ORDEN, TINT_HEX, BLOQUE_LABEL, type Etapa, type Nino } from '@/lib/seed-data';
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
 const item: Variants = {
@@ -27,8 +27,18 @@ function Etiqueta({ children }: { children: React.ReactNode }) {
 export default function DetalleActividad() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const encontrado = actividadPorId(params.id);
+  const [ninos, setNinos] = useState<Nino[]>([]);
+  const [cargado, setCargado] = useState(false);
   const [etapaActiva, setEtapaActiva] = useState<Etapa>('Preschool');
+
+  useEffect(() => {
+    setNinos(leerNinos());
+    setCargado(true);
+  }, []);
+
+  if (!cargado) return null;
+
+  const encontrado = actividadPorId(params.id, planeacionPorNumero(3));
 
   if (!encontrado) {
     return (
@@ -43,7 +53,7 @@ export default function DetalleActividad() {
     );
   }
 
-  const { actividad, dia } = encontrado;
+  const { actividad, dia, plan } = encontrado;
   const tieneGuiaGenerica = actividad.preparacion || actividad.queHaceMaestra || actividad.queHacenNinos || actividad.preguntasGuia;
 
   return (
@@ -297,13 +307,15 @@ export default function DetalleActividad() {
           </motion.section>
         )}
 
-        {/* ——— CAPAS B y C, y observación — plegadas por defecto (regla del usuario). ——— */}
+        {/* ——— CAPAS B y C — solo si ESTA semana tiene personalización activada (regla del
+            usuario, Sesión 6 paso 5). "Qué observar" es general del grupo, se queda siempre.
+            Todo sigue plegado por defecto. ——— */}
         <motion.div variants={item} className="mb-6 flex flex-col gap-3">
-          {actividad.adaptacionesIndividuales && actividad.adaptacionesIndividuales.length > 0 && (
+          {plan.personalizacionActiva && actividad.adaptacionesIndividuales && actividad.adaptacionesIndividuales.length > 0 && (
             <Colapsable titulo="Adaptaciones individuales" subtitulo="Ajustes puntuales — no implican un Plan Individual">
               <ul className="flex flex-col gap-2">
                 {actividad.adaptacionesIndividuales.map((a, i) => {
-                  const nino = ninoPorId(a.ninoId);
+                  const nino = ninoPorId(a.ninoId, ninos);
                   if (!nino) return null;
                   return (
                     <li key={i} className="flex items-start gap-3 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-3">
@@ -311,6 +323,9 @@ export default function DetalleActividad() {
                       <div className="min-w-0 flex-1">
                         <p className="text-[14px] font-semibold text-[var(--text-primary)]">
                           {nino.nombre} · <span className="font-normal text-[var(--text-secondary)]">{a.necesidad}</span>
+                          {a.origenCalculo === 'raiz_sugerido' && (
+                            <span className="ml-1.5 text-[11px] font-semibold text-[var(--accent)]">· sugerido por RAÍZ</span>
+                          )}
                         </p>
                         <p className="mt-0.5 text-[13px] leading-snug text-[var(--text-secondary)]">{a.ajuste}</p>
                       </div>
@@ -321,11 +336,11 @@ export default function DetalleActividad() {
             </Colapsable>
           )}
 
-          {actividad.ninosFoco && actividad.ninosFoco.length > 0 && (
+          {plan.personalizacionActiva && actividad.ninosFoco && actividad.ninosFoco.length > 0 && (
             <Colapsable titulo="Niños foco en esta actividad" subtitulo="Su meta activa, aprovechando esta misma experiencia">
               <ul className="flex flex-col gap-2">
                 {actividad.ninosFoco.map((f, i) => {
-                  const nino = ninoPorId(f.ninoId);
+                  const nino = ninoPorId(f.ninoId, ninos);
                   if (!nino) return null;
                   return (
                     <li key={i} className="flex items-start gap-3 rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--accent)_7%,transparent)] p-3">
@@ -333,6 +348,9 @@ export default function DetalleActividad() {
                       <div className="min-w-0 flex-1">
                         <p className="text-[14px] font-semibold text-[var(--text-primary)]">
                           {nino.nombre} · <span className="font-normal text-[var(--accent)]">{f.meta}</span>
+                          {f.origenCalculo === 'raiz_sugerido' && (
+                            <span className="ml-1.5 text-[11px] font-semibold text-[var(--accent)]">· sugerido por RAÍZ</span>
+                          )}
                         </p>
                         <p className="mt-0.5 text-[13px] leading-snug text-[var(--text-secondary)]">Observar: {f.observar}</p>
                       </div>

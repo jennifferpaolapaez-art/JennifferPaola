@@ -113,6 +113,11 @@ export interface ApoyoNino {
   activa: boolean;
   origen: OrigenNecesidadApoyo;
   teacherConfirmed: boolean;
+  /** Sesión 6 paso 5 — en qué CONTEXTOS de actividad este apoyo es relevante (ver
+   * `ContextoActividad`). Reemplaza "categoría de necesidad == dominio de actividad" (regla del
+   * usuario: esa igualdad es demasiado limitada — una necesidad sensorial puede ser relevante en
+   * una actividad de motricidad fina si ambas comparten el contexto real, ej. contacto con pega). */
+  contextosRelevantes?: ContextoActividad[];
 }
 
 /* ── EVALUACIONES (Sesión 6, paso 4 — Perfil completo del niño) ──
@@ -413,7 +418,7 @@ const NINOS_SEMILLA: Nino[] = [
       },
     ],
     apoyos: [
-      { id: 'apoyo-sofia-aplicador', necesidadId: 'need-sofia-sensorial', estrategia: 'Ofrecer un aplicador o guante en vez de contacto directo con pega/pintura.', activa: true, origen: 'maestra', teacherConfirmed: true },
+      { id: 'apoyo-sofia-aplicador', necesidadId: 'need-sofia-sensorial', estrategia: 'Ofrecer un aplicador o guante en vez de contacto directo con pega/pintura.', activa: true, origen: 'maestra', teacherConfirmed: true, contextosRelevantes: ['contacto_sensorial', 'pega'] },
       { id: 'apoyo-sofia-opciones', necesidadId: 'need-sofia-lenguaje', estrategia: 'Permitir señalar o elegir entre dos imágenes en vez de exigir respuesta verbal.', activa: true, origen: 'maestra', teacherConfirmed: true },
     ],
     diasAsistencia: ['Lun', 'Mar', 'Jue'],
@@ -518,7 +523,7 @@ const NINOS_SEMILLA: Nino[] = [
       },
     ],
     apoyos: [
-      { id: 'apoyo-mateo-piso', necesidadId: 'need-mateo-postural', estrategia: 'Ofrecer apoyo directo o brazos de la maestra en actividades de piso, sin exigir sedestación sostenida.', activa: true, origen: 'maestra', teacherConfirmed: true },
+      { id: 'apoyo-mateo-piso', necesidadId: 'need-mateo-postural', estrategia: 'Ofrecer apoyo directo o brazos de la maestra en actividades de piso, sin exigir sedestación sostenida.', activa: true, origen: 'maestra', teacherConfirmed: true, contextosRelevantes: ['movimiento', 'sentarse_quieto'] },
     ],
     diasAsistencia: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
     evaluaciones: [],
@@ -1133,11 +1138,30 @@ export function bloquesConfiguradosParaDia(dia: DiaSemana, rutina: BloqueRutina[
  * QUÉ se sugirió (regla del usuario, Sesión 5 ronda 3). */
 export type OrigenAdaptacion = 'necesidad_registrada' | 'plan_individual' | 'observacion' | 'recomendacion_raiz';
 
+/** Sesión 6 paso 5 — CONTEXTOS/DEMANDAS reales de una actividad (materiales, sentidos,
+ * movimiento, participación esperada) — tags controlados y fijos, NUNCA texto libre. Reemplaza
+ * "categoría de necesidad == dominio de actividad" como regla de relevancia (corrección explícita
+ * del usuario: esa igualdad era demasiado limitada — ej. una necesidad SENSORIAL sigue siendo
+ * relevante en una actividad de MOTRICIDAD FINA si ambas comparten el contexto real "pega"). Lista
+ * corta a propósito; se ampliará solo si hace falta, nunca se vuelve texto libre ni la decide la
+ * IA en tiempo de ejecución. */
+export type ContextoActividad =
+  | 'contacto_sensorial'
+  | 'motricidad_fina'
+  | 'tijeras'
+  | 'pega'
+  | 'movimiento'
+  | 'respuesta_verbal'
+  | 'sentarse_quieto'
+  | 'participacion_grupal';
+
 /** Adaptación por una necesidad puntual de UN niño (capa B) — nunca implica Plan Individual.
  * Entidad relacional completa: `necesidad`/`ajuste` son el snapshot histórico de lo que se usó
- * ESE día; las referencias (`childNeedId`/`individualGoalId`/`planId`/`observationId`) enlazan a
- * la fuente estructurada cuando existe — ninguna es obligatoria (regla del usuario: "no todos son
- * obligatorios"). */
+ * ESE día; las referencias (`childNeedId`/`childSupportId`/`individualGoalId`/`planId`/
+ * `observationId`) enlazan a la fuente estructurada cuando existe — ninguna es obligatoria (regla
+ * del usuario: "no todos son obligatorios"). `origenCalculo` distingue lo que RAÍZ calculó y
+ * guardó (`raiz_sugerido`) de lo escrito a mano (`maestra_manual` o sin marcar, contenido
+ * histórico) — sin este campo, ambos se tratan igual (contenido ya aceptado). */
 export interface AdaptacionIndividual {
   ninoId: string;
   necesidad: string;
@@ -1148,9 +1172,11 @@ export interface AdaptacionIndividual {
    * una adaptación permanente que se repite en varias actividades). */
   alcance: 'solo_esta_actividad' | 'general_del_nino';
   childNeedId?: string;
+  childSupportId?: string;
   individualGoalId?: string;
   planId?: string;
   observationId?: string;
+  origenCalculo?: 'raiz_sugerido' | 'maestra_manual';
 }
 
 /** Niño cuya meta/skill activa se observa a propósito en ESTA actividad (capa C) — objetivo
@@ -1165,8 +1191,12 @@ export interface NinoFocoActividad {
   /** Enlaza con el skill/meta real del niño (`Nino.skills[].id`) cuando ya existe como skill
    * formal; algunos focos observan un dominio que aún no se ha formalizado como skill. */
   skillId?: string;
+  /** Meta de Plan Individual que motivó este foco, cuando aplica — prioridad 1 sobre un simple
+   * skill en desarrollo (regla del usuario, Sesión 6 paso 5). */
+  individualGoalId?: string;
   estadoFoco: 'pendiente' | 'observado';
   observationId?: string;
+  origenCalculo?: 'raiz_sugerido' | 'maestra_manual';
 }
 
 /* ── GUÍAS ESPECÍFICAS POR TIPO DE BLOQUE (corrección del usuario, Sesión 5 — ronda 2):
@@ -1249,6 +1279,13 @@ export interface Actividad {
   conexionTema?: string;
   /** Adaptación por ETAPA (capa A) — solo las actividades que lo ameritan la tienen. */
   diferenciacion?: Record<Etapa, string>;
+  /** Sesión 6 paso 5 — CONTEXTOS/DEMANDAS reales de esta actividad (ver `ContextoActividad`), y
+   * skills reales que esta actividad trabaja de verdad (`SkillCatalogEntry.id`) — la base para
+   * calcular Capas B/C desde el perfil real del niño, en vez de solo comparar dominio. Opcional:
+   * una actividad sin tags simplemente nunca genera candidatos automáticos (default seguro, sin
+   * falsos positivos) — no hace falta taggear todo el catálogo de una vez. */
+  contextos?: ContextoActividad[];
+  skillsRelacionados?: string[];
   adaptacionesIndividuales?: AdaptacionIndividual[];
   ninosFoco?: NinoFocoActividad[];
   queObservar?: string;
@@ -1283,10 +1320,20 @@ export interface PlaneacionSemanal {
   objetivosGenerales: string[];
   dominiosPrincipales: string[];
   dias: DiaPlan[];
+  /** Sesión 6 paso 5 — pertenece a ESTA semana, no a un interruptor global (regla del usuario:
+   * una maestra puede personalizar unas semanas y no otras). Apagado por defecto: la planeación
+   * grupal (Capa A) funciona igual sin esto. Cuando se prende, `calcularPersonalizacionSemana()`
+   * corre UNA vez y guarda su resultado dentro de `dias[].actividades[]` — nunca se recalcula
+   * solo al abrir la pantalla (regla del usuario: "personalización sugerida ≠ cambio eterno en
+   * vivo"); solo un "Actualizar personalización" explícito vuelve a correrlo. */
+  personalizacionActiva: boolean;
+  personalizacionActualizadaEn?: string;
 }
 
 export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
   numero: 3,
+  personalizacionActiva: true,
+  personalizacionActualizadaEn: '2026-09-10',
   temaMensual: 'Mi cuerpo y mis sentidos',
   subtemaSemanal: 'Las partes de mi cuerpo',
   vocabulario: ['cabeza', 'brazos', 'piernas', 'dedos', 'sentir'],
@@ -1505,6 +1552,11 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
             Preschool: 'Nombra cada parte del cuerpo mientras pega y recorta con tijeras.',
             'Pre-K': 'Escribe el nombre de 3 partes del cuerpo junto a su silueta.',
           },
+          // Sesión 6 paso 5: contextos/skills reales de esta actividad — base para que RAÍZ
+          // calcule Capas B/C desde el perfil real de cualquier niño (no solo estos 2 ejemplos
+          // ya escritos a mano).
+          contextos: ['pega', 'tijeras', 'motricidad_fina', 'contacto_sensorial'],
+          skillsRelacionados: ['tijeras'],
           adaptacionesIndividuales: [
             {
               ninoId: 'sofia',
@@ -1512,6 +1564,7 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
               ajuste: 'Ofrecerle un aplicador de pega en vez de pega-stick directo en la mano.',
               origen: 'necesidad_registrada',
               alcance: 'general_del_nino',
+              origenCalculo: 'maestra_manual',
             },
             {
               ninoId: 'mateo',
@@ -1519,11 +1572,12 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
               ajuste: 'Explorar la silueta en el piso, boca abajo, con apoyo directo de la maestra.',
               origen: 'necesidad_registrada',
               alcance: 'general_del_nino',
+              origenCalculo: 'maestra_manual',
             },
           ],
           ninosFoco: [
-            { ninoId: 'luca', meta: 'Tijeras', observar: 'Cortes consecutivos sin ayuda', skillId: 'tijeras', estadoFoco: 'pendiente' },
-            { ninoId: 'zayne', meta: 'Números 6–8', observar: 'Reconoce solo, sin contar con el dedo', skillId: 'numeros-6-8', estadoFoco: 'pendiente' },
+            { ninoId: 'luca', meta: 'Tijeras', observar: 'Cortes consecutivos sin ayuda', skillId: 'tijeras', estadoFoco: 'pendiente', origenCalculo: 'maestra_manual' },
+            { ninoId: 'zayne', meta: 'Números 6–8', observar: 'Reconoce solo, sin contar con el dedo', skillId: 'numeros-6-8', estadoFoco: 'pendiente', origenCalculo: 'maestra_manual' },
           ],
           queObservar: 'Quién nombra la parte del cuerpo sin que se le pregunte, y quién necesita el modelo de la maestra.',
           evidenciaPosible: 'Foto de la silueta terminada + la frase textual que dijo el niño al pegar.',
@@ -1699,6 +1753,10 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           titulo: 'Cuento: "De pies a cabeza"',
           objetivo: 'Escuchar y anticipar partes del cuento con apoyo visual, imitando cada acción.',
           dominio: 'Lenguaje y vocabulario',
+          // Sesión 6 paso 5 — sin adaptaciones/focos escritos a mano todavía: caso de prueba para
+          // demostrar que la personalización calculada agrega a un niño real (Mateo) desde su
+          // apoyo registrado, sin que nadie lo haya anotado aquí antes.
+          contextos: ['movimiento', 'sentarse_quieto'],
           materiales: [{ nombre: 'Libro ilustrado', disponible: true }],
           preparacion: 'Elegir las páginas con acciones fáciles de imitar (girar, saltar, aplaudir).',
           queHaceMaestra: 'Lee el cuento en voz alta, invitando a los niños a imitar cada acción del libro.',
@@ -1861,6 +1919,10 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
           titulo: 'Centro de matemáticas: contar partes del cuerpo',
           objetivo: 'Practicar conteo 6–8 con un contexto significativo, contando entre compañeros.',
           dominio: 'Matemáticas tempranas',
+          // Sesión 6 paso 5 — el skill real que se trabaja aquí (no solo el dominio) es contar
+          // 1 a 1: caso de prueba para que Luca aparezca agregado automáticamente junto a Zayne
+          // (que ya estaba escrito a mano), sin duplicar ni tocar la entrada de Zayne.
+          skillsRelacionados: ['correspondencia-uno-a-uno'],
           materiales: [{ nombre: 'Fichas de conteo', disponible: true }],
           guiaCentros: [
             {
@@ -1872,7 +1934,7 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
             },
           ],
           ninosFoco: [
-            { ninoId: 'zayne', meta: 'Números 6–8', observar: 'Cuenta dedos y ojos de sus compañeros sin ayuda.', skillId: 'numeros-6-8', estadoFoco: 'pendiente' },
+            { ninoId: 'zayne', meta: 'Números 6–8', observar: 'Cuenta dedos y ojos de sus compañeros sin ayuda.', skillId: 'numeros-6-8', estadoFoco: 'pendiente', origenCalculo: 'maestra_manual' },
           ],
         },
         {
@@ -1896,22 +1958,173 @@ export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
   ],
 };
 
-export function actividadPorId(id: string): { actividad: Actividad; dia: DiaPlan } | undefined {
-  for (const dia of PLANEACION_SEMANA_3.dias) {
+export function actividadPorId(id: string, plan: PlaneacionSemanal = PLANEACION_SEMANA_3): { actividad: Actividad; dia: DiaPlan; plan: PlaneacionSemanal } | undefined {
+  for (const dia of plan.dias) {
     const actividad = dia.actividades.find((a) => a.id === id);
-    if (actividad) return { actividad, dia };
+    if (actividad) return { actividad, dia, plan };
   }
   return undefined;
 }
 
 /** La actividad "actual" de hoy — para el mockup fijo, mediodía-mañana del martes (fecha
  * de referencia de esta demo: 2026-09-15). En producción esto se calcula con la hora real. */
-export function actividadActualHoy(): { actividad: Actividad; dia: DiaPlan } | undefined {
-  return actividadPorId('mar-principal');
+export function actividadActualHoy(plan: PlaneacionSemanal = PLANEACION_SEMANA_3): { actividad: Actividad; dia: DiaPlan; plan: PlaneacionSemanal } | undefined {
+  return actividadPorId('mar-principal', plan);
 }
 
-export function diaPorFecha(fecha: string): DiaPlan | undefined {
-  return PLANEACION_SEMANA_3.dias.find((d) => d.fecha === fecha);
+export function diaPorFecha(fecha: string, plan: PlaneacionSemanal = PLANEACION_SEMANA_3): DiaPlan | undefined {
+  return plan.dias.find((d) => d.fecha === fecha);
+}
+
+/* ── PERSONALIZACIÓN DE PLANEACIÓN (Sesión 6 paso 5) — CONECTA la planeación ya aprobada con el
+   perfil real del niño (Módulo Niños). No reemplaza nada de lo anterior: Capa A (diferenciación
+   por etapa) sigue igual y siempre visible; esto solo calcula candidatos para Capas B/C cuando la
+   maestra prende `personalizacionActiva` en ESA semana. Reglas del usuario (Sesión 6 paso 5):
+   contexto real (no dominio) para adaptaciones, skill real de la actividad (no dominio) para
+   niño foco, tope ~2 focos automáticos por actividad, asistencia PROGRAMADA como filtro, y el
+   resultado se GUARDA — nunca se recalcula solo al abrir la pantalla. */
+
+/** Capa B calculada: un apoyo activo del niño es relevante si comparte al menos un contexto real
+ * con la actividad (regla del usuario: nunca "categoría de necesidad == dominio"). */
+function apoyosRelevantesParaActividad(nino: Nino, actividad: Actividad): ApoyoNino[] {
+  if (!actividad.contextos || actividad.contextos.length === 0) return [];
+  return nino.apoyos.filter((a) => a.activa && a.contextosRelevantes?.some((c) => actividad.contextos!.includes(c)));
+}
+
+type CandidatoFoco = { prioridad: 1 | 2 | 3; skillId: string; individualGoalId?: string; meta: string; observar: string };
+
+/** Capa C calculada: solo cuando el skill pertenece a `actividad.skillsRelacionados` (regla del
+ * usuario: nunca solo por dominio). Prioridad 1 = meta activa de Plan Individual sobre ese skill;
+ * prioridad 2 = skill en desarrollo; prioridad 3 = sin evidencia suficiente todavía (oportunidad
+ * real de observar en ESTA experiencia). */
+function candidatoFocoParaActividad(nino: Nino, actividad: Actividad): CandidatoFoco | null {
+  if (!actividad.skillsRelacionados || actividad.skillsRelacionados.length === 0) return null;
+  const metaPlan = nino.planIndividual?.metas.find(
+    (m) => m.skillId && actividad.skillsRelacionados!.includes(m.skillId) && m.estado !== 'alcanzado'
+  );
+  if (metaPlan) {
+    return { prioridad: 1, skillId: metaPlan.skillId!, individualGoalId: metaPlan.id, meta: metaPlan.descripcion, observar: metaPlan.siguientePaso ?? metaPlan.descripcion };
+  }
+  const edadMeses = edadEnMeses(nino.fechaNacimiento);
+  for (const skillId of actividad.skillsRelacionados) {
+    const catalogo = SKILLS_CATALOG.find((s) => s.id === skillId);
+    // Nunca sugerir un skill fuera del rango de edad del catálogo (ej. "tijeras" 36-60m no aplica
+    // a un bebé de 11 meses) — sin esto, "sin dato todavía" se confundía con "no le corresponde
+    // observarlo aquí". Skill sin entrada en el catálogo: no se filtra por edad (no hay con qué).
+    if (catalogo && (edadMeses < catalogo.rangoEdadMesesMin || edadMeses > catalogo.rangoEdadMesesMax)) continue;
+    const skill = nino.skills.find((s) => s.id === skillId);
+    const nombreSkill = catalogo?.nombre ?? skillId;
+    if (skill?.estadoDesarrollo === 'en_desarrollo') {
+      return { prioridad: 2, skillId, meta: nombreSkill, observar: `Oportunidad de avanzar "${nombreSkill}" en esta experiencia.` };
+    }
+    if (!skill || skill.estadoEvidencia === 'no_observado' || skill.estadoEvidencia === 'insuficiente') {
+      return { prioridad: 3, skillId, meta: nombreSkill, observar: `Todavía falta evidencia de "${nombreSkill}" — esta experiencia es una oportunidad para observarlo.` };
+    }
+  }
+  return null;
+}
+
+/** Corre UNA vez (al prender personalización o al pulsar "Actualizar personalización") y devuelve
+ * una COPIA de la semana con Capas B/C fusionadas: lo escrito a mano (`maestra_manual` o sin
+ * marcar) se conserva intacto; lo calculado se agrega con `origenCalculo: 'raiz_sugerido'` solo
+ * para niños que no estuvieran ya cubiertos en esa actividad, filtrando por asistencia programada
+ * y respetando el tope de ~2 focos automáticos por actividad. Nunca se llama en cada render —
+ * quien la llama decide cuándo "vale" el cálculo (regla del usuario: sugerencia, no cambio eterno
+ * en vivo). */
+export function calcularPersonalizacionSemana(plan: PlaneacionSemanal, ninos: Nino[]): PlaneacionSemanal {
+  const dias = plan.dias.map((dia) => {
+    const ninosDeHoy = ninos.filter((n) => n.diasAsistencia.includes(dia.dia));
+    const actividades = dia.actividades.map((actividad) => {
+      const adaptacionesExistentes = actividad.adaptacionesIndividuales ?? [];
+      const focosExistentes = actividad.ninosFoco ?? [];
+      const idsYaAdaptados = new Set(adaptacionesExistentes.map((a) => a.ninoId));
+      const idsYaFoco = new Set(focosExistentes.map((f) => f.ninoId));
+
+      const adaptacionesNuevas: AdaptacionIndividual[] = [];
+      for (const nino of ninosDeHoy) {
+        if (idsYaAdaptados.has(nino.id)) continue;
+        const apoyos = apoyosRelevantesParaActividad(nino, actividad);
+        if (apoyos.length === 0) continue;
+        const apoyo = apoyos[0];
+        const necesidad = nino.necesidades.find((nn) => nn.id === apoyo.necesidadId);
+        adaptacionesNuevas.push({
+          ninoId: nino.id,
+          necesidad: necesidad?.descripcion ?? 'Necesidad registrada en su perfil',
+          ajuste: apoyo.estrategia,
+          origen: 'necesidad_registrada',
+          alcance: 'general_del_nino',
+          childNeedId: necesidad?.id,
+          childSupportId: apoyo.id,
+          origenCalculo: 'raiz_sugerido',
+        });
+      }
+
+      const candidatosFoco: (CandidatoFoco & { ninoId: string })[] = [];
+      for (const nino of ninosDeHoy) {
+        if (idsYaFoco.has(nino.id)) continue;
+        const candidato = candidatoFocoParaActividad(nino, actividad);
+        if (candidato) candidatosFoco.push({ ninoId: nino.id, ...candidato });
+      }
+      candidatosFoco.sort((a, b) => a.prioridad - b.prioridad);
+      const TOPE_FOCOS_AUTOMATICOS = 2;
+      const focosNuevos: NinoFocoActividad[] = candidatosFoco.slice(0, TOPE_FOCOS_AUTOMATICOS).map((c) => ({
+        ninoId: c.ninoId,
+        meta: c.meta,
+        observar: c.observar,
+        skillId: c.skillId,
+        individualGoalId: c.individualGoalId,
+        estadoFoco: 'pendiente',
+        origenCalculo: 'raiz_sugerido',
+      }));
+
+      if (adaptacionesNuevas.length === 0 && focosNuevos.length === 0) return actividad;
+      return {
+        ...actividad,
+        adaptacionesIndividuales: [...adaptacionesExistentes, ...adaptacionesNuevas],
+        ninosFoco: [...focosExistentes, ...focosNuevos],
+      };
+    });
+    return { ...dia, actividades };
+  });
+  return { ...plan, dias, personalizacionActiva: true, personalizacionActualizadaEn: FECHA_HOY };
+}
+
+const PLANEACION_STORAGE_KEY = 'raiz_planeaciones';
+
+/** Roster de semanas — hoy solo existe la Semana 3, pero se guarda como lista para no rehacer
+ * esto cuando haya más. Mismo patrón de `leerNinos()`/`leerProgramaConfig()`: localStorage con
+ * semilla de respaldo, nunca lanza en SSR/modo privado. */
+export function leerPlaneaciones(): PlaneacionSemanal[] {
+  if (typeof window === 'undefined') return [PLANEACION_SEMANA_3];
+  try {
+    const guardado = window.localStorage.getItem(PLANEACION_STORAGE_KEY);
+    if (!guardado) return [PLANEACION_SEMANA_3];
+    const parseado = JSON.parse(guardado) as PlaneacionSemanal[];
+    return Array.isArray(parseado) && parseado.length > 0 ? parseado : [PLANEACION_SEMANA_3];
+  } catch {
+    return [PLANEACION_SEMANA_3];
+  }
+}
+
+export function guardarPlaneaciones(planes: PlaneacionSemanal[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(PLANEACION_STORAGE_KEY, JSON.stringify(planes));
+  } catch {
+    // Almacenamiento no disponible — la sesión sigue funcionando en memoria.
+  }
+}
+
+export function planeacionPorNumero(numero: number, planes: PlaneacionSemanal[] = leerPlaneaciones()): PlaneacionSemanal {
+  return planes.find((p) => p.numero === numero) ?? PLANEACION_SEMANA_3;
+}
+
+export function guardarUnaPlaneacion(planActualizado: PlaneacionSemanal): void {
+  const planes = leerPlaneaciones();
+  const actualizados = planes.some((p) => p.numero === planActualizado.numero)
+    ? planes.map((p) => (p.numero === planActualizado.numero ? planActualizado : p))
+    : [...planes, planActualizado];
+  guardarPlaneaciones(actualizados);
 }
 
 /** Fecha de referencia de esta demo — en producción se calcula con la fecha real. */

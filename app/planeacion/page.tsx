@@ -6,12 +6,12 @@
 // por día. Cada bloque es tocable y lleva al detalle completo de esa actividad.
 // Jerarquía (regla del usuario): Vista rápida → Planeación completa → Día → Actividad.
 
-import { Suspense } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, type Variants } from 'motion/react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { AppShell } from '@/components/app/shell';
-import { PLANEACION_SEMANA_3, BLOQUE_LABEL, FECHA_HOY } from '@/lib/seed-data';
+import { planeacionPorNumero, BLOQUE_LABEL, FECHA_HOY, type PlaneacionSemanal } from '@/lib/seed-data';
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.05 } } };
 const item: Variants = {
@@ -26,7 +26,13 @@ function PlaneacionContenido() {
   const router = useRouter();
   const params = useSearchParams();
   const diaAbrir = params.get('dia');
-  const plan = PLANEACION_SEMANA_3;
+  const [plan, setPlan] = useState<PlaneacionSemanal | null>(null);
+
+  useEffect(() => {
+    setPlan(planeacionPorNumero(3));
+  }, []);
+
+  if (!plan) return null;
 
   return (
     <AppShell>

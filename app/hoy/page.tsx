@@ -6,7 +6,7 @@
 // detalle — diferenciación por etapa, adaptaciones individuales y niños foco, como 3 capas
 // separadas. Message-match con el mockup ya mostrado en la landing (frame-hoy.png).
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, useReducedMotion, type Variants } from 'motion/react';
 import { ChevronRight, NotebookPen } from 'lucide-react';
@@ -19,7 +19,10 @@ import {
   diaPorFecha,
   actividadActualHoy,
   ninoPorId,
+  leerNinos,
+  planeacionPorNumero,
   type Etapa,
+  type Nino,
 } from '@/lib/seed-data';
 
 /** Mayúscula solo en la primera letra — "capitalize" de Tailwind mayusculiza CADA palabra,
@@ -37,9 +40,19 @@ export default function Hoy() {
     visible: { opacity: 1, y: 0, transition: { duration: reduce ? 0.15 : 0.3, ease: [0.16, 1, 0.3, 1] } },
   };
   const [etapaActiva, setEtapaActiva] = useState<Etapa>('Preschool');
+  const [ninos, setNinos] = useState<Nino[]>([]);
+  const [cargado, setCargado] = useState(false);
 
-  const dia = diaPorFecha(FECHA_HOY);
-  const actual = actividadActualHoy();
+  useEffect(() => {
+    setNinos(leerNinos());
+    setCargado(true);
+  }, []);
+
+  if (!cargado) return null;
+
+  const plan = planeacionPorNumero(3);
+  const dia = diaPorFecha(FECHA_HOY, plan);
+  const actual = actividadActualHoy(plan);
   const hoyDate = new Date(`${FECHA_HOY}T09:00:00`);
   const fecha = primeraMayuscula(
     new Intl.DateTimeFormat('es', { weekday: 'long', day: 'numeric', month: 'long' }).format(hoyDate)
@@ -150,14 +163,15 @@ export default function Hoy() {
           </button>
         </motion.section>
 
-        {/* ——— CAPA B: adaptaciones individuales — SEPARADA de niños foco. ——— */}
-        {actividad.adaptacionesIndividuales && actividad.adaptacionesIndividuales.length > 0 && (
+        {/* ——— CAPA B: adaptaciones individuales — SEPARADA de niños foco. Solo si ESTA semana
+            tiene personalización activada (regla del usuario, Sesión 6 paso 5). ——— */}
+        {plan.personalizacionActiva && actividad.adaptacionesIndividuales && actividad.adaptacionesIndividuales.length > 0 && (
           <motion.section variants={item} className="mb-6" aria-label="Adaptaciones individuales">
             <h2 className="mb-1 text-[16px] font-semibold text-[var(--text-primary)]">Adaptaciones individuales</h2>
             <p className="mb-3 text-[13px] text-[var(--text-secondary)]">Ajustes puntuales — no implican un Plan Individual.</p>
             <ul className="flex flex-col gap-2">
               {actividad.adaptacionesIndividuales.map((a, i) => {
-                const nino = ninoPorId(a.ninoId);
+                const nino = ninoPorId(a.ninoId, ninos);
                 if (!nino) return null;
                 return (
                   <li key={i} className="flex items-start gap-3 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-4">
@@ -175,8 +189,9 @@ export default function Hoy() {
           </motion.section>
         )}
 
-        {/* ——— CAPA C: niños foco — SEPARADA de adaptaciones individuales. ——— */}
-        {actividad.ninosFoco && actividad.ninosFoco.length > 0 && (
+        {/* ——— CAPA C: niños foco — SEPARADA de adaptaciones individuales. Solo si ESTA semana
+            tiene personalización activada (regla del usuario, Sesión 6 paso 5). ——— */}
+        {plan.personalizacionActiva && actividad.ninosFoco && actividad.ninosFoco.length > 0 && (
           <motion.section variants={item} className="mb-6" aria-label="Niños foco de hoy">
             <button
               type="button"
@@ -189,7 +204,7 @@ export default function Hoy() {
               </div>
               <ul className="flex flex-col gap-3">
                 {actividad.ninosFoco.map((f) => {
-                  const nino = ninoPorId(f.ninoId);
+                  const nino = ninoPorId(f.ninoId, ninos);
                   if (!nino) return null;
                   return (
                     <li key={f.ninoId} className="flex items-center gap-3">

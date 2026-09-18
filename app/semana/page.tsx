@@ -4,12 +4,31 @@
 // corrección del usuario, Sesión 5: una planeación real tiene varios bloques cada día). Esta
 // pantalla se queda igual visualmente a como ya fue aprobada; solo cambia su CONCEPTO: ahora es
 // un resumen que lleva a /planeacion para ver todos los bloques del día completo.
+//
+// Sesión 6 paso 5: agrega el interruptor "Personalizar con mis niños" — pertenece a ESTA semana
+// (`plan.personalizacionActiva`), no a un ajuste global (regla del usuario: una maestra puede
+// personalizar unas semanas y no otras). Sin niños registrados, el interruptor no aparece — la
+// planeación grupal sigue funcionando exactamente igual. Encenderlo corre
+// `calcularPersonalizacionSemana` UNA vez y lo guarda; después solo "Actualizar personalización"
+// lo vuelve a correr (nunca se recalcula solo al abrir la pantalla).
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, type Variants } from 'motion/react';
-import { ChevronLeft, ChevronRight, ClipboardList } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ClipboardList, RefreshCw, Sparkles } from 'lucide-react';
 import { AppShell } from '@/components/app/shell';
-import { PLANEACION_SEMANA_3, FECHA_HOY, actividadDestacada, focoTextoDestacado, BLOQUE_LABEL } from '@/lib/seed-data';
+import {
+  FECHA_HOY,
+  actividadDestacada,
+  focoTextoDestacado,
+  BLOQUE_LABEL,
+  leerNinos,
+  planeacionPorNumero,
+  guardarUnaPlaneacion,
+  calcularPersonalizacionSemana,
+  type Nino,
+  type PlaneacionSemanal,
+} from '@/lib/seed-data';
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
 const item: Variants = {
@@ -21,6 +40,32 @@ const FECHA_CORTA = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'shor
 
 export default function Semana() {
   const router = useRouter();
+  const [ninos, setNinos] = useState<Nino[]>([]);
+  const [plan, setPlan] = useState<PlaneacionSemanal | null>(null);
+  const [cargado, setCargado] = useState(false);
+
+  useEffect(() => {
+    setNinos(leerNinos());
+    setPlan(planeacionPorNumero(3));
+    setCargado(true);
+  }, []);
+
+  if (!cargado || !plan) return null;
+
+  function alternarPersonalizacion() {
+    if (!plan) return;
+    const activar = !plan.personalizacionActiva;
+    const actualizado = activar ? calcularPersonalizacionSemana(plan, ninos) : { ...plan, personalizacionActiva: false };
+    guardarUnaPlaneacion(actualizado);
+    setPlan(actualizado);
+  }
+
+  function actualizarPersonalizacion() {
+    if (!plan) return;
+    const actualizado = calcularPersonalizacionSemana(plan, ninos);
+    guardarUnaPlaneacion(actualizado);
+    setPlan(actualizado);
+  }
 
   return (
     <AppShell>
@@ -28,7 +73,7 @@ export default function Semana() {
         <motion.header variants={item} className="mb-6 flex items-end justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--accent)]">
-              Semana {PLANEACION_SEMANA_3.numero} · Resumen
+              Semana {plan.numero} · Resumen
             </p>
             <h1 className="mt-1 text-balance text-[26px] font-bold leading-[1.15] text-[var(--text-primary)] [font-family:var(--font-display)]">
               Mañana ya tiene foco
@@ -53,8 +98,51 @@ export default function Semana() {
           </div>
         </motion.header>
 
+        {ninos.length > 0 && (
+          <motion.div
+            variants={item}
+            className="mb-6 flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
+          >
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--accent)_10%,transparent)] text-[var(--accent)]">
+              <Sparkles size={18} aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-semibold text-[var(--text-primary)]">Personalizar con mis niños</p>
+              <p className="mt-0.5 text-[12px] leading-snug text-[var(--text-secondary)]">
+                {plan.personalizacionActiva
+                  ? `Activada para esta semana · actualizada ${plan.personalizacionActualizadaEn ?? ''}`
+                  : 'Agrega adaptaciones y niños foco reales solo a esta semana.'}
+              </p>
+            </div>
+            {plan.personalizacionActiva && (
+              <button
+                type="button"
+                onClick={actualizarPersonalizacion}
+                aria-label="Actualizar personalización"
+                className="flex size-9 shrink-0 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)]"
+              >
+                <RefreshCw size={16} aria-hidden="true" />
+              </button>
+            )}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={plan.personalizacionActiva}
+              onClick={alternarPersonalizacion}
+              className="relative h-7 w-12 shrink-0 rounded-full transition-colors"
+              style={{ background: plan.personalizacionActiva ? 'var(--accent)' : 'color-mix(in oklab, var(--text-tertiary) 30%, transparent)' }}
+            >
+              <motion.span
+                className="absolute top-1 left-1 size-5 rounded-full bg-[var(--bg)] shadow-[var(--shadow-1)]"
+                animate={{ x: plan.personalizacionActiva ? 20 : 0 }}
+                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              />
+            </button>
+          </motion.div>
+        )}
+
         <ul className="flex flex-col gap-3">
-          {PLANEACION_SEMANA_3.dias.map((d) => {
+          {plan.dias.map((d) => {
             const destacada = actividadDestacada(d);
             const hoy = d.fecha === FECHA_HOY;
             return (

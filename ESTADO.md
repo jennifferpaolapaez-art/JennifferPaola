@@ -41,7 +41,8 @@ oficial a partir de ahora:
 4. Perfil completo del niño: evaluación inicial RAÍZ + evaluaciones/documentos externos +
    Plan Individual opcional — CERRADO por completo (arquitectura + experiencia de evaluación por
    preguntas observables, validada en Infant/Toddler/Preschool/Pre-K), ver sección de cierre
-5. Planeación CON o SIN niños (grupo-nivel si no hay niños; se enriquece si los hay)
+5. Planeación CON o SIN niños — CERRADO (conecta la Planeación ya aprobada con Módulo Niños, ver
+   sección de cierre; no se reconstruyó nada de lo existente)
 6. Observaciones como módulo independiente (mismo sistema de Sesión 5 ronda 4, entrada propia)
 7. Progreso / Reportes (vista de lectura sobre lo ya acumulado)
    — núcleo funcional sólido antes de continuar —
@@ -1140,6 +1141,93 @@ conectar resultados con la planeación — nunca generar contenido pedagógico n
 evaluación por preguntas observables queda APROBADA Y CERRADA por ahora — el contenido pedagógico
 (preguntas, opciones, umbrales) sigue DEMO hasta la fase de Catálogo Pedagógico Oficial. Sesión 6
 paso 4 queda cerrado por completo; siguiente paso oficial: paso 5, Planeación con/sin niños.
+
+## Sesión 6, paso 5 — Planeación conectada con Módulo Niños (CERRADO)
+El usuario fue explícito: la Planeación YA está construida y APROBADA — este paso es CONECTARLA
+con los perfiles reales del niño, no reconstruirla ni crear un segundo sistema ("Planeación con
+niños" vs "sin niños"). Sigue siendo UNA sola planeación; Capa A (diferenciación por etapa) sigue
+siempre visible y no depende de ningún niño — una maestra que solo quiere que RAÍZ le planee no
+necesita registrar niños ni ve ningún mensaje pidiéndoselo.
+
+**Decisiones técnicas (negociadas con el usuario antes de ejecutar, 4 ajustes sobre el plan
+inicial):**
+1. **La personalización pertenece a la SEMANA, no a un ajuste global.** `PlaneacionSemanal` gana
+   `personalizacionActiva: boolean` + `personalizacionActualizadaEn?: fecha` — una maestra puede
+   personalizar unas semanas y no otras. Sin niños registrados, el control ni aparece.
+2. **Relevancia por CONTEXTO, no por igualar categoría de necesidad con dominio de actividad**
+   (corrección explícita del usuario: esa igualdad era demasiado limitada — una necesidad
+   sensorial sigue siendo relevante en una actividad de motricidad fina). Nuevo tipo
+   `ContextoActividad` — tags controlados y fijos (`contacto_sensorial`, `motricidad_fina`,
+   `tijeras`, `pega`, `movimiento`, `respuesta_verbal`, `sentarse_quieto`,
+   `participacion_grupal`), NUNCA texto libre. `Actividad.contextos?` + `ApoyoNino.
+   contextosRelevantes?` — una adaptación se sugiere cuando hay intersección real entre ambos.
+3. **Niño foco por SKILL real de la actividad, no por dominio** (misma corrección: "tijeras en
+   desarrollo" no debe activar foco en cualquier actividad de motricidad fina, solo en las que de
+   verdad trabajan tijeras). Nuevo `Actividad.skillsRelacionados?: string[]` (IDs de
+   `SKILLS_CATALOG`). Prioridad 1 = meta activa de Plan Individual sobre ese skill; prioridad 2 =
+   skill en desarrollo; prioridad 3 = sin evidencia suficiente todavía (oportunidad real de
+   observar ahí); dominio nunca es criterio de entrada por sí solo. Tope de 2 focos automáticos
+   por actividad.
+   ⚠️ **Bug real atrapado en pruebas y corregido antes de cerrar**: sin filtrar por el rango de
+   edad del catálogo (`SkillCatalogEntry.rangoEdadMesesMin/Max`), el cálculo sugirió a Mateo (11
+   meses, Infant) como foco de "tijeras" (36-60m) solo porque no tenía ese skill registrado — un
+   caso exactamente del tipo que el usuario pidió evitar. Corregido: prioridad 2/3 ahora se salta
+   cualquier skill fuera del rango de edad real del niño; la meta de Plan Individual (prioridad 1,
+   decisión explícita de la maestra) no se filtra por edad.
+4. **Sugerencia GUARDADA, no recalculada en vivo** (para que una planeación ya usada no cambie
+   sola si el perfil del niño cambia después). Como Planeación era 100% estática hasta ahora, se
+   agregó `leerPlaneaciones()/guardarPlaneaciones()/guardarUnaPlaneacion()` en localStorage —
+   mismo patrón exacto que `leerNinos()`/`leerProgramaConfig()`. `calcularPersonalizacionSemana()`
+   corre UNA vez (al prender el interruptor o al pulsar "Actualizar personalización" en
+   `/semana`) y GUARDA el resultado dentro de `dias[].actividades[]`, marcado
+   `origenCalculo: 'raiz_sugerido'` (vs `'maestra_manual'` o sin marcar = contenido ya escrito a
+   mano, que SIEMPRE se conserva intacto — el cálculo solo agrega niños que no estuvieran ya
+   cubiertos en esa actividad, nunca duplica). Abrir la pantalla después solo LEE lo guardado.
+   `AdaptacionIndividual` gana `childSupportId?`; `NinoFocoActividad` gana `individualGoalId?` —
+   ambas para trazar el origen real cuando `origenCalculo='raiz_sugerido'`.
+5. **Datos hardcodeados = seed, no lógica definitiva** — se dejó explícito en comentarios que
+   Mateo/Luca/Sofía/Zayne y sus adaptaciones/focos ya escritos a mano son contenido DEMO para
+   probar el recorrido; con el roster real (`leerNinos()`) conectado en todas las pantallas de
+   Planeación, una cuenta sin niños no ve ningún nombre demo, y una cuenta con sus propios niños
+   ve solo los suyos — no hay ninguna ruta que siga citando `NINOS` (la constante estática) salvo
+   `/ninos-foco` (mecanismo aparte, basado en `Nino.metaActiva`, fuera del alcance de este paso —
+   queda anotado como pendiente menor, no bloqueante).
+
+**Archivos tocados** (ninguno reescrito desde cero): `lib/seed-data.ts` (tipos nuevos +
+`calcularPersonalizacionSemana`/`apoyosRelevantesParaActividad`/`candidatoFocoParaActividad` +
+persistencia de planeaciones + `actividadPorId`/`actividadActualHoy`/`diaPorFecha` ahora aceptan
+un `plan` en vez de leer la constante fija siempre); `app/semana/page.tsx` (interruptor +
+"Actualizar personalización"); `app/planeacion/page.tsx` (lee la semana persistida); `app/
+planeacion/[id]/page.tsx` y `app/hoy/page.tsx` (Capas B/C detrás de `plan.personalizacionActiva`,
+`ninoPorId` sobre el roster real, badge "sugerido por RAÍZ" en lo calculado).
+
+**Verificado**: tsc ✓ · build ✓ (23 rutas) · recorrido real en navegador, exactamente la prueba
+que pidió el usuario:
+- **Personalización OFF** en "Collage del cuerpo" (la actividad de referencia del usuario) → solo
+  Capa A + "Qué observar" general, cero secciones individuales.
+- **Personalización ON** en la misma actividad → los 2 casos ya escritos a mano (adaptación de
+  Sofía/Mateo, foco de Luca/Zayne) aparecen intactos, sin duplicar y sin el badge "sugerido por
+  RAÍZ" (correcto: son contenido de la maestra).
+- **Caso positivo nuevo (Capa C)**: "Centro de matemáticas: contar partes del cuerpo" (viernes,
+  sin Luca hardcodeado ahí) — al calcular, Luca aparece agregado solo, con el badge "sugerido por
+  RAÍZ", derivado de que no tiene evidencia de "Correspondencia uno a uno" y sí asiste los
+  viernes; Zayne (ya manual) se conserva sin tocar.
+- **Caso positivo nuevo (Capa B)**: "Cuento: De pies a cabeza" (miércoles, sin nadie escrito a
+  mano) — al calcular, Mateo aparece agregado solo desde su apoyo real (`apoyo-mateo-piso`,
+  contexto `movimiento`/`sentarse_quieto`), con el badge "sugerido por RAÍZ".
+- **Caso negativo**: "Circuito motor" (lunes, sin tags) con personalización ON → cero secciones
+  individuales, ningún ruido.
+- `/hoy` refleja exactamente lo mismo que `/planeacion/[id]` para la actividad del día, en ambos
+  estados del interruptor.
+- Datos de prueba limpiados de localStorage al terminar.
+
+**Pendiente/decisión del usuario**: ninguna — el usuario dijo "si no requieren rehacer la
+arquitectura aprobada, puedes proceder" y los 4 ajustes eran aditivos. Queda como nota menor no
+bloqueante: `/ninos-foco` sigue sobre `Nino.metaActiva` sin conectar al mecanismo nuevo — se puede
+abordar si el usuario lo pide. Solo la Semana 3 tiene contenido tagueado con `contextos`/
+`skillsRelacionados`(Collage del cuerpo, Cuento De pies a cabeza, Centro de matemáticas); el resto
+de actividades sin tags simplemente nunca genera candidatos automáticos — taguear el resto del
+catálogo demo es progresivo, no bloqueante.
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).
