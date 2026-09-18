@@ -43,7 +43,8 @@ oficial a partir de ahora:
    preguntas observables, validada en Infant/Toddler/Preschool/Pre-K), ver sección de cierre
 5. Planeación CON o SIN niños — CERRADO (conecta la Planeación ya aprobada con Módulo Niños, ver
    sección de cierre; no se reconstruyó nada de lo existente)
-6. Observaciones como módulo independiente (mismo sistema de Sesión 5 ronda 4, entrada propia)
+6. Observaciones como módulo independiente — CERRADO (persiste de verdad, entrada propia +
+   contexto desde Hoy/Actividad/Perfil, cierra el ciclo con Planeación), ver sección de cierre
 7. Progreso / Reportes (vista de lectura sobre lo ya acumulado)
    — núcleo funcional sólido antes de continuar —
 8. Supabase + Auth real
@@ -1228,6 +1229,80 @@ abordar si el usuario lo pide. Solo la Semana 3 tiene contenido tagueado con `co
 `skillsRelacionados`(Collage del cuerpo, Cuento De pies a cabeza, Centro de matemáticas); el resto
 de actividades sin tags simplemente nunca genera candidatos automáticos — taguear el resto del
 catálogo demo es progresivo, no bloqueante.
+
+## Sesión 6, paso 6 — Observaciones como módulo independiente (CERRADO)
+El usuario fue explícito: REUTILIZAR el sistema ya aprobado (`Observacion`/`ObservacionSkill`,
+dirigida/espontánea, nota original vs. redacción profesional, 0/1/varios skills, aprobación de la
+maestra) — nada de un segundo sistema. El hueco real (confirmado leyendo `/observar` antes de
+tocar código): las observaciones NUNCA se guardaban — vivían en estado local del componente y se
+perdían al salir; tampoco existía historial en ningún lado ni conexión con actividad/niño foco
+desde la entrada.
+
+**5 reglas explícitas del usuario, todas implementadas:**
+1. Guardar una observación NUNCA toca `Nino.skills` — verificado en vivo: tras las pruebas,
+   `localStorage['raiz_ninos']` seguía sin existir (todo el roster sigue viniendo de
+   `NINOS_SEMILLA`), prueba de que ningún camino de `/observar` llama a `guardarNinos`. La
+   pantalla "listo" ya no dice "esto ajusta tu próxima planeación" — dice "Nueva evidencia para
+   revisar 'X' — tú decides si actualiza su perfil."
+2. Una sugerencia de la observación espontánea arranca en `estado: 'sugerido'` (nunca
+   pre-aceptada) — se rediseñó la pantalla de sugerencias con botones explícitos Aceptar/Rechazar
+   por área; lo que la maestra no toca se GUARDA como `'sugerido'` (verificado en localStorage).
+3. "No observado" en una micro-observación (`OpcionRapida.esEvidencia: false`) nunca crea una fila
+   de `ObservacionSkill` — la observación se guarda igual (oportunidad registrada), cero evidencia.
+4. Datos seed (`OBSERVACIONES_SEMILLA`/`OBSERVACION_SKILLS_SEMILLA`, 4 registros) documentados
+   explícitamente como DEMO — mismo patrón de respaldo que `leerNinos()`: solo aparecen cuando
+   localStorage está vacío, nunca se mezclan con lo real una vez que la maestra empieza a guardar.
+5. `Observacion.autorId` (constante `STAFF_ACTUAL_ID` por ahora, una sola maestra) — reservado
+   para cuando exista auth real con varias educadoras, sin mostrarlo todavía en la UI.
+
+**Arquitectura**: `leerObservaciones()/guardarObservaciones()` +
+`leerObservacionSkills()/guardarObservacionSkills()` (localStorage, mismo patrón que Niños/
+Planeación) + `agregarObservacion()` (append, nunca sobrescribe). Un solo formulario (`/observar`,
+envuelto en `Suspense` por `useSearchParams`) con 3 puntos de entrada vía query params —
+`ninoId` (salta a "¿qué observaste?"), `+skillId` (+`actividadId`) (entra directo al camino
+dirigido con el contexto ya enlazado) — cero lógica duplicada; Hoy/Actividad/Perfil/Observaciones
+solo arman el link. Nuevo componente compartido `<FilaObservacion>` (shell.tsx) — MISMA fila en
+`/observaciones` (todas) y en el perfil del niño (filtrada), regla del usuario: "no es otro
+dataset". Nueva ruta `/observaciones` (CTA + filtros simples de niño/período + empty state sin
+niños) y `/observaciones/[id]` (nota original, redacción profesional si existe, skills con su
+estado real, evidencia — solo nombre de archivo, nunca URL temporal — y contexto de actividad si
+aplica). Perfil del niño gana la sección "Observaciones". Cierre del ciclo: `marcarNinoFocoObservado()`
+localiza la actividad en `leerPlaneaciones()` y marca ese niño foco `estadoFoco:'observado'` +
+`observationId` cuando la observación nace de él — reutiliza `guardarUnaPlaneacion()` del paso 5,
+sin tocar ningún otro campo. `NAV` de `shell.tsx` gana un 4º tab ("Observar").
+
+**Verificado**: tsc ✓ · build ✓ (25 rutas) · los 8 recorridos exactos que pidió el usuario,
+probados en navegador con localStorage limpio:
+1. Observaciones → nueva → Luca → espontánea → acepté "Conteo 6–8" y dejé "Resolución de
+   problemas" sin tocar → persistido con `estado: 'aceptado'` y `estado: 'sugerido'` respectivamente.
+2. Observaciones → nueva → Zayne → espontánea → "Guardar sin clasificar" → persistido con cero
+   filas de `ObservacionSkill`.
+3. Perfil de Luca → "Nueva observación" → `href="/observar?ninoId=luca"` → entra directo a "Sobre
+   Luca" sin pasar por la selección de niño.
+4. Actividad "Collage del cuerpo" → niño foco Luca (tijeras) → botón de observar con
+   `ninoId+actividadId+skillId` → entra directo a la micro-observación de tijeras → "Línea recta
+   independiente" → la observación queda con `actividadId: 'mar-principal'` Y el `ninoFoco` de
+   Luca en esa actividad queda `estadoFoco: 'observado'` + `observationId` enlazado (Zayne, sin
+   tocar, sigue `pendiente`).
+5. `/observaciones` (historial general) → aparecen las 3 observaciones nuevas + las 4 semilla,
+   ordenadas por fecha.
+6. Perfil de Luca → "3 en el historial" (exactamente sus 3: 1 semilla + 2 nuevas) — misma
+   información, filtrada.
+7. `location.reload()` → todo sigue ahí.
+8. `localStorage['raiz_ninos']` nunca se creó durante toda la prueba → confirma que
+   `Nino.skills` de ningún niño cambió por registrar observaciones.
+Revisión visual a 375px de `/observaciones` (pantalla nueva de tipo "módulo principal" —
+secundaria en el sentido de la Regla de Oro 7, sin revisor-visual formal, solo medición): CTA
+clara, filtros por niño/período, filas con badge de origen y chips de skill (incluido "sin
+revisar" para sugeridos pendientes) — consistente con el resto del kit.
+
+**Pendiente/nota conocida**: el empty state "sin niños" de `/observaciones` y `/observar` no se
+pudo verificar visualmente en este entorno — `leerNinos()` cae a `NINOS_SEMILLA` incluso si se
+fuerza un array vacío en localStorage (mismo comportamiento ya documentado en rondas anteriores,
+no es un bug nuevo de este paso); el código del empty state es correcto y se activará solo cuando
+exista una cuenta real sin roster (paso 8, Supabase). `/ninos-foco` (basado en `Nino.metaActiva`)
+sigue sin conectarse al nuevo mecanismo de observación con contexto — nota menor ya señalada en
+el cierre del paso 5, no bloqueante.
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).

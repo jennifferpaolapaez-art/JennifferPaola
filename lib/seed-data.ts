@@ -2189,12 +2189,24 @@ export function focoTextoDestacado(actividad: Actividad): string {
    después." Dos caminos, un mismo historial, nunca 1 observación = 1 skill obligatorio:
      (a) DIRIGIDA — nace de tocar una habilidad ya sugerida (o una micro-observación de opciones
          rápidas, ej. Tijeras) — el skill queda aceptado de una vez, sin paso de sugerencia
-         (origen='observacion_dirigida', estado='aceptado').
+         (origen='observacion_dirigida', estado='aceptado'). EXCEPCIÓN (Sesión 6 paso 6, regla del
+         usuario): si la opción elegida NO representa evidencia real (ej. "No observado"), no se
+         crea ninguna fila de `ObservacionSkill` — la observación igual se guarda (la oportunidad
+         quedó registrada), pero nada cuenta como evidencia del skill.
      (b) ESPONTÁNEA — la maestra escribe/dicta libremente SIN elegir ningún skill antes. RAÍZ
          analiza la nota y SUGIERE posibles skills; la maestra acepta/rechaza/agrega, o guarda
-         sin clasificar. Una observación válida puede tener 0, 1 o varios skills relacionados. ── */
+         sin clasificar. Una observación válida puede tener 0, 1 o varios skills relacionados.
+         Regla del usuario (Sesión 6 paso 6): una sugerencia que la maestra NO tocó se guarda tal
+         cual — `estado: 'sugerido'` — el análisis simulado/IA NUNCA se auto-acepta.
+   Regla dura en las DOS: guardar una observación jamás toca `Nino.skills` — eso sigue
+   requiriendo una acción explícita y separada de la maestra (mismas reglas que evaluaciones). ── */
 export type OrigenObservacion = 'dirigida' | 'espontanea';
 export type FuenteObservacion = 'texto' | 'voz' | 'seleccion_rapida';
+
+/** Autoría — reservado desde ahora aunque hoy solo exista una maestra por programa (regla del
+ * usuario, Sesión 6 paso 6: "quiero que la arquitectura permita saber quién registró cada
+ * observación" antes de que exista auth real con varias educadoras). */
+export const STAFF_ACTUAL_ID = 'staff-principal';
 
 export interface Observacion {
   id: string;
@@ -2211,6 +2223,12 @@ export interface Observacion {
   redaccionProfesional?: string;
   /** Si nació de tocar un skill puntual (observación dirigida). */
   triggeredBySkillId?: string;
+  /** Quién la registró — ver `STAFF_ACTUAL_ID`. */
+  autorId: string;
+  /** Solo el NOMBRE del archivo adjunto — nunca la URL temporal del navegador (se pierde igual al
+   * recargar) ni se simula almacenamiento real todavía (regla del usuario, mismo patrón que
+   * evaluaciones externas). */
+  evidenciaArchivoNombre?: string;
 }
 
 /** Distingue sin ambigüedad "RAÍZ lo sugirió y aún no se revisó" de "RAÍZ lo sugirió y se
@@ -2229,10 +2247,25 @@ export interface ObservacionSkill {
   evidenciaTextual?: string;
 }
 
+/** Una opción de micro-observación — `esEvidencia: false` (ej. "No observado") registra que hubo
+ * una OPORTUNIDAD de observar, pero NUNCA cuenta como evidencia del skill (regla del usuario,
+ * Sesión 6 paso 6: "no observado" no es evidencia de que el niño puede o no puede hacerlo). */
+export interface OpcionRapida {
+  id: string;
+  texto: string;
+  esEvidencia: boolean;
+}
+
 /** Micro-observación de opciones rápidas (observación DIRIGIDA, fuente `seleccion_rapida`) — hoy
  * solo Tijeras tiene un set definido; el resto de habilidades cae a nota libre en ese mismo paso. */
-export const OPCIONES_RAPIDAS_POR_SKILL: Record<string, string[]> = {
-  tijeras: ['Pequeños recortes', 'Cortes consecutivos sin ayuda', 'Línea recta con ayuda', 'Línea recta independiente', 'No observado'],
+export const OPCIONES_RAPIDAS_POR_SKILL: Record<string, OpcionRapida[]> = {
+  tijeras: [
+    { id: 'pequenos-recortes', texto: 'Pequeños recortes', esEvidencia: true },
+    { id: 'cortes-consecutivos', texto: 'Cortes consecutivos sin ayuda', esEvidencia: true },
+    { id: 'linea-con-ayuda', texto: 'Línea recta con ayuda', esEvidencia: true },
+    { id: 'linea-independiente', texto: 'Línea recta independiente', esEvidencia: true },
+    { id: 'no-observado', texto: 'No observado', esEvidencia: false },
+  ],
 };
 
 interface PistaSkillDemo {
@@ -2396,4 +2429,164 @@ export function guardarProgramaConfig(config: ProgramaConfig): void {
   } catch {
     // Almacenamiento no disponible (modo privado/cuota) — la sesión sigue funcionando en memoria.
   }
+}
+
+/* ── PERSISTENCIA DE OBSERVACIONES (Sesión 6, paso 6) — hasta ahora `Observacion`/
+   `ObservacionSkill` (Sesión 5 ronda 4) existían solo como tipos; `/observar` las construía en
+   memoria y las perdía al salir. Mismo patrón que `leerNinos()`/`leerPlaneaciones()`: localStorage
+   con semilla de respaldo. Los 4 registros DEMO de abajo (`OBSERVACIONES_SEMILLA`) son SOLO para
+   probar el historial — una cuenta real sin observaciones propias nunca las ve (la semilla es el
+   valor por defecto SOLO cuando localStorage está vacío); cuando se conecte Supabase (paso 8), la
+   separación semilla/datos reales de la maestra debe quedar igual de clara. ── */
+
+export const OBSERVACIONES_SEMILLA: Observacion[] = [
+  {
+    id: 'obs-seed-luca-tijeras',
+    ninoId: 'luca',
+    fecha: '2026-09-08',
+    origen: 'dirigida',
+    fuente: 'seleccion_rapida',
+    notaOriginal: 'Cortes consecutivos sin ayuda',
+    triggeredBySkillId: 'tijeras',
+    autorId: STAFF_ACTUAL_ID,
+  },
+  {
+    id: 'obs-seed-sofia-espontanea',
+    ninoId: 'sofia',
+    fecha: '2026-09-05',
+    origen: 'espontanea',
+    fuente: 'texto',
+    notaOriginal: 'Sofía señaló la imagen de "more" cuando quería más bloques, y después dijo "más" con claridad. Se quedó jugando junto a Luca un buen rato, mirando lo que él construía.',
+    autorId: STAFF_ACTUAL_ID,
+  },
+  {
+    id: 'obs-seed-mateo-sin-clasificar',
+    ninoId: 'mateo',
+    fecha: '2026-09-11',
+    origen: 'espontanea',
+    fuente: 'texto',
+    notaOriginal: 'Mateo se quedó mirando fijamente el móvil de colores por varios minutos, muy concentrado, sin que nadie le llamara la atención hacia él.',
+    autorId: STAFF_ACTUAL_ID,
+  },
+  {
+    id: 'obs-seed-zayne-no-observado',
+    ninoId: 'zayne',
+    fecha: '2026-09-12',
+    origen: 'dirigida',
+    fuente: 'seleccion_rapida',
+    notaOriginal: 'No observado',
+    triggeredBySkillId: 'tijeras',
+    autorId: STAFF_ACTUAL_ID,
+  },
+];
+
+export const OBSERVACION_SKILLS_SEMILLA: ObservacionSkill[] = [
+  { observacionId: 'obs-seed-luca-tijeras', skillId: 'tijeras', nombreSkill: 'Uso de tijeras', origen: 'observacion_dirigida', estado: 'aceptado' },
+  { observacionId: 'obs-seed-sofia-espontanea', skillId: 'palabras', nombreSkill: 'Vocabulario de 2 palabras', origen: 'raiz', estado: 'aceptado', evidenciaTextual: 'después dijo "más" con claridad' },
+  { observacionId: 'obs-seed-sofia-espontanea', skillId: 'interaccion-social', nombreSkill: 'Interacción con pares', origen: 'raiz', estado: 'sugerido', evidenciaTextual: 'se quedó jugando junto a Luca un buen rato' },
+  // obs-seed-mateo-sin-clasificar: a propósito sin ninguna fila — "Guardar sin clasificar".
+  // obs-seed-zayne-no-observado: a propósito sin ninguna fila — "No observado" nunca es evidencia.
+];
+
+const OBSERVACIONES_STORAGE_KEY = 'raiz_observaciones';
+const OBSERVACION_SKILLS_STORAGE_KEY = 'raiz_observacion_skills';
+
+export function leerObservaciones(): Observacion[] {
+  if (typeof window === 'undefined') return OBSERVACIONES_SEMILLA;
+  try {
+    const guardado = window.localStorage.getItem(OBSERVACIONES_STORAGE_KEY);
+    if (!guardado) return OBSERVACIONES_SEMILLA;
+    const parseado = JSON.parse(guardado) as Observacion[];
+    return Array.isArray(parseado) ? parseado : OBSERVACIONES_SEMILLA;
+  } catch {
+    return OBSERVACIONES_SEMILLA;
+  }
+}
+
+export function guardarObservaciones(observaciones: Observacion[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(OBSERVACIONES_STORAGE_KEY, JSON.stringify(observaciones));
+  } catch {
+    // Almacenamiento no disponible — la sesión sigue funcionando en memoria.
+  }
+}
+
+export function leerObservacionSkills(): ObservacionSkill[] {
+  if (typeof window === 'undefined') return OBSERVACION_SKILLS_SEMILLA;
+  try {
+    const guardado = window.localStorage.getItem(OBSERVACION_SKILLS_STORAGE_KEY);
+    if (!guardado) return OBSERVACION_SKILLS_SEMILLA;
+    const parseado = JSON.parse(guardado) as ObservacionSkill[];
+    return Array.isArray(parseado) ? parseado : OBSERVACION_SKILLS_SEMILLA;
+  } catch {
+    return OBSERVACION_SKILLS_SEMILLA;
+  }
+}
+
+export function guardarObservacionSkills(skills: ObservacionSkill[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(OBSERVACION_SKILLS_STORAGE_KEY, JSON.stringify(skills));
+  } catch {
+    // Almacenamiento no disponible — la sesión sigue funcionando en memoria.
+  }
+}
+
+/** Guarda UNA observación nueva (+ sus filas de skill, si las hay) al final de lo ya persistido —
+ * nunca sobrescribe el historial existente. Devuelve las listas actualizadas para que la pantalla
+ * refresque su estado sin tener que releer el storage. */
+export function agregarObservacion(observacion: Observacion, skills: ObservacionSkill[]): { observaciones: Observacion[]; observacionSkills: ObservacionSkill[] } {
+  const observaciones = [...leerObservaciones(), observacion];
+  const observacionSkills = [...leerObservacionSkills(), ...skills];
+  guardarObservaciones(observaciones);
+  guardarObservacionSkills(observacionSkills);
+  return { observaciones, observacionSkills };
+}
+
+/** Historial de UN niño — misma información que el historial general, filtrada por `ninoId`
+ * (regla del usuario: "no es otro dataset, es la misma información filtrada"), más reciente primero. */
+export function observacionesDeNino(ninoId: string, observaciones: Observacion[] = leerObservaciones()): Observacion[] {
+  return observaciones.filter((o) => o.ninoId === ninoId).sort((a, b) => b.fecha.localeCompare(a.fecha));
+}
+
+export function skillsDeObservacion(observacionId: string, skills: ObservacionSkill[] = leerObservacionSkills()): ObservacionSkill[] {
+  return skills.filter((s) => s.observacionId === observacionId);
+}
+
+/** Busca una actividad por id en CUALQUIERA de las semanas persistidas (hoy solo existe la
+ * Semana 3, pero esto no debería tener que rehacerse cuando haya más) — usado para resolver el
+ * contexto de una observación nacida desde una actividad, y para cerrar el ciclo de vuelta hacia
+ * la Planeación (ver `marcarNinoFocoObservado`). */
+export function actividadYPlanPorId(actividadId: string): { actividad: Actividad; dia: DiaPlan; plan: PlaneacionSemanal } | undefined {
+  for (const plan of leerPlaneaciones()) {
+    const encontrado = actividadPorId(actividadId, plan);
+    if (encontrado) return encontrado;
+  }
+  return undefined;
+}
+
+/** Cierra el ciclo Planeación → Observación (regla del usuario, Sesión 6 paso 5/6): cuando una
+ * observación nace de un niño foco real de una actividad, ese foco queda marcado "observado" y
+ * enlazado a la observación — sin esto, la observación quedaría aislada del historial de foco que
+ * ya construimos. No toca `estadoDesarrollo`/`estadoEvidencia` de ningún skill — solo el estado
+ * del foco puntual de esa actividad. */
+export function marcarNinoFocoObservado(actividadId: string, ninoId: string, observationId: string): void {
+  const encontrado = actividadYPlanPorId(actividadId);
+  if (!encontrado) return;
+  const { plan } = encontrado;
+  const actualizado: PlaneacionSemanal = {
+    ...plan,
+    dias: plan.dias.map((dia) => ({
+      ...dia,
+      actividades: dia.actividades.map((act) => {
+        if (act.id !== actividadId || !act.ninosFoco) return act;
+        return {
+          ...act,
+          ninosFoco: act.ninosFoco.map((f) => (f.ninoId === ninoId ? { ...f, estadoFoco: 'observado' as const, observationId } : f)),
+        };
+      }),
+    })),
+  };
+  guardarUnaPlaneacion(actualizado);
 }

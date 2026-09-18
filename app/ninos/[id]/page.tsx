@@ -11,13 +11,17 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, type Variants } from 'motion/react';
 import { ArrowLeft, ChevronRight, Pencil, Plus } from 'lucide-react';
-import { AppShell, AvatarInicial, Colapsable, SkillBadge } from '@/components/app/shell';
+import { AppShell, AvatarInicial, Colapsable, FilaObservacion, SkillBadge } from '@/components/app/shell';
 import {
   calcularEdadTexto,
   calcularFechaProximaEvaluacion,
   leerNinos,
+  leerObservaciones,
+  leerObservacionSkills,
   leerProgramaConfig,
   ninoPorId,
+  observacionesDeNino,
+  skillsDeObservacion,
   TINT_HEX,
   type Nino,
 } from '@/lib/seed-data';
@@ -40,10 +44,14 @@ export default function Perfil() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const [ninos, setNinos] = useState<Nino[]>([]);
+  const [observaciones, setObservaciones] = useState(() => leerObservaciones());
+  const [observacionSkills, setObservacionSkills] = useState(() => leerObservacionSkills());
   const [cargado, setCargado] = useState(false);
 
   useEffect(() => {
     setNinos(leerNinos());
+    setObservaciones(leerObservaciones());
+    setObservacionSkills(leerObservacionSkills());
     setCargado(true);
   }, []);
 
@@ -173,6 +181,39 @@ export default function Perfil() {
               </ul>
             </Colapsable>
           )}
+
+          <Colapsable
+            titulo="Observaciones"
+            subtitulo={
+              observacionesDeNino(nino.id, observaciones).length > 0
+                ? `${observacionesDeNino(nino.id, observaciones).length} en el historial`
+                : 'Todavía no hay observaciones registradas'
+            }
+          >
+            {observacionesDeNino(nino.id, observaciones).length > 0 && (
+              <ul className="mb-3 flex flex-col gap-2">
+                {observacionesDeNino(nino.id, observaciones)
+                  .slice(0, 5)
+                  .map((o) => (
+                    <FilaObservacion
+                      key={o.id}
+                      observacion={o}
+                      ninoNombre={nino.nombre}
+                      ninoHex={TINT_HEX[nino.colorTint]}
+                      skills={skillsDeObservacion(o.id, observacionSkills)}
+                      mostrarNino={false}
+                    />
+                  ))}
+              </ul>
+            )}
+            <Link
+              href={`/observar?ninoId=${nino.id}`}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-button)] border-2 border-dashed border-[color-mix(in_oklab,var(--accent)_45%,transparent)] text-[14px] font-semibold text-[var(--accent)]"
+            >
+              <Plus size={16} aria-hidden="true" />
+              Nueva observación
+            </Link>
+          </Colapsable>
 
           <Colapsable
             titulo="Evaluaciones"

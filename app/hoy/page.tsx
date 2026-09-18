@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion, useReducedMotion, type Variants } from 'motion/react';
 import { ChevronRight, NotebookPen } from 'lucide-react';
 import { AppShell, AvatarInicial, EtapaChip, LeafCheck } from '@/components/app/shell';
@@ -192,30 +193,34 @@ export default function Hoy() {
         {/* ——— CAPA C: niños foco — SEPARADA de adaptaciones individuales. Solo si ESTA semana
             tiene personalización activada (regla del usuario, Sesión 6 paso 5). ——— */}
         {plan.personalizacionActiva && actividad.ninosFoco && actividad.ninosFoco.length > 0 && (
-          <motion.section variants={item} className="mb-6" aria-label="Niños foco de hoy">
+          <motion.section variants={item} className="mb-6 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-5" aria-label="Niños foco de hoy">
             <button
               type="button"
               onClick={() => router.push('/ninos-foco')}
-              className="block w-full rounded-[var(--radius-card)] bg-[var(--surface-2)] p-5 text-left transition-opacity active:opacity-90"
+              className="mb-3 flex w-full items-center justify-between text-left"
             >
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-[16px] font-semibold text-[var(--text-primary)]">Niños foco de hoy</h2>
-                <ChevronRight size={18} className="text-[var(--text-tertiary)]" aria-hidden="true" />
-              </div>
-              <ul className="flex flex-col gap-3">
-                {actividad.ninosFoco.map((f) => {
-                  const nino = ninoPorId(f.ninoId, ninos);
-                  if (!nino) return null;
-                  return (
-                    <li key={f.ninoId} className="flex items-center gap-3">
+              <h2 className="text-[16px] font-semibold text-[var(--text-primary)]">Niños foco de hoy</h2>
+              <ChevronRight size={18} className="text-[var(--text-tertiary)]" aria-hidden="true" />
+            </button>
+            <ul className="flex flex-col gap-1">
+              {actividad.ninosFoco.map((f) => {
+                const nino = ninoPorId(f.ninoId, ninos);
+                if (!nino) return null;
+                const yaObservado = f.estadoFoco === 'observado';
+                return (
+                  <li key={f.ninoId}>
+                    <Link
+                      href={`/observar?ninoId=${nino.id}&actividadId=${actividad.id}${f.skillId ? `&skillId=${f.skillId}` : ''}`}
+                      className="flex items-center gap-3 rounded-[var(--radius-button)] p-2 -mx-2 transition-opacity active:opacity-90"
+                    >
                       <AvatarInicial nombre={nino.nombre} hex={TINT_HEX[nino.colorTint]} />
                       <span className="flex-1 text-[15px] font-medium text-[var(--text-primary)]">{nino.nombre}</span>
-                      <span className="text-[13px] text-[var(--text-secondary)]">{f.meta}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </button>
+                      <span className="text-[13px] text-[var(--text-secondary)]">{yaObservado ? 'Ya observado' : f.meta}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
           </motion.section>
         )}
 
@@ -224,7 +229,7 @@ export default function Hoy() {
           <motion.button
             whileTap={{ scale: 0.97 }}
             type="button"
-            onClick={() => router.push('/observar')}
+            onClick={() => router.push(`/observar?actividadId=${actividad.id}`)}
             className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[var(--radius-button)] bg-[var(--accent)] text-[16px] font-semibold text-[var(--bg)] shadow-[0_8px_30px_color-mix(in_oklab,var(--accent)_25%,transparent)] [touch-action:manipulation]"
           >
             <NotebookPen size={20} aria-hidden="true" />

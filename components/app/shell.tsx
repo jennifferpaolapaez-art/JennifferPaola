@@ -6,15 +6,17 @@
 // global en app/globals.css) — NO redefine color aquí.
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
-import { CalendarDays, ChevronDown, Home, Plus, Users, X } from 'lucide-react';
+import { CalendarDays, ChevronDown, ChevronRight, Home, NotebookPen, Plus, Users, X } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { etiquetaSkill, type EstadoDesarrollo, type EstadoEvidencia } from '@/lib/seed-data';
+import { etiquetaSkill, type EstadoDesarrollo, type EstadoEvidencia, type Observacion, type ObservacionSkill } from '@/lib/seed-data';
 
 const NAV = [
   { id: 'hoy', label: 'Hoy', href: '/hoy', icono: Home },
   { id: 'semana', label: 'Semana', href: '/semana', icono: CalendarDays },
+  { id: 'observaciones', label: 'Observar', href: '/observaciones', icono: NotebookPen },
   { id: 'ninos', label: 'Niños', href: '/ninos', icono: Users },
 ] as const;
 
@@ -344,5 +346,63 @@ export function EtiquetasLibres({
         </button>
       </div>
     </div>
+  );
+}
+
+const ORIGEN_OBSERVACION_LABEL: Record<string, string> = { dirigida: 'Dirigida', espontanea: 'Espontánea' };
+
+/** Una fila de historial de observaciones — MISMA fila en `/observaciones` (todas) y dentro del
+ * perfil del niño (filtrada por ese niño), regla del usuario Sesión 6 paso 6: "no es otro
+ * dataset, es la misma información filtrada". `mostrarNino` se apaga dentro del perfil (ya se
+ * sabe de quién es). Los skills `rechazado` no se muestran aquí — sí en el detalle completo. */
+export function FilaObservacion({
+  observacion,
+  ninoNombre,
+  ninoHex,
+  skills,
+  mostrarNino = true,
+}: {
+  observacion: Observacion;
+  ninoNombre: string;
+  ninoHex: string;
+  skills: ObservacionSkill[];
+  mostrarNino?: boolean;
+}) {
+  const relevantes = skills.filter((s) => s.estado !== 'rechazado');
+  return (
+    <Link
+      href={`/observaciones/${observacion.id}`}
+      className="flex items-start gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)] transition-opacity active:opacity-90"
+    >
+      {mostrarNino && <AvatarInicial nombre={ninoNombre} hex={ninoHex} size={36} />}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          {mostrarNino && <span className="text-[14px] font-semibold text-[var(--text-primary)]">{ninoNombre}</span>}
+          <span className="text-[12px] text-[var(--text-tertiary)]">{observacion.fecha}</span>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--accent)]">
+            {ORIGEN_OBSERVACION_LABEL[observacion.origen]}
+          </span>
+        </div>
+        <p className="mt-1 truncate text-[14px] text-[var(--text-secondary)]">{observacion.notaOriginal}</p>
+        {relevantes.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {relevantes.map((s) => (
+              <span
+                key={s.skillId}
+                className={`rounded-[var(--radius-button)] px-2 py-0.5 text-[11px] font-semibold ${
+                  s.estado === 'aceptado'
+                    ? 'bg-[color-mix(in_oklab,var(--sage)_16%,transparent)] text-[var(--sage)]'
+                    : 'bg-[var(--surface-2)] text-[var(--text-tertiary)]'
+                }`}
+              >
+                {s.nombreSkill}
+                {s.estado === 'sugerido' ? ' · sin revisar' : ''}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      <ChevronRight size={16} className="mt-1 shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
+    </Link>
   );
 }

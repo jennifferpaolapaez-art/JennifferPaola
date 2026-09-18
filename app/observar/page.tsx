@@ -4,26 +4,45 @@
 // Regla dura del usuario (Sesión 5, ronda 4): "la maestra puede observar sin saber cómo
 // clasificar lo que vio. RAÍZ ayuda a organizarlo después." Dos caminos hacia el mismo historial:
 //   (a) DIRIGIDA — toca una habilidad ya sugerida (o una micro-observación de opciones rápidas,
-//       ej. Tijeras) → el skill queda aceptado de una vez, sin paso de sugerencia.
+//       ej. Tijeras) → el skill queda aceptado de una vez, sin paso de sugerencia — EXCEPTO si la
+//       opción elegida no representa evidencia real (ej. "No observado"), donde no se crea ninguna
+//       fila de skill (Sesión 6 paso 6).
 //   (b) ESPONTÁNEA — escribe/dicta libremente sin elegir ningún skill antes → RAÍZ ANALIZA (
 //       simulación local por palabra clave, NUNCA IA real todavía — eso llega con el servicio de
 //       IA en la fase de servicios externos, 30) y sugiere posibles skills; la maestra acepta,
 //       rechaza, agrega otra área, o guarda sin clasificar. 0, 1 o varios skills por observación.
+//
+// Sesión 6 paso 6 — ÚNICO formulario, 3 puntos de entrada: sin parámetros arranca eligiendo niño
+// (desde el módulo Observaciones); con `ninoId` salta directo a "¿qué observaste?" (desde Perfil/
+// Niño foco); con `ninoId`+`skillId`(+`actividadId`) entra directo al camino dirigido de esa
+// habilidad con el contexto ya enlazado (desde Hoy/Actividad). Cero lógica duplicada — Hoy/
+// Actividad/Perfil/Observaciones solo arman el link con esos query params.
+// Ahora SÍ persiste (antes solo vivía en estado local y se perdía al salir) y, si nace de un niño
+// foco real de una actividad, marca ese foco como "observado" y lo enlaza — cierra el ciclo
+// Planeación → Observación sin dejarla aislada (regla del usuario).
+// Regla dura (Sesión 6 paso 6): guardar una observación NUNCA toca `Nino.skills` — solo agrega
+// evidencia; el cambio de estado vivo sigue requiriendo una acción separada y explícita.
 
-import { useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion, type Variants } from 'motion/react';
 import { ArrowLeft, Camera, Keyboard, Mic, Plus, X } from 'lucide-react';
 import { AppShell, AvatarInicial, LeafCheck, SkillBadge } from '@/components/app/shell';
 import {
-  NINOS,
+  leerNinos,
   TINT_HEX,
   FECHA_HOY,
+  STAFF_ACTUAL_ID,
   OPCIONES_RAPIDAS_POR_SKILL,
   analizarNotaSimulado,
+  agregarObservacion,
+  marcarNinoFocoObservado,
+  type Nino,
   type Observacion,
   type ObservacionSkill,
   type OrigenRelacionSkill,
+  type EstadoRelacionSkill,
+  type OpcionRapida,
 } from '@/lib/seed-data';
 
 type Paso = 'nino' | 'camino' | 'dirigida-nota' | 'espontanea-entrada' | 'espontanea-sugerencias' | 'listo';
@@ -33,21 +52,29 @@ interface SugerenciaUI {
   nombre: string;
   evidenciaTextual: string;
   origen: OrigenRelacionSkill;
-  incluida: boolean;
+  estado: EstadoRelacionSkill;
 }
 
-export default function Observar() {
+function ObservarContenido() {
   const router = useRouter();
+  const params = useSearchParams();
   const reduce = useReducedMotion();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const ninoIdParam = params.get('ninoId');
+  const actividadIdParam = params.get('actividadId') ?? undefined;
+  const skillIdParam = params.get('skillId');
+
+  const [ninos, setNinos] = useState<Nino[]>([]);
+  const [cargado, setCargado] = useState(false);
   const [paso, setPaso] = useState<Paso>('nino');
   const [ninoId, setNinoId] = useState<string | null>(null);
+  const [entradaConContexto, setEntradaConContexto] = useState(false);
 
   // Camino A — dirigida
   const [skillDirigidoId, setSkillDirigidoId] = useState<string | null>(null);
   const [notaDirigida, setNotaDirigida] = useState('');
-  const [opcionRapida, setOpcionRapida] = useState<string | null>(null);
+  const [opcionRapida, setOpcionRapida] = useState<OpcionRapida | null>(null);
 
   // Camino B — espontánea
   const [notaEspontanea, setNotaEspontanea] = useState('');
@@ -59,8 +86,29 @@ export default function Observar() {
   const [guardando, setGuardando] = useState(false);
   const [resultado, setResultado] = useState<{ observacion: Observacion; skills: ObservacionSkill[] } | null>(null);
 
-  const nino = NINOS.find((n) => n.id === ninoId) ?? null;
+  useEffect(() => {
+    const todos = leerNinos();
+    setNinos(todos);
+    // Entrada con contexto (Sesión 6 paso 6): salta pasos según qué llegó en la URL — mismo
+    // formulario, distinto punto de partida.
+    if (ninoIdParam && todos.some((n) => n.id === ninoIdParam)) {
+      setNinoId(ninoIdParam);
+      setEntradaConContexto(true);
+      if (skillIdParam) {
+        setSkillDirigidoId(skillIdParam);
+        setOpcionRapida(null);
+        setNotaDirigida('');
+        setPaso('dirigida-nota');
+      } else {
+        setPaso('camino');
+      }
+    }
+    setCargado(true);
+  }, [ninoIdParam, skillIdParam]);
+
+  const nino = ninos.find((n) => n.id === ninoId) ?? null;
   const skillDirigido = nino?.skills.find((s) => s.id === skillDirigidoId) ?? null;
+  const nombreSkillDirigidoCatalogo = skillDirigidoId ?? '';
   const opcionesRapidas = skillDirigidoId ? OPCIONES_RAPIDAS_POR_SKILL[skillDirigidoId] : undefined;
   const areasDisponiblesParaAgregar = nino?.skills.filter((s) => !sugerencias.some((sg) => sg.skillId === s.id)) ?? [];
 
@@ -82,31 +130,41 @@ export default function Observar() {
     setEvidencia({ nombre: archivo.name, url: URL.createObjectURL(archivo) });
   }
 
+  /** Si esta observación nace de un niño foco real de una actividad (mismo skill), cierra el
+   * ciclo: marca ese foco como observado y lo enlaza — nunca toca `estadoDesarrollo`/
+   * `estadoEvidencia`, solo el estado del foco puntual. */
+  function cerrarCicloDeFocoSiAplica(observationId: string, skillIdAceptado?: string) {
+    if (!actividadIdParam || !ninoId || !skillIdAceptado) return;
+    marcarNinoFocoObservado(actividadIdParam, ninoId, observationId);
+  }
+
   function guardarDirigida() {
-    if (!nino || !skillDirigido) return;
+    if (!nino || !skillDirigidoId) return;
     setGuardando(true);
-    // Simulación local — sin backend todavía (Supabase se conecta en servicios externos, 51/62).
     setTimeout(() => {
       const obsId = `obs-${Date.now()}`;
-      const notaFinal = opcionRapida ?? notaDirigida.trim();
+      const notaFinal = opcionRapida ? opcionRapida.texto : notaDirigida.trim();
+      const nombreSkillMostrado = skillDirigido?.nombre ?? nombreSkillDirigidoCatalogo;
       const observacion: Observacion = {
         id: obsId,
         ninoId: nino.id,
+        actividadId: actividadIdParam,
         fecha: FECHA_HOY,
         origen: 'dirigida',
         fuente: opcionRapida ? 'seleccion_rapida' : 'texto',
         notaOriginal: notaFinal,
-        triggeredBySkillId: skillDirigido.id,
+        triggeredBySkillId: skillDirigidoId,
+        autorId: STAFF_ACTUAL_ID,
+        evidenciaArchivoNombre: evidencia?.nombre,
       };
-      const skills: ObservacionSkill[] = [
-        {
-          observacionId: obsId,
-          skillId: skillDirigido.id,
-          nombreSkill: skillDirigido.nombre,
-          origen: 'observacion_dirigida',
-          estado: 'aceptado',
-        },
-      ];
+      // Regla del usuario (Sesión 6 paso 6): una opción sin evidencia real (ej. "No observado")
+      // NUNCA genera una fila de skill — la oportunidad queda registrada, no la evidencia.
+      const esEvidencia = opcionRapida ? opcionRapida.esEvidencia : true;
+      const skills: ObservacionSkill[] = esEvidencia
+        ? [{ observacionId: obsId, skillId: skillDirigidoId, nombreSkill: nombreSkillMostrado, origen: 'observacion_dirigida', estado: 'aceptado' }]
+        : [];
+      agregarObservacion(observacion, skills);
+      if (esEvidencia) cerrarCicloDeFocoSiAplica(obsId, skillDirigidoId);
       setResultado({ observacion, skills });
       setGuardando(false);
       setPaso('listo');
@@ -119,7 +177,9 @@ export default function Observar() {
     // analizarNotaSimulado). El análisis real llega con el servicio de IA server-side (30).
     setTimeout(() => {
       const encontradas = analizarNotaSimulado(notaEspontanea);
-      setSugerencias(encontradas.map((e) => ({ ...e, origen: 'raiz', incluida: true })));
+      // Regla del usuario (Sesión 6 paso 6): una sugerencia de RAÍZ arranca en 'sugerido' — NUNCA
+      // se auto-acepta. La maestra tiene que aceptarla o rechazarla explícitamente.
+      setSugerencias(encontradas.map((e) => ({ ...e, origen: 'raiz', estado: 'sugerido' })));
       setAnalizando(false);
       setPaso('espontanea-sugerencias');
     }, 900);
@@ -133,29 +193,37 @@ export default function Observar() {
       const observacion: Observacion = {
         id: obsId,
         ninoId: nino.id,
+        actividadId: actividadIdParam,
         fecha: FECHA_HOY,
         origen: 'espontanea',
         fuente: 'texto',
         notaOriginal: notaEspontanea.trim(),
+        autorId: STAFF_ACTUAL_ID,
+        evidenciaArchivoNombre: evidencia?.nombre,
       };
       const skills: ObservacionSkill[] = skillsFinal.map((s) => ({
         observacionId: obsId,
         skillId: s.skillId,
         nombreSkill: s.nombre,
         origen: s.origen,
-        estado: s.incluida ? 'aceptado' : 'rechazado',
+        estado: s.estado,
         evidenciaTextual: s.evidenciaTextual || undefined,
       }));
+      agregarObservacion(observacion, skills);
+      const aceptado = skillsFinal.find((s) => s.estado === 'aceptado');
+      if (aceptado) cerrarCicloDeFocoSiAplica(obsId, aceptado.skillId);
       setResultado({ observacion, skills });
       setGuardando(false);
       setPaso('listo');
     }, 600);
   }
 
+  if (!cargado) return null;
+
   return (
     <AppShell>
       <div className="mb-4">
-        {paso !== 'listo' && (
+        {paso !== 'listo' && !(entradaConContexto && paso === 'camino') && (
           <button
             type="button"
             onClick={() => (paso === 'nino' ? router.push('/hoy') : setPaso(ANTERIOR[paso]))}
@@ -174,23 +242,36 @@ export default function Observar() {
             <h1 className="mt-1 text-balance text-[24px] font-bold leading-[1.15] text-[var(--text-primary)] [font-family:var(--font-display)]">
               ¿De quién es la observación?
             </h1>
-            <ul className="mt-6 flex flex-col gap-3">
-              {NINOS.map((n) => (
-                <li key={n.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNinoId(n.id);
-                      setPaso('camino');
-                    }}
-                    className="flex w-full items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 text-left shadow-[var(--shadow-1)] transition-opacity active:opacity-90"
-                  >
-                    <AvatarInicial nombre={n.nombre} hex={TINT_HEX[n.colorTint]} />
-                    <span className="text-[15px] font-medium text-[var(--text-primary)]">{n.nombre}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            {ninos.length === 0 ? (
+              <div className="mt-6 flex flex-col items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] px-6 py-12 text-center">
+                <p className="text-[14px] text-[var(--text-secondary)]">Aún no tienes niños registrados.</p>
+                <button
+                  type="button"
+                  onClick={() => router.push('/ninos/nuevo')}
+                  className="mt-2 text-[14px] font-semibold text-[var(--accent)] underline"
+                >
+                  Crear niño
+                </button>
+              </div>
+            ) : (
+              <ul className="mt-6 flex flex-col gap-3">
+                {ninos.map((n) => (
+                  <li key={n.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNinoId(n.id);
+                        setPaso('camino');
+                      }}
+                      className="flex w-full items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 text-left shadow-[var(--shadow-1)] transition-opacity active:opacity-90"
+                    >
+                      <AvatarInicial nombre={n.nombre} hex={TINT_HEX[n.colorTint]} />
+                      <span className="text-[15px] font-medium text-[var(--text-primary)]">{n.nombre}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </motion.div>
         )}
 
@@ -249,10 +330,10 @@ export default function Observar() {
           </motion.div>
         )}
 
-        {paso === 'dirigida-nota' && nino && skillDirigido && (
+        {paso === 'dirigida-nota' && nino && skillDirigidoId && (
           <motion.div key="dirigida-nota" initial="hidden" animate="visible" exit={{ opacity: 0 }} variants={item}>
             <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--accent)]">
-              {nino.nombre} · {skillDirigido.nombre}
+              {nino.nombre} · {skillDirigido?.nombre ?? nombreSkillDirigidoCatalogo}
             </p>
             <h1 className="mt-1 text-balance text-[24px] font-bold leading-[1.15] text-[var(--text-primary)] [font-family:var(--font-display)]">
               Cuéntalo con tus palabras
@@ -263,21 +344,26 @@ export default function Observar() {
                 <p className="mt-1 text-[14px] text-[var(--text-secondary)]">Elige lo que mejor describe lo que viste.</p>
                 <ul className="mt-5 flex flex-col gap-2">
                   {opcionesRapidas.map((op) => (
-                    <li key={op}>
+                    <li key={op.id}>
                       <button
                         type="button"
                         onClick={() => setOpcionRapida(op)}
                         className={`flex w-full items-center rounded-[var(--radius-card)] p-4 text-left text-[15px] font-medium transition-colors ${
-                          opcionRapida === op
+                          opcionRapida?.id === op.id
                             ? 'bg-[var(--accent)] text-[var(--bg)]'
                             : 'bg-[var(--surface)] text-[var(--text-primary)] shadow-[var(--shadow-1)]'
                         }`}
                       >
-                        {op}
+                        {op.texto}
                       </button>
                     </li>
                   ))}
                 </ul>
+                {opcionRapida && !opcionRapida.esEvidencia && (
+                  <p className="mt-3 text-[13px] leading-snug text-[var(--text-secondary)]">
+                    Queda registrada la oportunidad de observarlo — esto NO cuenta como evidencia de {skillDirigido?.nombre ?? 'esta habilidad'}.
+                  </p>
+                )}
               </>
             ) : (
               <>
@@ -368,7 +454,7 @@ export default function Observar() {
                 className="mt-3 flex items-center gap-2 text-[13px] font-semibold text-[var(--accent)]"
               >
                 <Camera size={16} aria-hidden="true" />
-                Agregar foto (se guarda solo en este dispositivo por ahora)
+                Agregar foto (se guarda solo el nombre por ahora — sin almacenamiento real todavía)
               </button>
             )}
 
@@ -404,7 +490,7 @@ export default function Observar() {
               Encontré posibles áreas relacionadas
             </h1>
             <p className="mt-1 text-[13px] text-[var(--text-secondary)]">
-              Análisis de ejemplo — el análisis real llega con el servicio de IA. Marca las que apliquen.
+              Análisis de ejemplo — el análisis real llega con el servicio de IA. Revísalas: nada queda aceptado hasta que tú lo confirmes.
             </p>
 
             <div className="mt-4 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-4 text-[14px] leading-snug text-[var(--text-secondary)]">
@@ -418,23 +504,17 @@ export default function Observar() {
             ) : (
               <ul className="mt-5 flex flex-col gap-2">
                 {sugerencias.map((s) => (
-                  <li key={s.skillId}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSugerencias((prev) => prev.map((p) => (p.skillId === s.skillId ? { ...p, incluida: !p.incluida } : p)))
-                      }
-                      aria-pressed={s.incluida}
-                      className={`flex w-full items-start gap-3 rounded-[var(--radius-card)] p-4 text-left transition-colors ${
-                        s.incluida ? 'bg-[color-mix(in_oklab,var(--sage)_16%,transparent)]' : 'bg-[var(--surface-2)] opacity-60'
-                      }`}
-                    >
-                      <span
-                        className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-[6px]"
-                        style={{ background: s.incluida ? 'var(--sage)' : 'transparent', border: s.incluida ? 'none' : '2px solid var(--text-tertiary)' }}
-                      >
-                        {s.incluida && <LeafCheck size={12} />}
-                      </span>
+                  <li
+                    key={s.skillId}
+                    className={`rounded-[var(--radius-card)] p-4 transition-colors ${
+                      s.estado === 'aceptado'
+                        ? 'bg-[color-mix(in_oklab,var(--sage)_16%,transparent)]'
+                        : s.estado === 'rechazado'
+                          ? 'bg-[var(--surface-2)] opacity-50'
+                          : 'bg-[var(--surface-2)]'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
                       <span className="min-w-0 flex-1">
                         <span className="block text-[15px] font-semibold text-[var(--text-primary)]">{s.nombre}</span>
                         {s.evidenciaTextual && (
@@ -442,8 +522,39 @@ export default function Observar() {
                             Evidencia: “{s.evidenciaTextual}”
                           </span>
                         )}
+                        <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-tertiary)]">
+                          {s.estado === 'aceptado' ? 'Aceptado' : s.estado === 'rechazado' ? 'Rechazado' : 'Sugerido · sin revisar'}
+                        </span>
                       </span>
-                    </button>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSugerencias((prev) => prev.map((p) => (p.skillId === s.skillId ? { ...p, estado: 'aceptado' } : p)))
+                        }
+                        aria-pressed={s.estado === 'aceptado'}
+                        className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-button)] text-[13px] font-semibold transition-colors ${
+                          s.estado === 'aceptado' ? 'bg-[var(--sage)] text-[var(--bg)]' : 'bg-[var(--surface)] text-[var(--text-primary)]'
+                        }`}
+                      >
+                        <LeafCheck size={13} negativo={false} />
+                        Aceptar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSugerencias((prev) => prev.map((p) => (p.skillId === s.skillId ? { ...p, estado: 'rechazado' } : p)))
+                        }
+                        aria-pressed={s.estado === 'rechazado'}
+                        className={`flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[var(--radius-button)] text-[13px] font-semibold transition-colors ${
+                          s.estado === 'rechazado' ? 'bg-[var(--coral)] text-[var(--bg)]' : 'bg-[var(--surface)] text-[var(--text-primary)]'
+                        }`}
+                      >
+                        <X size={13} aria-hidden="true" />
+                        Rechazar
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -459,9 +570,11 @@ export default function Observar() {
                     key={s.id}
                     type="button"
                     onClick={() => {
+                      // Agregada a mano por la maestra — ya es una decisión explícita, entra
+                      // directo como aceptada (no como sugerencia de RAÍZ sin revisar).
                       setSugerencias((prev) => [
                         ...prev,
-                        { skillId: s.id, nombre: s.nombre, evidenciaTextual: '', origen: 'maestra', incluida: true },
+                        { skillId: s.id, nombre: s.nombre, evidenciaTextual: '', origen: 'maestra', estado: 'aceptado' },
                       ]);
                       setAgregandoArea(false);
                     }}
@@ -521,10 +634,14 @@ export default function Observar() {
                   .filter((s) => s.estado === 'aceptado')
                   .map((s) => (
                     <div key={s.skillId} className="rounded-[var(--radius-card)] bg-[var(--surface-2)] px-4 py-2.5 text-[14px] font-medium text-[var(--text-primary)]">
-                      Esto ya ajusta la próxima planeación de {nino.nombre} en {s.nombreSkill}.
+                      Nueva evidencia para revisar &quot;{s.nombreSkill}&quot; — tú decides si actualiza su perfil.
                     </div>
                   ))}
               </div>
+            ) : resultado.observacion.triggeredBySkillId ? (
+              <p className="mt-2 max-w-[32ch] text-[15px] leading-relaxed text-[var(--text-secondary)]">
+                Quedó registrada la oportunidad — sin evidencia todavía de {skillDirigido?.nombre ?? 'esta habilidad'}.
+              </p>
             ) : (
               <p className="mt-2 max-w-[32ch] text-[15px] leading-relaxed text-[var(--text-secondary)]">
                 Guardada en el historial de {nino.nombre} sin clasificar todavía.
@@ -532,14 +649,25 @@ export default function Observar() {
             )}
             <button
               type="button"
-              onClick={() => router.push('/hoy')}
+              onClick={() => router.push(`/ninos/${nino.id}`)}
               className="mt-8 flex h-[52px] w-full items-center justify-center rounded-[var(--radius-button)] bg-[var(--accent)] text-[16px] font-semibold text-[var(--bg)]"
             >
+              Ver perfil de {nino.nombre}
+            </button>
+            <button type="button" onClick={() => router.push('/hoy')} className="mt-3 text-[14px] font-semibold text-[var(--text-secondary)] underline">
               Volver a Hoy
             </button>
           </motion.div>
         )}
       </AnimatePresence>
     </AppShell>
+  );
+}
+
+export default function Observar() {
+  return (
+    <Suspense fallback={null}>
+      <ObservarContenido />
+    </Suspense>
   );
 }

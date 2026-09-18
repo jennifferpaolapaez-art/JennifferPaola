@@ -9,8 +9,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion, type Variants } from 'motion/react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, NotebookPen } from 'lucide-react';
 import { AppShell, AvatarInicial, Colapsable, EtapaChip, LeafCheck } from '@/components/app/shell';
 import { actividadPorId, ninoPorId, leerNinos, planeacionPorNumero, ETAPAS_ORDEN, TINT_HEX, BLOQUE_LABEL, type Etapa, type Nino } from '@/lib/seed-data';
 
@@ -342,6 +343,7 @@ export default function DetalleActividad() {
                 {actividad.ninosFoco.map((f, i) => {
                   const nino = ninoPorId(f.ninoId, ninos);
                   if (!nino) return null;
+                  const yaObservado = f.estadoFoco === 'observado';
                   return (
                     <li key={i} className="flex items-start gap-3 rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--accent)_7%,transparent)] p-3">
                       <AvatarInicial nombre={nino.nombre} hex={TINT_HEX[nino.colorTint]} size={30} />
@@ -354,6 +356,19 @@ export default function DetalleActividad() {
                         </p>
                         <p className="mt-0.5 text-[13px] leading-snug text-[var(--text-secondary)]">Observar: {f.observar}</p>
                       </div>
+                      {yaObservado && f.observationId ? (
+                        <Link href={`/observaciones/${f.observationId}`} className="shrink-0 text-[12px] font-semibold text-[var(--sage)] underline">
+                          Ya observado
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/observar?ninoId=${nino.id}&actividadId=${actividad.id}${f.skillId ? `&skillId=${f.skillId}` : ''}`}
+                          aria-label={`Registrar observación de ${nino.nombre}`}
+                          className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--accent)]"
+                        >
+                          <NotebookPen size={15} aria-hidden="true" />
+                        </Link>
+                      )}
                     </li>
                   );
                 })}
