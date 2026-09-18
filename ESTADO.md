@@ -1015,6 +1015,42 @@ evaluación externa y su hallazgo renderizan bien con el aviso de "no se adjunta
 Individual de Sofía editable (cambié una meta a "Alcanzado" a mano) y el de Luca ofrece "Crear"
 sin haberse generado solo pese a que Luca no tiene necesidades registradas.
 
+### Sesión 6, paso 4, ronda 2 — experiencia de evaluación con preguntas observables (CERRADO)
+El usuario probó la ronda 1 y pidió una capa de experiencia distinta: NO responder directo entre
+botones grandes "Desconocido/En desarrollo/Dominado", sino sobre una CONDUCTA OBSERVABLE concreta
+— "pregunta observable → respuesta → RAÍZ interpreta → estado_desarrollo + estado_evidencia".
+Inspirado en el ENFOQUE de sistemas profesionales de ECE (evaluación auténtica, progresión,
+indicadores observables — contenido propio, no copiado). **No cambia la arquitectura aprobada**:
+`ResultadoEvaluacion` sigue guardando exactamente `estadoDesarrollo`/`estadoEvidencia`; se agregó
+un campo aditivo opcional `respuestaObservableIds?: string[]` para recordar qué respondió la
+maestra al reabrir un borrador.
+Nuevo en `lib/seed-data.ts`: `PreguntaObservable` (`seleccion_unica` con `OpcionObservable[]`
+progresivas que declaran directo su estado — ej. tijeras: 6 opciones de "aún no observado" a
+"sigue una línea sencilla"; o `seleccion_multiple` con `UmbralConteo[]` que derivan el estado por
+CUÁNTAS opciones se marcaron, ej. reconocimiento de numerales 1-10: 8+=dominado, 4+=en_desarrollo/
+suficiente, 1+=en_desarrollo/insuficiente, 0=desconocido). `PREGUNTAS_OBSERVABLES_DEMO` con 5
+preguntas (tijeras, juego-cooperativo, conteo-verbal-secuencia, reconocimiento-numerales,
+correspondencia-uno-a-uno) — datos DEMO, mismo aviso que `SKILLS_CATALOG`.
+Regla del usuario ("no mezclar como si fuera un solo skill"): 'numeros-1-8' se reemplazó en la
+plantilla Preschool por 3 skills separados — conteo-verbal-secuencia (secuencia verbal),
+reconocimiento-numerales (numerales fuera de orden), correspondencia-uno-a-uno (cantidad) — el
+catálogo entry `numeros-1-8` queda sin usar en ninguna plantilla, no se borra (Luca ya tiene un
+resultado histórico con ese id).
+`/ninos/[id]/evaluacion/[evalId]` reescrita: agrupa resultados por dominio (secciones), cada fila
+usa `<FilaResultado>` — si el skill tiene pregunta observable, muestra la pregunta + radios
+compactos (`<OpcionRadio>`) o casillas compactas (`<CasillaCompacta>`, grid para selección
+múltiple) + una línea discreta "Estado sugerido: X · evidencia Y" con botón "Editar" que revela
+los chips directos para corrección manual; si NO tiene pregunta observable (colores, nombre en
+esta demo), sigue editándose directo como antes — ambos caminos coexisten honestamente.
+Verificado: tsc ✓ build ✓ (23 rutas) · recorrido real en navegador con Luca (44 meses/Preschool) —
+secciones por dominio visibles, radio de tijeras cambia el estado sugerido al instante
+(Dominado·suficiente al elegir "sigue línea sencilla"), casillas de números derivan correctamente
+por conteo (verificado con clicks directos vía DOM: 4 marcados → En desarrollo/suficiente,
+coincide exacto con el umbral de `UmbralConteo`), botón Editar revela corrección manual, guardar
+borrador persiste `respuestaObservableIds` en localStorage. (Una inconsistencia vista durante
+pruebas con clics encadenados rápidos resultó ser un artefacto del automatizador de pruebas, no
+del código — se re-verificó limpio con clicks directos sobre el DOM.)
+
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).
   MFA disponible para la cuenta de la directora/dueña del programa (doc maestro sec. 59). Los

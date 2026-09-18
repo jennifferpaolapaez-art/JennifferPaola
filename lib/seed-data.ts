@@ -177,6 +177,13 @@ export interface ResultadoEvaluacion {
   sugeridoPorRaiz: boolean;
   /** La maestra cambió el valor sugerido antes de aprobar. */
   editadoPorMaestra: boolean;
+  /** Sesión 6, paso 4 ronda 2 — CAPA DE EXPERIENCIA, no cambia la arquitectura: cuando el skill
+   * tiene una `PreguntaObservable` asociada, la maestra responde sobre una conducta concreta
+   * (no directamente "Desconocido/En desarrollo/Dominado") y RAÍZ deriva `estadoDesarrollo`/
+   * `estadoEvidencia` de esa respuesta. Guardamos QUÉ respondió (para poder mostrarlo de nuevo al
+   * reabrir un borrador), no solo el estado derivado. Opcional — un skill sin pregunta observable
+   * sigue editándose directo, como antes. */
+  respuestaObservableIds?: string[];
 }
 
 /** UNA evaluación = snapshot fechado del perfil vivo (responde "cómo se genera una evaluación
@@ -581,6 +588,13 @@ export const SKILLS_CATALOG: SkillCatalogEntry[] = [
 
   { id: 'tijeras', dominio: 'motricidad_fina', nombre: 'Uso de tijeras', rangoEdadMesesMin: 36, rangoEdadMesesMax: 60, prerrequisitos: ['pinza'], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'consistencia_repetida', vecesMinimas: 3, contextosRecomendados: ['Actividad principal', 'Centros'] },
   { id: 'numeros-1-8', dominio: 'pre_math', nombre: 'Reconoce números 1–8', rangoEdadMesesMin: 36, rangoEdadMesesMax: 48, prerrequisitos: [], politicaRevision: 'una_vez_dominado', evidenciaRequerida: 'una_demostracion_clara', contextosRecomendados: ['Centros', 'Circle Time'] },
+  // Sesión 6 paso 4 ronda 2 — reemplazan a 'numeros-1-8' en la plantilla Preschool: el usuario
+  // pidió NO mezclar secuencia verbal + reconocimiento de numerales + correspondencia 1:1 como
+  // si fueran un solo skill. 'numeros-1-8' queda arriba sin usarse en ninguna plantilla (no se
+  // borra para no romper el historial de Luca, que ya tiene un resultado con ese id).
+  { id: 'conteo-verbal-secuencia', dominio: 'pre_math', nombre: 'Conteo verbal en secuencia', rangoEdadMesesMin: 30, rangoEdadMesesMax: 54, prerrequisitos: [], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros', 'Circle Time'] },
+  { id: 'reconocimiento-numerales', dominio: 'pre_math', nombre: 'Reconocimiento de numerales', rangoEdadMesesMin: 36, rangoEdadMesesMax: 54, prerrequisitos: [], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros', 'Circle Time'] },
+  { id: 'correspondencia-uno-a-uno', dominio: 'pre_math', nombre: 'Correspondencia uno a uno al contar objetos', rangoEdadMesesMin: 36, rangoEdadMesesMax: 54, prerrequisitos: ['conteo-verbal-secuencia'], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros', 'Comidas'] },
   { id: 'colores', dominio: 'cognicion', nombre: 'Reconoce colores', rangoEdadMesesMin: 30, rangoEdadMesesMax: 42, prerrequisitos: [], politicaRevision: 'una_vez_dominado', evidenciaRequerida: 'una_demostracion_clara', contextosRecomendados: ['Cualquier actividad'] },
   { id: 'nombre', dominio: 'pre_literacy', nombre: 'Escritura de su nombre', rangoEdadMesesMin: 42, rangoEdadMesesMax: 60, prerrequisitos: [], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Pre-K Table', 'Centros'] },
   { id: 'juego-cooperativo', dominio: 'interaccion_social', nombre: 'Juego cooperativo con un rol compartido', rangoEdadMesesMin: 36, rangoEdadMesesMax: 54, prerrequisitos: ['juego-paralelo'], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros', 'Outdoor'] },
@@ -626,10 +640,12 @@ export const ASSESSMENT_TEMPLATE_SKILLS: AssessmentTemplateSkill[] = [
   { assessmentTemplateId: 'tpl-toddler-sr-core-v1', skillId: 'autonomia-alimentacion', orden: 4 },
 
   { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'tijeras', orden: 1 },
-  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'numeros-1-8', orden: 2 },
-  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'colores', orden: 3 },
-  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'nombre', orden: 4 },
-  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'juego-cooperativo', orden: 5 },
+  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'conteo-verbal-secuencia', orden: 2 },
+  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'reconocimiento-numerales', orden: 3 },
+  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'correspondencia-uno-a-uno', orden: 4 },
+  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'colores', orden: 5 },
+  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'nombre', orden: 6 },
+  { assessmentTemplateId: 'tpl-preschool-core-v1', skillId: 'juego-cooperativo', orden: 7 },
 
   { assessmentTemplateId: 'tpl-prek-core-v1', skillId: 'numeros-6-8', orden: 1 },
   { assessmentTemplateId: 'tpl-prek-core-v1', skillId: 'rima', orden: 2 },
@@ -639,6 +655,128 @@ export const ASSESSMENT_TEMPLATE_SKILLS: AssessmentTemplateSkill[] = [
   { assessmentTemplateId: 'tpl-prek-kinder-readiness-v1', skillId: 'reconocimiento-letras', orden: 1 },
   { assessmentTemplateId: 'tpl-prek-kinder-readiness-v1', skillId: 'conteo-cantidades', orden: 2 },
 ];
+
+/* ── PREGUNTAS OBSERVABLES (Sesión 6, paso 4, ronda 2) — CAPA DE EXPERIENCIA sobre la
+   arquitectura ya aprobada, no la reemplaza: `ResultadoEvaluacion` sigue guardando exactamente
+   `estadoDesarrollo`/`estadoEvidencia`. Lo que cambia es CÓMO llega la maestra a esos dos
+   valores — respondiendo sobre una conducta observable concreta, no eligiendo directo entre
+   "Desconocido/En desarrollo/Dominado". RAÍZ deriva el estado desde la respuesta; la maestra
+   puede revisarlo/corregirlo. Inspirado en el ENFOQUE de sistemas profesionales (evaluación
+   auténtica, indicadores observables, progresión) — contenido propio, no copiado. Datos DEMO
+   para probar la experiencia, no el catálogo pedagógico oficial (igual que `SKILLS_CATALOG`). */
+
+export type TipoRespuestaObservable = 'seleccion_unica' | 'seleccion_multiple';
+
+/** Una opción de respuesta de selección única — ordenada de la conducta más temprana a la más
+ * avanzada. Cada opción declara directamente el estado que implica; RAÍZ nunca improvisa esa
+ * traducción en tiempo de ejecución. */
+export interface OpcionObservable {
+  id: string;
+  texto: string;
+  estadoDesarrollo: EstadoDesarrollo;
+  estadoEvidencia: EstadoEvidencia;
+}
+
+/** Para preguntas de selección MÚLTIPLE (ej. "¿cuáles números reconoce?") — el estado se deriva
+ * de CUÁNTAS opciones se marcaron, evaluado de mayor a menor umbral. */
+export interface UmbralConteo {
+  minimoSeleccionado: number;
+  estadoDesarrollo: EstadoDesarrollo;
+  estadoEvidencia: EstadoEvidencia;
+}
+
+export interface PreguntaObservable {
+  id: string;
+  skillId: string;
+  texto: string;
+  tipoRespuesta: TipoRespuestaObservable;
+  /** Selección única: opciones progresivas, cada una con su estado. Siempre incluye una opción
+   * "Aún no observado" — nunca fuerza a la maestra a inventar una respuesta. */
+  opciones?: OpcionObservable[];
+  /** Selección múltiple: universo de opciones marcables + umbrales de derivación por conteo. */
+  opcionesMultiples?: { id: string; texto: string }[];
+  umbrales?: UmbralConteo[];
+}
+
+export const PREGUNTAS_OBSERVABLES_DEMO: PreguntaObservable[] = [
+  {
+    id: 'preg-tijeras',
+    skillId: 'tijeras',
+    texto: '¿Qué has observado cuando usa tijeras?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: 'abre_cierra_ayuda', texto: 'Abre y cierra con ayuda', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'pequenos_recortes', texto: 'Realiza pequeños recortes', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'cortes_consecutivos', texto: 'Realiza cortes consecutivos', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'intenta_linea', texto: 'Intenta seguir una línea', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'sigue_linea', texto: 'Sigue una línea sencilla', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+    ],
+  },
+  {
+    id: 'preg-juego-cooperativo',
+    skillId: 'juego-cooperativo',
+    texto: 'Durante el juego con otros niños, ¿qué suele hacer?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: 'cerca_propios_materiales', texto: 'Juega cerca de otros, pero con sus propios materiales', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'se_une_brevemente', texto: 'Se une brevemente a otros', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'comparte_materiales', texto: 'Comparte materiales o actividad', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'mantiene_turnos', texto: 'Mantiene juego común y acepta turnos/ideas', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'roles_compartidos', texto: 'Participa en juego imaginativo con roles compartidos', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+    ],
+  },
+  {
+    id: 'preg-conteo-verbal',
+    skillId: 'conteo-verbal-secuencia',
+    texto: '¿Hasta dónde cuenta verbalmente en secuencia?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: '1-3', texto: '1–3', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: '1-5', texto: '1–5', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: '1-10', texto: '1–10', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+      { id: 'mas-10', texto: 'Más de 10', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+    ],
+  },
+  {
+    id: 'preg-correspondencia',
+    skillId: 'correspondencia-uno-a-uno',
+    texto: 'Cuando cuenta objetos, ¿usa una palabra-número por cada objeto?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: 'todavia_no', texto: 'Todavía no', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'a_veces_apoyo', texto: 'A veces, con apoyo', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'si_consistente', texto: 'Sí, consistentemente', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+    ],
+  },
+  {
+    id: 'preg-reconocimiento-numerales',
+    skillId: 'reconocimiento-numerales',
+    texto: 'Cuando ve los números fuera de orden, ¿cuáles reconoce de manera independiente?',
+    tipoRespuesta: 'seleccion_multiple',
+    opcionesMultiples: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'].map((n) => ({ id: n, texto: n })),
+    umbrales: [
+      { minimoSeleccionado: 8, estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+      { minimoSeleccionado: 4, estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { minimoSeleccionado: 1, estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { minimoSeleccionado: 0, estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+    ],
+  },
+];
+
+export function preguntaObservablePorSkill(skillId: string): PreguntaObservable | undefined {
+  return PREGUNTAS_OBSERVABLES_DEMO.find((p) => p.skillId === skillId);
+}
+
+/** Deriva el estado desde cuántas opciones se marcaron — evalúa el umbral más alto que aplique. */
+export function derivarEstadoDesdeConteo(pregunta: PreguntaObservable, seleccionadas: string[]): { estadoDesarrollo: EstadoDesarrollo; estadoEvidencia: EstadoEvidencia } {
+  const umbrales = [...(pregunta.umbrales ?? [])].sort((a, b) => b.minimoSeleccionado - a.minimoSeleccionado);
+  const match = umbrales.find((u) => seleccionadas.length >= u.minimoSeleccionado) ?? umbrales[umbrales.length - 1];
+  return { estadoDesarrollo: match.estadoDesarrollo, estadoEvidencia: match.estadoEvidencia };
+}
 
 /** Plantillas CORE + tracks que apliquen para una etapa, dado lo que el programa activó en
  * Configuración — nunca decidido por la IA en el momento. */
