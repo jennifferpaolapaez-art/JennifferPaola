@@ -605,6 +605,14 @@ export const SKILLS_CATALOG: SkillCatalogEntry[] = [
 
   { id: 'reconocimiento-letras', dominio: 'pre_literacy', nombre: 'Reconoce letras de su nombre', rangoEdadMesesMin: 48, rangoEdadMesesMax: 60, prerrequisitos: [], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Pre-K Table', 'Circle Time'] },
   { id: 'conteo-cantidades', dominio: 'pre_math', nombre: 'Asocia cantidad con número', rangoEdadMesesMin: 48, rangoEdadMesesMax: 60, prerrequisitos: ['numeros-6-8'], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros'] },
+  // Sesión 6 paso 4 ronda 2b — skill nuevo, ligado al track opcional 'pre_literacy' (no al CORE
+  // de Preschool): reconocer el alfabeto mayúsculo fuera de secuencia es una expectativa de
+  // alfabetización temprana más fuerte que la que trae por defecto un programa play-based, así
+  // que solo aparece en la evaluación si el programa activó ese track (mismo patrón que
+  // 'reconocimiento-letras' con el track de Pre-K). Reconocer/nombrar letras vs recitar el
+  // abecedario en secuencia vs asociar letra-sonido quedan como distinciones futuras — la demo
+  // arranca solo con reconocimiento visual fuera de orden.
+  { id: 'reconocimiento-letras-mayusculas', dominio: 'pre_literacy', nombre: 'Reconoce letras mayúsculas fuera de orden', rangoEdadMesesMin: 36, rangoEdadMesesMax: 60, prerrequisitos: [], politicaRevision: 'seguimiento_periodico', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Pre-K Table', 'Circle Time', 'Centros'] },
 
   { id: 'resolucion-problemas', dominio: 'cognicion', nombre: 'Resolución de problemas', rangoEdadMesesMin: 24, rangoEdadMesesMax: 60, prerrequisitos: [], politicaRevision: 'desarrollo_continuo', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros', 'STEAM'] },
   { id: 'interaccion-social', dominio: 'interaccion_social', nombre: 'Interacción con pares', rangoEdadMesesMin: 18, rangoEdadMesesMax: 60, prerrequisitos: [], politicaRevision: 'desarrollo_continuo', evidenciaRequerida: 'multiples_contextos', contextosRecomendados: ['Centros', 'Outdoor'] },
@@ -621,6 +629,7 @@ export const ASSESSMENT_TEMPLATES: AssessmentTemplate[] = [
   { id: 'tpl-preschool-core-v1', rangoEdadMesesMin: 36, rangoEdadMesesMax: 48, etapa: 'Preschool', track: null, version: '1.0', vigente: true },
   { id: 'tpl-prek-core-v1', rangoEdadMesesMin: 48, rangoEdadMesesMax: 60, etapa: 'Pre-K', track: null, version: '1.0', vigente: true },
   { id: 'tpl-prek-kinder-readiness-v1', rangoEdadMesesMin: 48, rangoEdadMesesMax: 60, etapa: 'Pre-K', track: 'kindergarten_readiness', version: '1.0', vigente: true },
+  { id: 'tpl-preschool-pre-literacy-v1', rangoEdadMesesMin: 36, rangoEdadMesesMax: 48, etapa: 'Preschool', track: 'pre_literacy', version: '1.0', vigente: true },
 ];
 
 export const ASSESSMENT_TEMPLATE_SKILLS: AssessmentTemplateSkill[] = [
@@ -654,6 +663,8 @@ export const ASSESSMENT_TEMPLATE_SKILLS: AssessmentTemplateSkill[] = [
 
   { assessmentTemplateId: 'tpl-prek-kinder-readiness-v1', skillId: 'reconocimiento-letras', orden: 1 },
   { assessmentTemplateId: 'tpl-prek-kinder-readiness-v1', skillId: 'conteo-cantidades', orden: 2 },
+
+  { assessmentTemplateId: 'tpl-preschool-pre-literacy-v1', skillId: 'reconocimiento-letras-mayusculas', orden: 1 },
 ];
 
 /* ── PREGUNTAS OBSERVABLES (Sesión 6, paso 4, ronda 2) — CAPA DE EXPERIENCIA sobre la
@@ -663,7 +674,16 @@ export const ASSESSMENT_TEMPLATE_SKILLS: AssessmentTemplateSkill[] = [
    "Desconocido/En desarrollo/Dominado". RAÍZ deriva el estado desde la respuesta; la maestra
    puede revisarlo/corregirlo. Inspirado en el ENFOQUE de sistemas profesionales (evaluación
    auténtica, indicadores observables, progresión) — contenido propio, no copiado. Datos DEMO
-   para probar la experiencia, no el catálogo pedagógico oficial (igual que `SKILLS_CATALOG`). */
+   para probar la experiencia, no el catálogo pedagógico oficial (igual que `SKILLS_CATALOG`).
+
+   ⚠️ LOS UMBRALES SON ILUSTRATIVOS, NO POLÍTICA PEDAGÓGICA OFICIAL. Cada `minimoSeleccionado` de
+   `UmbralConteo` y cada mapeo opción→estado de `OpcionObservable` en `PREGUNTAS_OBSERVABLES_DEMO`
+   es un número/decisión que este agente eligió SOLO para demostrar que el mecanismo (radio
+   progresivo, selección múltiple con conteo, progresión por niveles) deriva correctamente
+   `estadoDesarrollo`/`estadoEvidencia`. Ninguno viene de un instrumento validado ni fue revisado
+   pedagógicamente. Antes de usar esto con familias reales, el catálogo completo — preguntas,
+   opciones, umbrales, y cada skill/rango/track nuevo que se agregue después (letras, colores,
+   etc.) — pasa por una ronda de revisión pedagógica dedicada y aparte de esta. */
 
 export type TipoRespuestaObservable = 'seleccion_unica' | 'seleccion_multiple';
 
@@ -678,7 +698,9 @@ export interface OpcionObservable {
 }
 
 /** Para preguntas de selección MÚLTIPLE (ej. "¿cuáles números reconoce?") — el estado se deriva
- * de CUÁNTAS opciones se marcaron, evaluado de mayor a menor umbral. */
+ * de CUÁNTAS opciones se marcaron, evaluado de mayor a menor umbral. ⚠️ Los valores de
+ * `minimoSeleccionado` que se definan en `PREGUNTAS_OBSERVABLES_DEMO` son ilustrativos (demo), no
+ * una regla pedagógica validada — ver el aviso completo arriba de `PREGUNTAS_OBSERVABLES_DEMO`. */
 export interface UmbralConteo {
   minimoSeleccionado: number;
   estadoDesarrollo: EstadoDesarrollo;
@@ -763,6 +785,60 @@ export const PREGUNTAS_OBSERVABLES_DEMO: PreguntaObservable[] = [
       { minimoSeleccionado: 4, estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
       { minimoSeleccionado: 1, estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
       { minimoSeleccionado: 0, estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+    ],
+  },
+  // Sesión 6 paso 4 ronda 2b — 3 casos nuevos pedidos por el usuario para terminar de validar el
+  // mecanismo antes de declarar la experiencia definitiva: seleccion_multiple sobre una lista
+  // abierta (colores), seleccion_multiple sobre una grilla completa (letras A-Z), y
+  // seleccion_unica como progresión de 8 niveles (nombre propio).
+  {
+    id: 'preg-colores',
+    skillId: 'colores',
+    texto: '¿Qué colores reconoce o nombra de manera independiente?',
+    // Nota de catálogo: por ahora una sola pregunta mezcla "reconoce/señala cuando se le pide"
+    // y "nombra sin ayuda" — la estructura (PreguntaObservable por skillId) ya permite separarlas
+    // como dos skills con su propia pregunta el día que el catálogo oficial lo requiera; no se
+    // construyen dos cuestionarios completos todavía porque esta demo no lo necesita.
+    tipoRespuesta: 'seleccion_multiple',
+    opcionesMultiples: ['Rojo', 'Azul', 'Amarillo', 'Verde', 'Naranja', 'Morado', 'Rosa', 'Marrón', 'Negro', 'Blanco', 'Gris'].map((c) => ({ id: c.toLowerCase(), texto: c })),
+    umbrales: [
+      { minimoSeleccionado: 8, estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+      { minimoSeleccionado: 4, estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { minimoSeleccionado: 1, estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { minimoSeleccionado: 0, estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+    ],
+  },
+  {
+    id: 'preg-letras-mayusculas',
+    skillId: 'reconocimiento-letras-mayusculas',
+    texto: '¿Qué letras mayúsculas reconoce de manera independiente cuando aparecen fuera de orden?',
+    // Nota de catálogo: recitar el abecedario en secuencia, reconocer mayúsculas, reconocer
+    // minúsculas y asociar letra-sonido son 4 conductas distintas — esta demo arranca solo con
+    // "reconoce mayúsculas fuera de orden"; las otras 3 quedan reservadas para cuando el catálogo
+    // oficial las necesite (misma nota que en colores).
+    tipoRespuesta: 'seleccion_multiple',
+    opcionesMultiples: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((l) => ({ id: l, texto: l })),
+    umbrales: [
+      { minimoSeleccionado: 20, estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
+      { minimoSeleccionado: 10, estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { minimoSeleccionado: 1, estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { minimoSeleccionado: 0, estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+    ],
+  },
+  {
+    id: 'preg-nombre',
+    skillId: 'nombre',
+    texto: '¿Qué has observado con su nombre?',
+    tipoRespuesta: 'seleccion_unica',
+    opciones: [
+      { id: 'no_observado', texto: 'Aún no observado', estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' },
+      { id: 'reconoce_escrito', texto: 'Reconoce su nombre escrito', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'identifica_algunas_letras', texto: 'Identifica algunas letras de su nombre', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' },
+      { id: 'traza_con_modelo', texto: 'Traza su nombre con modelo', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'copia_algunas_letras', texto: 'Copia algunas letras', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'copia_con_modelo', texto: 'Copia su nombre mirando un modelo', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'escribe_algunas_memoria', texto: 'Escribe algunas letras de memoria', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' },
+      { id: 'escribe_independiente', texto: 'Escribe su nombre independientemente', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' },
     ],
   },
 ];

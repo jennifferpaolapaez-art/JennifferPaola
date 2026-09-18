@@ -1051,6 +1051,51 @@ borrador persiste `respuestaObservableIds` en localStorage. (Una inconsistencia 
 pruebas con clics encadenados rápidos resultó ser un artefacto del automatizador de pruebas, no
 del código — se re-verificó limpio con clicks directos sobre el DOM.)
 
+### Sesión 6, paso 4, ronda 2b — 3 casos de prueba más (CERRADO)
+El usuario aprobó la dirección de ronda 2 pero pidió 3 casos más antes de declarar la EXPERIENCIA
+definitiva: colores, letras mayúsculas, nombre propio — para probar `seleccion_multiple` con lista
+abierta, `seleccion_multiple` con grilla completa y `seleccion_unica` como progresión de 8
+niveles, respectivamente.
+
+`lib/seed-data.ts`: 3 `PreguntaObservable` nuevas en `PREGUNTAS_OBSERVABLES_DEMO` —
+`preg-colores` (11 colores, mismos umbrales de conteo que numerales: 8+dominado/4+suficiente/
+1+insuficiente/0 desconocido — con nota de catálogo dejando dicho que "reconoce/señala" vs
+"nombra independientemente" son distinciones que la estructura ya soporta separar cuando el
+catálogo oficial lo pida, sin construir dos cuestionarios en esta demo), `preg-letras-mayusculas`
+(grid A-Z, umbrales 20+/10+/1+/0 — mismo patrón, con la misma nota reservando recitar-secuencia/
+minúsculas/letra-sonido para después) y `preg-nombre` (8 opciones progresivas, de "aún no
+observado" a "escribe su nombre independientemente", cada una con su estadoDesarrollo/
+estadoEvidencia). Letras mayúsculas es un skill NUEVO (`reconocimiento-letras-mayusculas`,
+dominio pre_literacy) que NO se agregó al CORE de Preschool — vive en una plantilla de track
+nueva (`tpl-preschool-pre-literacy-v1`, track `pre_literacy`, ya existente en `TrackOpcional`) que
+solo aparece en la evaluación si el programa activa ese track en Configuración (mismo patrón que
+`reconocimiento-letras` con Kindergarten Readiness en Pre-K) — un programa play-based no queda
+obligado a evaluarlo.
+**Aviso demo-only reforzado por instrucción explícita del usuario**: comentario ampliado arriba de
+`PREGUNTAS_OBSERVABLES_DEMO` (todo umbral/mapeo es ilustrativo, ningún instrumento validado, pasa
+por revisión pedagógica aparte antes de usarse con familias reales) + eco corto en la definición
+de `UmbralConteo` — aplica a cualquier skill nuevo que se agregue después (letras, colores, etc.),
+no solo a los 3 de hoy.
+
+Verificado: tsc ✓ · build ✓ (23 rutas) · recorrido real en navegador — activé el track
+Pre-literacy en Configuración, generé la evaluación de ingreso de Luca y vi las 6 preguntas juntas
+(tijeras, 3 de números, colores, letras, nombre, juego cooperativo) en sus 6 secciones por
+dominio. Clicks directos por DOM (mismo método que ronda 2, evita el ruido del automatizador de
+pruebas): 4 colores marcados → "En desarrollo · evidencia suficiente" (coincide con el umbral 4);
+10 letras marcadas → "En desarrollo · evidencia suficiente" (coincide con el umbral 10); "Copia su
+nombre mirando un modelo" → "En desarrollo · evidencia suficiente" (coincide con la opción
+mapeada). Guardé el borrador y confirmé en localStorage que las 3 respuestas persistieron
+(`respuestaObservableIds`) y que `ResultadoEvaluacion` sigue guardando solo `estadoDesarrollo`/
+`estadoEvidencia` — cero cambios a la arquitectura aprobada. Reabrí el borrador y confirmé que las
+respuestas marcadas se ven pre-seleccionadas (Rojo/A/"Copia su nombre..." con `aria-pressed=true`,
+Naranja/K con `false`). Datos de prueba limpiados de localStorage al terminar.
+
+**Pendiente de decisión del usuario** (no se declara unilateralmente): si con estos 6 casos
+(tijeras, números×3, juego cooperativo, colores, letras, nombre) la EXPERIENCIA de evaluación por
+preguntas observables queda aprobada como definitiva antes de pasar al paso 5 (Planeación con/sin
+niños) — el contenido pedagógico (preguntas, opciones, umbrales) sigue siendo DEMO, pendiente de
+una ronda de revisión aparte.
+
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).
   MFA disponible para la cuenta de la directora/dueña del programa (doc maestro sec. 59). Los
