@@ -331,8 +331,6 @@ export interface Nino {
   necesidades: NecesidadNino[];
   apoyos: ApoyoNino[];
   skills: Skill[];
-  /** Meta activa (si tiene foco hoy) — se muestra en Hoy/Niños foco. */
-  metaActiva?: { skillId: string; nota: string };
   /** Asistencia PROGRAMADA (horario configurado) — de aquí se DERIVA si hoy le tocaba venir; la
    * presencia REAL de cada día vive aparte, en ASISTENCIA_HOY (regla del usuario, Sesión 5
    * ronda 3: nunca mezclar planificación con realidad). */
@@ -424,9 +422,18 @@ const NINOS_SEMILLA: Nino[] = [
     preferencias: ['Prefiere actividades con las manos antes que con lápiz'],
     formasComunicacion: 'Habla con oraciones completas en español.',
     notasIngresoOriginal: 'Luca es muy curioso y le encanta que le expliquen "por qué" de las cosas. Le cuesta un poco esperar su turno en grupo.',
-    necesidades: [],
+    necesidades: [
+      {
+        id: 'need-luca-motricidad-fina',
+        categoria: 'Motricidad fina',
+        descripcion: 'Afinando el control de las manos para usar tijeras y lápiz.',
+        estado: 'activa',
+        origen: 'maestra',
+        teacherConfirmed: true,
+        fechaCreacion: '2026-06-24',
+      },
+    ],
     apoyos: [],
-    metaActiva: { skillId: 'tijeras', nota: 'Tijeras' },
     diasAsistencia: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
     evaluaciones: [],
     evaluacionesExternas: [],
@@ -452,7 +459,32 @@ const NINOS_SEMILLA: Nino[] = [
     notasIngresoOriginal: 'Zayne pregunta mucho "cuántos faltan" — le gusta contar todo. Se frustra un poco si algo no sale a la primera.',
     necesidades: [],
     apoyos: [],
-    metaActiva: { skillId: 'numeros-6-8', nota: 'Números 6–8' },
+    planesIndividuales: [
+      {
+        id: 'plan-zayne',
+        fechaCreacion: '2026-08-17',
+        estado: 'activo',
+        motivo: 'Consolidar el conteo hasta 8 antes de pasar a cantidades.',
+        periodo: { inicio: '2026-08-17' },
+        metas: [
+          {
+            id: 'meta-zayne-conteo',
+            skillId: 'numeros-6-8',
+            descripcion: 'Reconoce los números 6 a 8 sin contar con el dedo.',
+            estado: 'en_progreso',
+            estrategias: 'Usar fichas y huellas para contar, y pedirle que señale el número antes de contar.',
+            siguientePaso: 'Observar si reconoce 6, 7 y 8 de un vistazo durante Centros.',
+            fechaActualizacion: '2026-09-09',
+            fechaCreacion: '2026-08-17',
+            origen: 'maestra',
+            historial: [
+              { fecha: '2026-08-17', a: 'por_trabajar', nota: 'Meta creada.' },
+              { fecha: '2026-09-09', de: 'por_trabajar', a: 'en_progreso', nota: 'Ya cuenta hasta 8 con apoyo del dedo.' },
+            ],
+          },
+        ],
+      },
+    ],
     diasAsistencia: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'],
     evaluaciones: [],
     evaluacionesExternas: [],
@@ -631,9 +663,10 @@ const NINOS_STORAGE_KEY = 'raiz_ninos';
 /** Datos guardados antes de 6d tenían `planIndividual` (un solo plan) — se convierte al leer a
  * `planesIndividuales[]` para no perder nada ni pedir borrar el almacenamiento (misma técnica que
  * la mini-migración de `evidencias[]`). */
-type NinoLegado = Nino & { planIndividual?: PlanIndividual };
+type NinoLegado = Nino & { planIndividual?: PlanIndividual; metaActiva?: unknown };
 function normalizarNino(n: NinoLegado): Nino {
-  const { planIndividual, ...resto } = n;
+  // `metaActiva` (foco guardado aparte, Sesión 5) ya no existe: el foco sale del Plan Individual.
+  const { planIndividual, metaActiva: _foco, ...resto } = n;
   if (planIndividual && !resto.planesIndividuales) {
     return { ...resto, planesIndividuales: [{ ...planIndividual, periodo: planIndividual.periodo ?? { inicio: planIndividual.fechaCreacion } }] };
   }
@@ -1162,8 +1195,31 @@ export function ninoPorId(id: string, ninos: Nino[] = NINOS): Nino | undefined {
   return ninos.find((n) => n.id === id);
 }
 
-export function ninosConFocoHoy(ninos: Nino[] = NINOS): Nino[] {
-  return ninos.filter((n) => n.metaActiva);
+/** NIÑOS FOCO = niños con al menos UNA meta activa (Por trabajar / En progreso / Casi lograda) en su
+ * Plan Individual activo. Es la ÚNICA fuente: no existe un "foco" paralelo guardado aparte (6d). Una
+ * meta Cumplida o Cerrada no cuenta, y un niño sin meta activa no aparece por una meta histórica. */
+export function ninosConMetaActiva(ninos: Nino[]): { nino: Nino; metas: MetaIndividual[] }[] {
+  return ninos.map((nino) => ({ nino, metas: metasActivasDeNino(nino) })).filter((x) => x.metas.length > 0);
+}
+
+/** Nombre legible de la habilidad ligada a una meta (perfil del niño primero, catálogo después). */
+export function nombreDeSkillDeMeta(nino: Nino, skillId?: string): string | undefined {
+  if (!skillId) return undefined;
+  return nino.skills.find((s) => s.id === skillId)?.nombre ?? SKILLS_CATALOG.find((c) => c.id === skillId)?.nombre;
+}
+
+/** ¿El roster que se está viendo es la SEMILLA de demo? (nunca hay mezcla: o se lee el roster
+ * guardado de la maestra o la semilla completa — la semilla no se cuela en un roster real). */
+export function rosterEsDemo(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const guardado = window.localStorage.getItem(NINOS_STORAGE_KEY);
+    if (!guardado) return true;
+    const parseado = JSON.parse(guardado);
+    return !(Array.isArray(parseado) && parseado.length > 0);
+  } catch {
+    return true;
+  }
 }
 
 export type DiaSemana = 'Lun' | 'Mar' | 'Mié' | 'Jue' | 'Vie';

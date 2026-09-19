@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { motion, type Variants } from 'motion/react';
 import { ChevronRight, Plus, Settings } from 'lucide-react';
 import { AppShell, AvatarInicial } from '@/components/app/shell';
-import { calcularEdadTexto, ETAPAS_ORDEN, leerNinos, TINT_HEX, type Nino } from '@/lib/seed-data';
+import { calcularEdadTexto, ETAPAS_ORDEN, leerNinos, metasActivasDeNino, nombreDeSkillDeMeta, TINT_HEX, type Nino } from '@/lib/seed-data';
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.05 } } };
 const item: Variants = {
@@ -86,9 +86,9 @@ export default function Ninos() {
                         <p className="truncate text-[15px] font-medium text-[var(--text-primary)]">{n.nombre}</p>
                         <p className="mt-0.5 truncate text-[13px] text-[var(--text-secondary)]">{calcularEdadTexto(n.fechaNacimiento)}</p>
                       </div>
-                      {n.metaActiva && (
-                        <span className="hidden shrink-0 text-[12px] text-[var(--text-tertiary)] sm:inline">
-                          Foco: {n.metaActiva.nota}
+                      {metasActivasDeNino(n).length > 0 && (
+                        <span className="hidden max-w-[40%] shrink-0 truncate text-[12px] text-[var(--text-tertiary)] sm:inline">
+                          Foco: {nombreDeSkillDeMeta(n, metasActivasDeNino(n)[0].skillId) ?? metasActivasDeNino(n)[0].descripcion}
                         </span>
                       )}
                       <ChevronRight size={18} className="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />

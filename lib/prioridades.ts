@@ -349,7 +349,6 @@ export function calcularPrioridadDeSkill(nino: Nino, skill: Skill, datos: Contex
 
   // 5. Ya documentado en su perfil — meta de foco, evaluación externa, necesidad o apoyo relacionado.
   const documentado: string[] = [];
-  if (nino.metaActiva?.skillId === skill.id) documentado.push('la tienes como foco actual en su perfil');
   const externa = nino.evaluacionesExternas.find((e) => e.permisoUsoPedagogico && e.hallazgos.some((h) => h.skillId === skill.id));
   if (externa) documentado.push(`aparece en una evaluación externa (${externa.nombreInstrumento})`);
   const area = catalogo ? areaDeDominio(catalogo.dominio).toLowerCase() : '';
@@ -762,9 +761,7 @@ export function cambiarEstadoMeta(
   opciones: { nota?: string; observacionIds?: string[]; motivoCierre?: string } = {}
 ): Nino {
   const observacionIds = opciones.observacionIds ?? [];
-  let skillDeLaMeta: string | undefined;
-  let actualizado = actualizarMeta(nino, planId, metaId, (m) => {
-    skillDeLaMeta = m.skillId;
+  return actualizarMeta(nino, planId, metaId, (m) => {
     const base: MetaIndividual = {
       ...m,
       estado: nuevo,
@@ -776,10 +773,6 @@ export function cambiarEstadoMeta(
     if (nuevo === 'cerrada') return { ...base, fechaCierre: FECHA_HOY, motivoCierre: opciones.motivoCierre?.trim() || undefined, fechaCumplimiento: undefined, evidenciaCumplimientoIds: undefined };
     return { ...base, fechaCumplimiento: undefined, evidenciaCumplimientoIds: undefined, fechaCierre: undefined, motivoCierre: undefined };
   });
-  if ((nuevo === 'alcanzado' || nuevo === 'cerrada') && skillDeLaMeta && actualizado.metaActiva?.skillId === skillDeLaMeta) {
-    actualizado = { ...actualizado, metaActiva: undefined };
-  }
-  return actualizado;
 }
 
 /** "La revisé y la dejo como está": queda en el historial (de === a) y la evidencia vista deja de avisar. */

@@ -131,7 +131,6 @@ export function NinoFormulario({
       necesidades: necesidadesFinal,
       apoyos: apoyosFinal,
       skills: ninoExistente?.skills ?? [],
-      metaActiva: ninoExistente?.metaActiva,
       diasAsistencia,
       fechaUltimaEvaluacionAprobada: ninoExistente?.fechaUltimaEvaluacionAprobada,
       evaluaciones: ninoExistente?.evaluaciones ?? [],

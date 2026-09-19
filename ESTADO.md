@@ -1505,9 +1505,21 @@ PRINCIPAL y otra "también conviene observar") + 3 ajustes (no_priorizar no sile
   Planeación (`individualGoalId`); Cumplida y Cerrada salen; ambas quedan en "Logros y metas anteriores" con
   historial; plan nuevo no sobrescribe; observación nueva → aviso sin cambiar estado; datos antiguos con
   `planIndividual` se leen bien. tsc ✓ · build ✓ (28 rutas) · sin errores de consola.
+- **Cierre de 6d (aprobado por el usuario, con 1 corrección pedida y hecha): `/ninos-foco` ya no tiene datos
+  propios.** Se ELIMINÓ el campo paralelo `Nino.metaActiva` (y `ninosConFocoHoy`); un niño foco es un niño con
+  ≥1 meta activa (Por trabajar/En progreso/Casi) en su Plan Individual ACTIVO (`ninosConMetaActiva`). Misma
+  fuente que Niños (`Foco:` en la lista), Progreso, Plan Individual y Planeación. Cada tarjeta enlaza a Plan
+  Individual (o "Revisar meta" si hay evidencia nueva), a la habilidad y al Progreso; muestra cuántas
+  observaciones aprobadas respaldan la habilidad. `rosterEsDemo()` avisa "Estás viendo datos de ejemplo" y la
+  semilla nunca se mezcla con un roster guardado. Datos guardados con `metaActiva` se limpian al leer.
+  Cambios de semilla (demo): Zayne ahora tiene un Plan Individual real (meta numeros-6-8 en progreso, antes era
+  un foco suelto) y Luca una necesidad documentada de Motricidad fina (sustituye al foco suelto como señal
+  "documentado" de su prioridad de tijeras). Verificado en navegador con un roster propio (Luca + Nora): meta
+  activa → aparece; Cumplida → sale; reabrir → vuelve; Cerrada → sale; Zayne/Sofía de ejemplo nunca se cuelan.
 - **Limitaciones conocidas:** el caso de 2 prioridades simultáneas no se ve con la semilla (solo Luca tiene
-  candidata); `/ninos-foco` sigue leyendo la semilla fija; sin Supabase todo vive en localStorage.
-- **Siguiente:** 6e-1 Registro Mensual (solo tras validar 6d). **NO avanzar a 6e sin OK del usuario.**
+  candidata); sin Supabase todo vive en localStorage; con un roster vacío la app cae a la semilla completa
+  (comportamiento previo de `leerNinos`, no cambiado).
+- **Siguiente:** 6e-1 Registro Mensual (plan corto pendiente de aprobación). **NO avanzar a 6e sin OK.**
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).
