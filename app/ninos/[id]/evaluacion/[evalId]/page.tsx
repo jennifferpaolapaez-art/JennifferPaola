@@ -19,7 +19,9 @@ import { ArrowLeft, Pencil } from 'lucide-react';
 import { AppShell, Chip, LeafCheck } from '@/components/app/shell';
 import {
   SKILLS_CATALOG,
+  agregarEventosSkill,
   aprobarEvaluacion,
+  eventosDeAprobacion,
   derivarEstadoDesdeConteo,
   generarBorradorEvaluacion,
   guardarNinos,
@@ -254,6 +256,10 @@ function EvaluacionContenido() {
   function aprobar() {
     if (!nino || !evaluacion) return;
     setGuardando(true);
+    // Historial (Sesión 6 paso 7 / 6c): los eventos se calculan con el niño ANTES de aprobar,
+    // porque `aprobarEvaluacion` sobrescribe `nino.skills`. Solo los skills que realmente
+    // cambiaron generan un evento.
+    agregarEventosSkill(eventosDeAprobacion(nino, { ...evaluacion, estado: 'aprobada' }));
     const ninoActualizado = aprobarEvaluacion(nino, evaluacion, 'maestra');
     guardarNinos(ninos.map((n) => (n.id === nino.id ? ninoActualizado : n)));
     router.push(`/ninos/${nino.id}`);

@@ -87,39 +87,46 @@ function TogleEscribirHablar() {
 }
 
 /** "+ Agregar evidencia" (regla del usuario: la entidad es EVIDENCIA, no "foto" — disponible
- * desde CUALQUIER punto de entrada). Solo `foto` es real hoy; se guarda únicamente el nombre. */
+ * desde CUALQUIER punto de entrada, y una observación puede tener VARIAS). Solo `foto` es real
+ * hoy; se guarda únicamente el nombre (metadata), sin almacenamiento real todavía. */
+interface EvidenciaUI {
+  id: string;
+  tipo: 'foto';
+  nombre: string;
+  url: string;
+}
+
 function BloqueEvidencia({
-  evidencia,
+  evidencias,
   onArchivo,
   onQuitar,
 }: {
-  evidencia: { tipo: 'foto'; nombre: string; url: string } | null;
+  evidencias: EvidenciaUI[];
   onArchivo: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onQuitar: () => void;
+  onQuitar: (id: string) => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   return (
-    <div className="mt-3">
+    <div className="mt-3 flex flex-col gap-2">
       <input ref={ref} type="file" accept="image/*" onChange={onArchivo} className="hidden" />
-      {evidencia ? (
-        <div className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-3">
-          <img src={evidencia.url} alt="" className="size-12 rounded-[calc(var(--radius-button)-4px)] object-cover" />
-          <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-secondary)]">{evidencia.nombre}</span>
+      {evidencias.map((ev) => (
+        <div key={ev.id} className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-3">
+          <img src={ev.url} alt="" className="size-12 rounded-[calc(var(--radius-button)-4px)] object-cover" />
+          <span className="min-w-0 flex-1 truncate text-[13px] text-[var(--text-secondary)]">{ev.nombre}</span>
           <button
             type="button"
-            onClick={onQuitar}
-            aria-label="Quitar evidencia"
+            onClick={() => onQuitar(ev.id)}
+            aria-label={`Quitar evidencia ${ev.nombre}`}
             className="flex size-8 shrink-0 items-center justify-center rounded-full text-[var(--text-tertiary)] hover:bg-[var(--surface)]"
           >
             <X size={16} aria-hidden="true" />
           </button>
         </div>
-      ) : (
-        <button type="button" onClick={() => ref.current?.click()} className="flex items-center gap-2 text-[13px] font-semibold text-[var(--accent)]">
-          <Camera size={16} aria-hidden="true" />
-          + Agregar evidencia (por ahora solo foto — se guarda el nombre, sin almacenamiento real todavía)
-        </button>
-      )}
+      ))}
+      <button type="button" onClick={() => ref.current?.click()} className="flex items-center gap-2 text-[13px] font-semibold text-[var(--accent)]">
+        <Camera size={16} aria-hidden="true" />
+        + Agregar evidencia (por ahora solo foto — se guarda el nombre, sin almacenamiento real todavía)
+      </button>
     </div>
   );
 }
@@ -147,7 +154,7 @@ function ObservarContenido() {
 
   // Camino B — espontánea
   const [notaEspontanea, setNotaEspontanea] = useState('');
-  const [evidencia, setEvidencia] = useState<{ tipo: 'foto'; nombre: string; url: string } | null>(null);
+  const [evidencias, setEvidencias] = useState<EvidenciaUI[]>([]);
   const [analizando, setAnalizando] = useState(false);
   const [sugerencias, setSugerencias] = useState<SugerenciaUI[]>([]);
   const [agregandoArea, setAgregandoArea] = useState(false);
@@ -205,11 +212,17 @@ function ObservarContenido() {
   function manejarArchivo(e: React.ChangeEvent<HTMLInputElement>) {
     const archivo = e.target.files?.[0];
     if (!archivo) return;
-    setEvidencia({ tipo: 'foto', nombre: archivo.name, url: URL.createObjectURL(archivo) });
+    setEvidencias((prev) => [...prev, { id: `ev-${Date.now()}-${prev.length + 1}`, tipo: 'foto', nombre: archivo.name, url: URL.createObjectURL(archivo) }]);
+    e.target.value = '';
   }
 
-  function evidenciaGuardable(): Evidencia | undefined {
-    return evidencia ? { tipo: evidencia.tipo, nombreArchivo: evidencia.nombre } : undefined;
+  function quitarEvidencia(id: string) {
+    setEvidencias((prev) => prev.filter((ev) => ev.id !== id));
+  }
+
+  function evidenciasGuardables(): Evidencia[] | undefined {
+    if (evidencias.length === 0) return undefined;
+    return evidencias.map((ev) => ({ id: ev.id, tipo: ev.tipo, nombreArchivo: ev.nombre, compartibleConFamilia: false }));
   }
 
   /** Si esta observación nace de un niño foco real de una actividad (mismo skill), cierra el
@@ -270,13 +283,16 @@ function ObservarContenido() {
         fuente: opcionRapida ? 'seleccion_rapida' : 'texto',
         notaOriginal: notaFinal,
         redaccionProfesional: redaccionProfesionalFinal || undefined,
+        idiomaRedaccion: redaccionProfesionalFinal ? 'es' : undefined,
         triggeredBySkillId: skillDirigidoId,
         autorId: STAFF_ACTUAL_ID,
-        evidencia: evidenciaGuardable(),
+        evidencias: evidenciasGuardables(),
       };
       // Regla del usuario (Sesión 6 paso 6): una opción sin evidencia real (ej. "No observado")
-      // NUNCA genera una fila de skill — la oportunidad queda registrada, no la evidencia.
+      // NUNCA genera una fila de skill — la oportunidad queda registrada, no la evidencia. Se marca
+      // explícitamente como oportunidad (no es una nota "pendiente de redacción").
       const esEvidencia = opcionRapida ? opcionRapida.esEvidencia : true;
+      if (!esEvidencia) observacion.oportunidadSinEvidencia = true;
       const skills: ObservacionSkill[] = esEvidencia
         ? [{ observacionId: obsId, skillId: skillDirigidoId, nombreSkill: nombreSkillDirigidoMostrado, origen: 'observacion_dirigida', estado: 'aceptado' }]
         : [];
@@ -317,8 +333,9 @@ function ObservarContenido() {
         fuente: 'texto',
         notaOriginal: (notaEnRevision || notaEspontanea).trim(),
         redaccionProfesional: redaccionConfirmada || undefined,
+        idiomaRedaccion: redaccionConfirmada ? 'es' : undefined,
         autorId: STAFF_ACTUAL_ID,
-        evidencia: evidenciaGuardable(),
+        evidencias: evidenciasGuardables(),
       };
       const skills: ObservacionSkill[] = skillsFinal.map((s) => ({
         observacionId: obsId,
@@ -409,7 +426,7 @@ function ObservarContenido() {
                       setSkillDirigidoId(s.id);
                       setOpcionRapida(null);
                       setNotaDirigida('');
-                      setEvidencia(null);
+                      setEvidencias([]);
                       irA('dirigida-nota', 'camino');
                     }}
                     className="flex w-full items-center justify-between gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 text-left shadow-[var(--shadow-1)] transition-opacity active:opacity-90"
@@ -432,7 +449,7 @@ function ObservarContenido() {
               type="button"
               onClick={() => {
                 setNotaEspontanea('');
-                setEvidencia(null);
+                setEvidencias([]);
                 setSugerencias([]);
                 irA('espontanea-entrada', 'camino');
               }}
@@ -476,7 +493,7 @@ function ObservarContenido() {
                 {opcionRapida && (
                   opcionRapida.esEvidencia ? (
                     <p className="mt-3 text-[13px] leading-snug text-[var(--text-secondary)]">
-                      RAÍZ escribirá: “{generarRedaccionMicroObservacion(nino.nombre, nombreSkillDirigidoMostrado, opcionRapida.texto)}”
+                      RAÍZ escribirá: “{generarRedaccionMicroObservacion(nino.nombre, nombreSkillDirigidoMostrado, opcionRapida)}”
                     </p>
                   ) : (
                     <p className="mt-3 text-[13px] leading-snug text-[var(--text-secondary)]">
@@ -484,13 +501,13 @@ function ObservarContenido() {
                     </p>
                   )
                 )}
-                <BloqueEvidencia evidencia={evidencia} onArchivo={manejarArchivo} onQuitar={() => setEvidencia(null)} />
+                <BloqueEvidencia evidencias={evidencias} onArchivo={manejarArchivo} onQuitar={quitarEvidencia} />
                 {!opcionRapida && <p className="mt-3 text-[13px] text-[var(--text-tertiary)]">Elige una opción para poder guardar.</p>}
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   type="button"
                   disabled={!opcionRapida || guardando}
-                  onClick={() => guardarDirigida(opcionRapida?.esEvidencia ? generarRedaccionMicroObservacion(nino.nombre, nombreSkillDirigidoMostrado, opcionRapida.texto) : undefined)}
+                  onClick={() => guardarDirigida(opcionRapida?.esEvidencia ? generarRedaccionMicroObservacion(nino.nombre, nombreSkillDirigidoMostrado, opcionRapida) : undefined)}
                   className="mt-4 flex h-[52px] w-full items-center justify-center rounded-[var(--radius-button)] bg-[var(--accent)] text-[16px] font-semibold text-[var(--bg)] shadow-[0_8px_30px_color-mix(in_oklab,var(--accent)_25%,transparent)] disabled:opacity-50"
                 >
                   {guardando ? 'Guardando…' : 'Guardar observación'}
@@ -510,7 +527,7 @@ function ObservarContenido() {
                   rows={5}
                   className="mt-4 w-full resize-none rounded-[var(--radius-card)] border border-[color-mix(in_oklab,var(--text-tertiary)_28%,transparent)] bg-[var(--surface)] p-4 text-[15px] text-[var(--text-primary)] outline-none focus-visible:border-[var(--accent)]"
                 />
-                <BloqueEvidencia evidencia={evidencia} onArchivo={manejarArchivo} onQuitar={() => setEvidencia(null)} />
+                <BloqueEvidencia evidencias={evidencias} onArchivo={manejarArchivo} onQuitar={quitarEvidencia} />
                 {notaDirigida.trim().length === 0 && <p className="mt-3 text-[13px] text-[var(--text-tertiary)]">Escribe una nota para poder guardar.</p>}
                 <motion.button
                   whileTap={{ scale: 0.97 }}
@@ -647,7 +664,7 @@ function ObservarContenido() {
               className="mt-4 w-full resize-none rounded-[var(--radius-card)] border border-[color-mix(in_oklab,var(--text-tertiary)_28%,transparent)] bg-[var(--surface)] p-4 text-[15px] text-[var(--text-primary)] outline-none focus-visible:border-[var(--accent)]"
             />
 
-            <BloqueEvidencia evidencia={evidencia} onArchivo={manejarArchivo} onQuitar={() => setEvidencia(null)} />
+            <BloqueEvidencia evidencias={evidencias} onArchivo={manejarArchivo} onQuitar={quitarEvidencia} />
 
             {notaEspontanea.trim().length === 0 && <p className="mt-3 text-[13px] text-[var(--text-tertiary)]">Escribe una nota para continuar.</p>}
             <motion.button
@@ -767,7 +784,7 @@ function ObservarContenido() {
               </button>
             )}
 
-            <BloqueEvidencia evidencia={evidencia} onArchivo={manejarArchivo} onQuitar={() => setEvidencia(null)} />
+            <BloqueEvidencia evidencias={evidencias} onArchivo={manejarArchivo} onQuitar={quitarEvidencia} />
 
             <motion.button
               whileTap={{ scale: 0.97 }}

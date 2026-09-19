@@ -15,14 +15,20 @@ import { AppShell, AvatarInicial, Colapsable, FilaObservacion, SkillBadge } from
 import {
   calcularEdadTexto,
   calcularFechaProximaEvaluacion,
+  evidenciaNuevaParaRevisar,
+  grupoProgreso,
+  leerEventosSkill,
   leerNinos,
   leerObservaciones,
   leerObservacionSkills,
   leerProgramaConfig,
   ninoPorId,
   observacionesDeNino,
+  resumenProgresoTexto,
   skillsDeObservacion,
+  skillsEsperadosSinEstado,
   TINT_HEX,
+  type GrupoProgreso,
   type Nino,
 } from '@/lib/seed-data';
 
@@ -46,12 +52,14 @@ export default function Perfil() {
   const [ninos, setNinos] = useState<Nino[]>([]);
   const [observaciones, setObservaciones] = useState(() => leerObservaciones());
   const [observacionSkills, setObservacionSkills] = useState(() => leerObservacionSkills());
+  const [eventosSkill, setEventosSkill] = useState(() => leerEventosSkill());
   const [cargado, setCargado] = useState(false);
 
   useEffect(() => {
     setNinos(leerNinos());
     setObservaciones(leerObservaciones());
     setObservacionSkills(leerObservacionSkills());
+    setEventosSkill(leerEventosSkill());
     setCargado(true);
   }, []);
 
@@ -107,6 +115,27 @@ export default function Perfil() {
             </p>
           </div>
         </motion.header>
+
+        {(() => {
+          const conteo: Record<GrupoProgreso, number> = { consolidado: 0, en_desarrollo: 0, necesita_evidencia: 0, sin_observar: 0 };
+          for (const s of nino.skills) conteo[grupoProgreso(s)] += 1;
+          conteo.sin_observar += skillsEsperadosSinEstado(nino, programaConfig.tracksActivos).length;
+          const conNueva = nino.skills.filter((s) => evidenciaNuevaParaRevisar(nino.id, s, observaciones, observacionSkills, eventosSkill).length > 0).length;
+          return (
+            <motion.div variants={item} className="mb-6">
+              <Link
+                href={`/ninos/${nino.id}/progreso`}
+                className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-5 shadow-[var(--shadow-2)]"
+              >
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold uppercase tracking-[0.06em] text-[var(--accent)]">Progreso</p>
+                  <p className="mt-1 text-[14px] leading-snug text-[var(--text-primary)]">{resumenProgresoTexto(nino.nombre, conteo, conNueva)}</p>
+                </div>
+                <ChevronRight size={18} className="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
+              </Link>
+            </motion.div>
+          );
+        })()}
 
         <motion.div variants={item} className="mb-6 flex flex-col gap-3">
           <Colapsable titulo="Datos básicos" subtitulo="Ingreso, asistencia e idiomas">
@@ -327,19 +356,20 @@ export default function Perfil() {
         </motion.h2>
         <ul className="flex flex-col gap-2">
           {nino.skills.map((s) => (
-            <motion.li
-              key={s.id}
-              variants={item}
-              className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
-            >
-              <span className="text-[15px] font-medium text-[var(--text-primary)]">{s.nombre}</span>
-              <SkillBadge estadoDesarrollo={s.estadoDesarrollo} estadoEvidencia={s.estadoEvidencia} />
+            <motion.li key={s.id} variants={item}>
+              <Link
+                href={`/ninos/${nino.id}/progreso/${s.id}`}
+                className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
+              >
+                <span className="text-[15px] font-medium text-[var(--text-primary)]">{s.nombre}</span>
+                <SkillBadge estadoDesarrollo={s.estadoDesarrollo} estadoEvidencia={s.estadoEvidencia} />
+              </Link>
             </motion.li>
           ))}
         </ul>
 
         <motion.p variants={item} className="mt-6 text-center text-[13px] text-[var(--text-tertiary)]">
-          Cada estado se actualiza con tus observaciones — nunca se marca solo.
+          Las observaciones agregan evidencia — el estado de cada habilidad solo cambia cuando tú lo apruebas.
         </motion.p>
       </motion.div>
     </AppShell>

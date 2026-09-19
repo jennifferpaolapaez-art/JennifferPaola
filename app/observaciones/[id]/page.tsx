@@ -22,6 +22,7 @@ import {
   leerObservacionSkills,
   actualizarEstadoObservacionSkill,
   actividadYPlanPorId,
+  estadoRegistroObservacion,
   TINT_HEX,
   BLOQUE_LABEL,
   type Nino,
@@ -89,6 +90,7 @@ export default function DetalleObservacion() {
   const contexto = observacion.actividadId ? actividadYPlanPorId(observacion.actividadId) : undefined;
   const observacionPrincipal = observacion.redaccionProfesional ?? observacion.notaOriginal;
   const tieneRedaccionPropia = !!observacion.redaccionProfesional;
+  const estadoRegistro = estadoRegistroObservacion(observacion);
 
   return (
     <AppShell>
@@ -117,7 +119,23 @@ export default function DetalleObservacion() {
         </motion.header>
 
         <motion.section variants={item} className="mb-5 rounded-[var(--radius-card)] bg-[var(--surface)] p-5 shadow-[var(--shadow-1)]">
-          <Etiqueta>{tieneRedaccionPropia ? 'Observación profesional' : 'Nota'}</Etiqueta>
+          <Etiqueta>
+            {estadoRegistro === 'oportunidad_sin_evidencia'
+              ? 'Oportunidad de observación'
+              : tieneRedaccionPropia
+                ? 'Observación profesional'
+                : 'Nota'}
+          </Etiqueta>
+          {estadoRegistro === 'pendiente_redaccion' && (
+            <p className="mt-1 text-[12px] font-semibold text-[var(--butter)]">
+              Pendiente de redacción profesional — no alimenta Registro, Informe, evaluaciones ni reportes hasta que se apruebe.
+            </p>
+          )}
+          {estadoRegistro === 'oportunidad_sin_evidencia' && (
+            <p className="mt-1 text-[12px] text-[var(--text-tertiary)]">
+              Sin evidencia: quedó registrado que hubo una oportunidad de observar. No cuenta como evidencia ni como dificultad.
+            </p>
+          )}
           <p className="mt-2 text-[15px] leading-relaxed text-[var(--text-primary)]">{observacionPrincipal}</p>
           {tieneRedaccionPropia && (
             <button
@@ -150,6 +168,14 @@ export default function DetalleObservacion() {
                       </span>
                     </div>
                     {s.evidenciaTextual && <p className="mt-1.5 text-[13px] leading-snug text-[var(--text-secondary)]">Evidencia: “{s.evidenciaTextual}”</p>}
+                    {s.estado === 'aceptado' && (
+                      <Link
+                        href={`/ninos/${nino.id}/progreso/${s.skillId}?revisar=1`}
+                        className="mt-2 inline-block text-[13px] font-semibold text-[var(--accent)] underline"
+                      >
+                        Revisar habilidad
+                      </Link>
+                    )}
                     {s.estado === 'sugerido' && (
                       <div className="mt-3 flex gap-2">
                         <button
@@ -177,13 +203,22 @@ export default function DetalleObservacion() {
           </motion.section>
         )}
 
-        {observacion.evidencia && (
-          <motion.section variants={item} className="mb-5 flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-4">
-            <Paperclip size={18} className="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
-            <div className="min-w-0">
-              <p className="truncate text-[14px] font-medium text-[var(--text-primary)]">{observacion.evidencia.nombreArchivo}</p>
-              <p className="text-[12px] text-[var(--text-tertiary)]">Referencia guardada — el archivo real todavía no se adjunta (sin almacenamiento conectado).</p>
-            </div>
+        {observacion.evidencias && observacion.evidencias.length > 0 && (
+          <motion.section variants={item} className="mb-5">
+            <Etiqueta>Evidencia</Etiqueta>
+            <ul className="mt-2 flex flex-col gap-2">
+              {observacion.evidencias.map((ev) => (
+                <li key={ev.id} className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-4">
+                  <Paperclip size={18} className="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-medium text-[var(--text-primary)]">{ev.nombreArchivo}</p>
+                    <p className="text-[12px] text-[var(--text-tertiary)]">
+                      Interna · referencia guardada — el archivo real todavía no se adjunta (sin almacenamiento conectado).
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </motion.section>
         )}
 

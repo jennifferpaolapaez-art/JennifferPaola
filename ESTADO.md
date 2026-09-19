@@ -1377,6 +1377,95 @@ Sin regresión verificada en la micro-observación de tijeras (sigue guardando d
 redacción automática) y en el historial/perfil (siguen mostrando lo mismo, con la redacción como
 resumen). Datos de prueba limpiados de localStorage al terminar.
 
+## Sesión 6, paso 7 — Progreso / Reportes: DEFINICIÓN DE DOCUMENTOS (decisión del usuario, sin código todavía)
+Cosa juzgada — evita mezclar observaciones, evaluaciones, planes, reportes y álbum. La maestra solo
+OBSERVA; RAÍZ arma todo lo demás con la misma información, sin que ella repita trabajo.
+1. **Observación individual** — interna; nota original (nunca sale de lo interno) + redacción
+   profesional aprobada (la que alimenta todo lo demás).
+2. **Registro Mensual de Observaciones** — interno; bitácora cronológica del mes con SOLO
+   redacciones profesionales aprobadas (fecha, contexto, dominio/skill, evidencia, autora). Vista
+   derivada, la maestra no lo crea. Observaciones sin redacción aprobada se listan aparte como
+   "pendientes de redacción", nunca entra la nota cruda.
+3. **Informe Mensual de Observaciones** — interno; síntesis por áreas (Language & Communication,
+   Cognition, Fine/Gross Motor, Social-Emotional, Self-Help si aplica por edad/evidencia), progreso
+   vs. observaciones previas (comparación simple, sin porcentajes ni forzar comparaciones sin
+   evidencia), resumen y "qué continuar observando". Reglas: solo hechos observados, sin rellenar
+   áreas con poca evidencia, sin afirmaciones absolutas ("No spoken words were documented during
+   May observations", no "does not use words"). Se aprueba como snapshot versionado (una corrección
+   = versión nueva); cada afirmación guarda los `observacionIds` que la respaldan ("Ver
+   observaciones que respaldan esto").
+4. **Evaluación inicial/periódica** — ya existe; snapshot estructurado. La periódica usará
+   evaluación anterior + observaciones + informes mensuales + evidencia + child_skills + historial +
+   Plan Individual/metas + documentos externos autorizados. Frecuencia por programa; ciclo propio
+   por niño desde ingreso/última evaluación aprobada.
+5. **Plan Individual** — plan de acción (no reporte); RAÍZ puede sugerirlo (tras evaluación inicial
+   o tras seguimiento), nunca crearlo solo; no cada skill "en desarrollo" lo genera. Meta:
+   Por trabajar / En progreso / Casi lograda / Cumplida / Cerrada-no continuar. Cumplida: deja de
+   ser prioridad y de generar niño foco, NO se borra (queda como logro con fecha).
+6. **Reporte de Resultados del Periodo** — tras cada evaluación periódica; claro para familia y
+   maestra (periodo, edad, fortalezas, áreas trabajadas, logros, metas cumplidas/continúan,
+   próximos pasos); jamás entran nota original, skills sugeridos sin aprobar ni nada no marcado
+   como compartible; idioma congelado en el snapshot. Después: metas cumplidas se cierran y RAÍZ
+   puede sugerir nuevo Plan Individual (o "seguimiento normal" — el plan no es obligatorio).
+7. **Álbum Anual / My Learning Journey** — YA NO es reporte mensual. Portafolio cálido/visual del
+   año, con contenido aprobado acumulado; narración elegible (primera persona del niño o voz de la
+   maestra, sin inventar emociones/frases/recuerdos); galería de plantillas (Natural Montessori,
+   Minimal Reggio, Soft Rainbow, Little Explorer, Garden, Watercolor, Modern Playful, Classic
+   Keepsake — nombres provisionales), CONTENIDO separado de la PLANTILLA (cambiar plantilla sin
+   perder datos; plantilla por grupo o por niño y guardada por año escolar); decoración suave,
+   fotos protagonistas; ES/EN/bilingüe renderizado desde contenido aprobado, idioma congelado en
+   snapshots aprobados. **NO se construye ahora** — recomendado después del paso 8 (necesita
+   almacenamiento real de fotos).
+**Fases propuestas (pendientes de confirmación del usuario):** 6c = Progreso vivo + `child_skill_events`
++ detalle de habilidad + Revisar habilidad + trazabilidad (+ mini-migración `evidencias[]` con id y
+`compartibleConFamilia`, `idiomaRedaccion`, `citasDelNino?`); 6d = prioridades/"¿qué trabajar ahora?"
++ sugerencia/borrador de Plan Individual + ciclo de vida de metas; 6e-1 Registro Mensual, 6e-2
+Informe Mensual (nace `child_reports` con `tipo`, `audiencia`, `version`, `reemplazaA`, `idioma`);
+6f = evaluación periódica preparada + revisión de metas + Reporte de Resultados + siguiente plan;
+Álbum Anual = fase independiente posterior. El plan anterior de "My Learning Journey mensual" queda
+DESCARTADO.
+
+### Sesión 6, paso 7 / 6c — Progreso vivo + historial de skills + Revisar habilidad (CONSTRUIDO, pendiente validación del usuario)
+**Alcance exacto (sin ampliar):** Progreso vivo, `child_skill_events`, detalle de habilidad,
+"Revisar habilidad", trazabilidad y mini-migración de evidencia. NO se tocó 6d (prioridades/Plan
+Individual) — el usuario pidió validar 6c en navegador antes de avanzar.
+- **Mini-migración:** `Observacion.evidencia` → `evidencias: Evidencia[]` (`id`, `tipo`,
+  `nombreArchivo`, `compartibleConFamilia=false`); `leerObservaciones()` convierte al leer los
+  registros legados (una sola evidencia sin id). `/observar` permite varias evidencias por
+  observación. Reservados: `idiomaRedaccion` (se guarda 'es' con la redacción), `citasDelNino?`
+  (solo palabras realmente documentadas; una cita detectada por RAÍZ requerirá confirmación de la
+  maestra antes del Álbum — sin interfaz todavía).
+- **Tres estados de registro** (`estadoRegistroObservacion`): observación profesional aprobada /
+  pendiente de redacción (solo `notaOriginal`) / oportunidad "No observado" (`oportunidadSinEvidencia`,
+  marca explícita — no es "pendiente"). Visibles como etiqueta en historial y detalle. Reglas para
+  6e: los dos últimos NUNCA entran al Registro/Informe/evaluaciones/reportes de familia.
+- **`child_skill_events`** (`EventoSkill`, localStorage `raiz_skill_events`, semilla demo para Luca/
+  Sofía/Mateo): solo se escribe con un cambio aprobado por un humano — al aprobar una evaluación
+  (`eventosDeAprobacion`, solo skills que cambiaron o nuevos) y con "Revisar habilidad"
+  (`revisarHabilidad`, único camino además de la evaluación que cambia `Nino.skills`).
+- **Rutas nuevas:** `/ninos/[id]/progreso` (frase en palabras, sin porcentajes; nueva evidencia
+  para revisar; metas activas; grupos Fortalezas/En desarrollo/Necesita más evidencia/Aún no
+  observado — este último incluye skills de la plantilla de su etapa sin dato y ya en edad) y
+  `/ninos/[id]/progreso/[skillId]` (línea de tiempo con ambos ejes en palabras —
+  `describirEstadoSkill`—, observaciones aceptadas que lo respaldan, sugeridas sin revisar,
+  oportunidades no observadas aparte, evaluaciones aprobadas, metas del Plan Individual, panel
+  "Revisar habilidad" con 5 opciones compactas + nota opcional). El perfil gana la tarjeta
+  "Progreso" y las habilidades enlazan al detalle; el detalle de observación enlaza "Revisar
+  habilidad" desde cada skill aceptado.
+- **Decisión a confirmar:** en Progreso, una observación con skill aceptado pero "pendiente de
+  redacción" SÍ cuenta como evidencia visible (con etiqueta "pendiente de redacción profesional"),
+  porque la maestra ya la aceptó; lo que no puede es alimentar Registro/Informe/evaluaciones/
+  reportes. Fácil de cambiar si se prefiere excluirla también de Progreso.
+- Micro-observaciones: `OpcionRapida.frase` da redacciones gramaticales ("siguió una línea recta
+  de forma independiente").
+- **Verificado:** tsc ✓ · build ✓ (27 rutas) · en navegador con Luca: la observación nueva de tijeras
+  avisó "nueva evidencia" SIN cambiar el estado (`raiz_ninos` no existía); Revisar habilidad →
+  Dominado escribió el evento (timeline Aún no observado → En desarrollo con poca evidencia → con
+  evidencia suficiente → Dominado) y actualizó solo tijeras; Zayne "No observado" aparece aparte
+  como oportunidad y no altera su estado; aprobar la evaluación periódica de Sofía generó eventos
+  solo para los 2 skills nuevos (palabras/apilar sin cambio no generaron); registro legado
+  convertido; 2 evidencias en una observación persistidas; revisión visual a 375px OK.
+
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).
   MFA disponible para la cuenta de la directora/dueña del programa (doc maestro sec. 59). Los

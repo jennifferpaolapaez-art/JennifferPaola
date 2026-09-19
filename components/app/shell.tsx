@@ -11,7 +11,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { CalendarDays, ChevronDown, ChevronRight, Home, NotebookPen, Plus, Users, X } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { etiquetaSkill, type EstadoDesarrollo, type EstadoEvidencia, type Observacion, type ObservacionSkill } from '@/lib/seed-data';
+import { estadoRegistroObservacion, etiquetaSkill, type EstadoDesarrollo, type EstadoEvidencia, type Observacion, type ObservacionSkill } from '@/lib/seed-data';
 
 const NAV = [
   { id: 'hoy', label: 'Hoy', href: '/hoy', icono: Home },
@@ -369,6 +369,7 @@ export function FilaObservacion({
   mostrarNino?: boolean;
 }) {
   const relevantes = skills.filter((s) => s.estado !== 'rechazado');
+  const estadoRegistro = estadoRegistroObservacion(observacion);
   return (
     <Link
       href={`/observaciones/${observacion.id}`}
@@ -383,6 +384,11 @@ export function FilaObservacion({
             {ORIGEN_OBSERVACION_LABEL[observacion.origen]}
           </span>
         </div>
+        {estadoRegistro !== 'profesional_aprobada' && (
+          <p className="mt-1 text-[11px] font-semibold text-[var(--butter)]">
+            {estadoRegistro === 'oportunidad_sin_evidencia' ? 'Oportunidad sin evidencia' : 'Pendiente de redacción profesional'}
+          </p>
+        )}
         <p className="mt-1 truncate text-[14px] text-[var(--text-secondary)]">{observacion.redaccionProfesional ?? observacion.notaOriginal}</p>
         {relevantes.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">

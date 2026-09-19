@@ -2225,20 +2225,46 @@ export interface Observacion {
   triggeredBySkillId?: string;
   /** Quién la registró — ver `STAFF_ACTUAL_ID`. */
   autorId: string;
-  /** La entidad es EVIDENCIA en general, no "foto" (regla del usuario, Sesión 6 paso 6b) — hoy
-   * solo el tipo `foto` es real; el resto queda reservado en `TipoEvidencia` sin construirse. */
-  evidencia?: Evidencia;
+  /** Una observación puede tener VARIAS evidencias (Sesión 6 paso 7 / 6c, mini-migración pedida
+   * por el usuario). La entidad es EVIDENCIA en general, no "foto" — hoy solo `foto` es real. */
+  evidencias?: Evidencia[];
+  /** Idioma en que está escrita `redaccionProfesional` (código, ej. 'es') — para saber después
+   * si un documento en otro idioma necesitaría traducción real (llega con IA). */
+  idiomaRedaccion?: string;
+  /** Palabras REALMENTE dichas por el niño y documentadas — nunca reconstruidas por RAÍZ. Si más
+   * adelante RAÍZ detecta una posible cita, la maestra debe confirmarla antes de usarla en el
+   * Álbum (regla del usuario). Reservado, sin interfaz todavía. */
+  citasDelNino?: string[];
+  /** "No observado" (micro-observación sin evidencia): hubo una OPORTUNIDAD de observar, no una
+   * observación. Nunca cuenta como evidencia, nunca entra como observación profesional al Registro/
+   * Informe, nunca se interpreta como dificultad, y NO es lo mismo que "pendiente de redacción"
+   * (regla del usuario, Sesión 6 paso 7). */
+  oportunidadSinEvidencia?: boolean;
 }
 
 /** Reservado para cuando existan más formas de evidencia — hoy solo `foto` tiene UI real. */
 export type TipoEvidencia = 'foto' | 'trabajo_nino' | 'audio' | 'video' | 'documento';
 
-/** Solo el NOMBRE del archivo — nunca la URL temporal del navegador (se pierde igual al recargar)
- * ni se simula almacenamiento real todavía (regla del usuario, mismo patrón que evaluaciones
- * externas: "no fingir almacenamiento real"). */
+/** Solo metadata (nombre del archivo) — nunca la URL temporal del navegador (se pierde igual al
+ * recargar) ni se simula almacenamiento real todavía (regla del usuario, mismo patrón que
+ * evaluaciones externas: "no fingir almacenamiento real"). `compartibleConFamilia` arranca en
+ * `false`: nada sale a un reporte para familia sin que la maestra lo marque. */
 export interface Evidencia {
+  id: string;
   tipo: TipoEvidencia;
   nombreArchivo: string;
+  compartibleConFamilia: boolean;
+}
+
+/** Los tres estados conceptuales distintos de un registro (regla del usuario, Sesión 6 paso 7):
+ * A. observación profesional aprobada → alimenta Registro/Informe/evaluaciones/reportes;
+ * B. nota sin redacción profesional aprobada → "pendiente de redacción" (nunca entra la nota cruda);
+ * C. oportunidad "No observado" → sin evidencia, no es una observación pendiente. */
+export type EstadoRegistroObservacion = 'profesional_aprobada' | 'pendiente_redaccion' | 'oportunidad_sin_evidencia';
+
+export function estadoRegistroObservacion(o: Observacion): EstadoRegistroObservacion {
+  if (o.oportunidadSinEvidencia) return 'oportunidad_sin_evidencia';
+  return o.redaccionProfesional && o.redaccionProfesional.trim() ? 'profesional_aprobada' : 'pendiente_redaccion';
 }
 
 /** Distingue sin ambigüedad "RAÍZ lo sugirió y aún no se revisó" de "RAÍZ lo sugirió y se
@@ -2264,16 +2290,19 @@ export interface OpcionRapida {
   id: string;
   texto: string;
   esEvidencia: boolean;
+  /** Predicado objetivo para la redacción automática ("siguió una línea recta…"); si falta se
+   * usa "realizó <texto>". */
+  frase?: string;
 }
 
 /** Micro-observación de opciones rápidas (observación DIRIGIDA, fuente `seleccion_rapida`) — hoy
  * solo Tijeras tiene un set definido; el resto de habilidades cae a nota libre en ese mismo paso. */
 export const OPCIONES_RAPIDAS_POR_SKILL: Record<string, OpcionRapida[]> = {
   tijeras: [
-    { id: 'pequenos-recortes', texto: 'Pequeños recortes', esEvidencia: true },
-    { id: 'cortes-consecutivos', texto: 'Cortes consecutivos sin ayuda', esEvidencia: true },
-    { id: 'linea-con-ayuda', texto: 'Línea recta con ayuda', esEvidencia: true },
-    { id: 'linea-independiente', texto: 'Línea recta independiente', esEvidencia: true },
+    { id: 'pequenos-recortes', texto: 'Pequeños recortes', esEvidencia: true, frase: 'realizó pequeños recortes' },
+    { id: 'cortes-consecutivos', texto: 'Cortes consecutivos sin ayuda', esEvidencia: true, frase: 'realizó cortes consecutivos sin ayuda' },
+    { id: 'linea-con-ayuda', texto: 'Línea recta con ayuda', esEvidencia: true, frase: 'siguió una línea recta con ayuda' },
+    { id: 'linea-independiente', texto: 'Línea recta independiente', esEvidencia: true, frase: 'siguió una línea recta de forma independiente' },
     { id: 'no-observado', texto: 'No observado', esEvidencia: false },
   ],
 };
@@ -2494,8 +2523,9 @@ function unirHechosEnParrafo(hechos: HechoDetectado[], nombreNino: string): stri
 /** Camino dirigido de opciones rápidas (Sesión 6 paso 6b, regla del usuario: "no hace falta
  * obligar a pasar por un proceso largo de reformulación" cuando la opción YA es objetiva) — RAÍZ
  * genera una redacción simple de una frase, sin paso de confirmación aparte. */
-export function generarRedaccionMicroObservacion(nombreNino: string, nombreSkill: string, opcionTexto: string): string {
-  return `${nombreNino} realizó ${opcionTexto.toLowerCase()} durante la actividad relacionada con ${nombreSkill.toLowerCase()}.`;
+export function generarRedaccionMicroObservacion(nombreNino: string, nombreSkill: string, opcion: OpcionRapida): string {
+  const predicado = opcion.frase ?? `realizó ${opcion.texto.toLowerCase()}`;
+  return `${nombreNino} ${predicado} durante la actividad relacionada con ${nombreSkill.toLowerCase()}.`;
 }
 
 /** Cambia el estado de UNA fila de skill de una observación YA GUARDADA (Aceptar/Rechazar desde
@@ -2648,6 +2678,8 @@ export const OBSERVACIONES_SEMILLA: Observacion[] = [
     origen: 'dirigida',
     fuente: 'seleccion_rapida',
     notaOriginal: 'Cortes consecutivos sin ayuda',
+    redaccionProfesional: 'Luca realizó cortes consecutivos sin ayuda durante la actividad relacionada con tijeras.',
+    idiomaRedaccion: 'es',
     triggeredBySkillId: 'tijeras',
     autorId: STAFF_ACTUAL_ID,
   },
@@ -2662,6 +2694,7 @@ export const OBSERVACIONES_SEMILLA: Observacion[] = [
     // anonimizado a "un compañero" — así el detalle muestra "Ver nota original" desde el primer
     // vistazo, sin que el usuario tenga que generar una nueva para verlo.
     redaccionProfesional: 'Sofía señaló una imagen para pedir más bloques y después dijo "más" con claridad. Jugó junto a un compañero, observando lo que él construía.',
+    idiomaRedaccion: 'es',
     autorId: STAFF_ACTUAL_ID,
   },
   {
@@ -2681,6 +2714,7 @@ export const OBSERVACIONES_SEMILLA: Observacion[] = [
     fuente: 'seleccion_rapida',
     notaOriginal: 'No observado',
     triggeredBySkillId: 'tijeras',
+    oportunidadSinEvidencia: true,
     autorId: STAFF_ACTUAL_ID,
   },
 ];
@@ -2696,13 +2730,24 @@ export const OBSERVACION_SKILLS_SEMILLA: ObservacionSkill[] = [
 const OBSERVACIONES_STORAGE_KEY = 'raiz_observaciones';
 const OBSERVACION_SKILLS_STORAGE_KEY = 'raiz_observacion_skills';
 
+/** Datos guardados antes de la mini-migración (Sesión 6 paso 7 / 6c) tenían `evidencia` (una sola,
+ * sin id) — se convierten al leer para no perder nada ni exigir borrar el almacenamiento. */
+type ObservacionLegada = Observacion & { evidencia?: { tipo: TipoEvidencia; nombreArchivo: string } };
+function normalizarObservacion(o: ObservacionLegada): Observacion {
+  const { evidencia, ...resto } = o;
+  if (evidencia && !resto.evidencias) {
+    return { ...resto, evidencias: [{ id: `ev-${resto.id}-1`, tipo: evidencia.tipo, nombreArchivo: evidencia.nombreArchivo, compartibleConFamilia: false }] };
+  }
+  return resto;
+}
+
 export function leerObservaciones(): Observacion[] {
   if (typeof window === 'undefined') return OBSERVACIONES_SEMILLA;
   try {
     const guardado = window.localStorage.getItem(OBSERVACIONES_STORAGE_KEY);
     if (!guardado) return OBSERVACIONES_SEMILLA;
-    const parseado = JSON.parse(guardado) as Observacion[];
-    return Array.isArray(parseado) ? parseado : OBSERVACIONES_SEMILLA;
+    const parseado = JSON.parse(guardado) as ObservacionLegada[];
+    return Array.isArray(parseado) ? parseado.map(normalizarObservacion) : OBSERVACIONES_SEMILLA;
   } catch {
     return OBSERVACIONES_SEMILLA;
   }
@@ -2794,4 +2839,249 @@ export function marcarNinoFocoObservado(actividadId: string, ninoId: string, obs
     })),
   };
   guardarUnaPlaneacion(actualizado);
+}
+
+/* ── PROGRESO VIVO + HISTORIAL DE SKILLS (Sesión 6, paso 7 / 6c) ──
+   Progreso es una VISTA VIVA calculada al abrir — nunca se guarda ni se congela (los snapshots
+   son los reportes, 6e/6f). Lo único que se persiste es `child_skill_events`: el HISTORIAL de
+   cambios de estado de cada skill, escrito SOLO cuando un humano aprueba un cambio (aprobar una
+   evaluación, o "Revisar habilidad"). Una observación NUNCA escribe aquí ni cambia `Nino.skills`
+   — solo agrega evidencia (regla del usuario). Sin porcentajes: dar una falsa precisión no ayuda. */
+
+export type FuenteEventoSkill = 'evaluacion' | 'revision_maestra';
+
+export interface EstadosSkill {
+  estadoDesarrollo: EstadoDesarrollo;
+  estadoEvidencia: EstadoEvidencia;
+}
+
+export interface EventoSkill {
+  id: string;
+  ninoId: string;
+  skillId: string;
+  nombreSkill: string;
+  fecha: string;
+  /** Ausente = primer registro del skill (punto de partida). */
+  anterior?: EstadosSkill;
+  nuevo: EstadosSkill;
+  fuente: FuenteEventoSkill;
+  evaluacionId?: string;
+  /** Observaciones que la maestra tenía a la vista al revisar (trazabilidad). */
+  observacionIds?: string[];
+  nota?: string;
+  /** Siempre true: el historial solo registra cambios que un humano aprobó. */
+  confirmadoPorMaestra: true;
+}
+
+/** DEMO — historial ilustrativo para que la línea de tiempo no se vea vacía (mismo aviso que el
+ * resto de la semilla: una cuenta real nunca lo recibe). Coherente con el estado actual y con las
+ * observaciones/evaluaciones semilla. */
+export const EVENTOS_SKILL_SEMILLA: EventoSkill[] = [
+  { id: 'evt-seed-luca-tijeras-1', ninoId: 'luca', skillId: 'tijeras', nombreSkill: 'Tijeras', fecha: '2026-05-12', nuevo: { estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' }, fuente: 'revision_maestra', nota: 'Punto de partida', confirmadoPorMaestra: true },
+  { id: 'evt-seed-luca-tijeras-2', ninoId: 'luca', skillId: 'tijeras', nombreSkill: 'Tijeras', fecha: '2026-06-24', anterior: { estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' }, nuevo: { estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' }, fuente: 'revision_maestra', confirmadoPorMaestra: true },
+  { id: 'evt-seed-luca-tijeras-3', ninoId: 'luca', skillId: 'tijeras', nombreSkill: 'Tijeras', fecha: '2026-09-08', anterior: { estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'insuficiente' }, nuevo: { estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' }, fuente: 'revision_maestra', observacionIds: ['obs-seed-luca-tijeras'], confirmadoPorMaestra: true },
+  { id: 'evt-seed-luca-numeros-1', ninoId: 'luca', skillId: 'numeros-1-8', nombreSkill: 'Números 1–8', fecha: '2026-06-02', nuevo: { estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' }, fuente: 'revision_maestra', nota: 'Punto de partida', confirmadoPorMaestra: true },
+  { id: 'evt-seed-luca-numeros-2', ninoId: 'luca', skillId: 'numeros-1-8', nombreSkill: 'Números 1–8', fecha: '2026-08-20', anterior: { estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' }, nuevo: { estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' }, fuente: 'revision_maestra', confirmadoPorMaestra: true },
+  { id: 'evt-seed-sofia-palabras-1', ninoId: 'sofia', skillId: 'palabras', nombreSkill: 'Vocabulario de 2 palabras', fecha: '2026-02-12', nuevo: { estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' }, fuente: 'evaluacion', evaluacionId: 'eval-sofia-ingreso', nota: 'Evaluación de ingreso', confirmadoPorMaestra: true },
+  { id: 'evt-seed-sofia-palabras-2', ninoId: 'sofia', skillId: 'palabras', nombreSkill: 'Vocabulario de 2 palabras', fecha: '2026-09-05', anterior: { estadoDesarrollo: 'desconocido', estadoEvidencia: 'no_observado' }, nuevo: { estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' }, fuente: 'revision_maestra', observacionIds: ['obs-seed-sofia-espontanea'], confirmadoPorMaestra: true },
+  { id: 'evt-seed-sofia-apilar-1', ninoId: 'sofia', skillId: 'apilar', nombreSkill: 'Apila 4+ bloques', fecha: '2026-02-12', nuevo: { estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' }, fuente: 'evaluacion', evaluacionId: 'eval-sofia-ingreso', nota: 'Evaluación de ingreso', confirmadoPorMaestra: true },
+  { id: 'evt-seed-sofia-apilar-2', ninoId: 'sofia', skillId: 'apilar', nombreSkill: 'Apila 4+ bloques', fecha: '2026-08-22', anterior: { estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' }, nuevo: { estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' }, fuente: 'revision_maestra', confirmadoPorMaestra: true },
+  { id: 'evt-seed-mateo-gateo-1', ninoId: 'mateo', skillId: 'gateo', nombreSkill: 'Gateo cruzado', fecha: '2026-06-15', nuevo: { estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' }, fuente: 'revision_maestra', nota: 'Punto de partida', confirmadoPorMaestra: true },
+  { id: 'evt-seed-mateo-gateo-2', ninoId: 'mateo', skillId: 'gateo', nombreSkill: 'Gateo cruzado', fecha: '2026-08-30', anterior: { estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente' }, nuevo: { estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente' }, fuente: 'revision_maestra', confirmadoPorMaestra: true },
+];
+
+const EVENTOS_SKILL_STORAGE_KEY = 'raiz_skill_events';
+
+export function leerEventosSkill(): EventoSkill[] {
+  if (typeof window === 'undefined') return EVENTOS_SKILL_SEMILLA;
+  try {
+    const guardado = window.localStorage.getItem(EVENTOS_SKILL_STORAGE_KEY);
+    if (!guardado) return EVENTOS_SKILL_SEMILLA;
+    const parseado = JSON.parse(guardado) as EventoSkill[];
+    return Array.isArray(parseado) ? parseado : EVENTOS_SKILL_SEMILLA;
+  } catch {
+    return EVENTOS_SKILL_SEMILLA;
+  }
+}
+
+export function guardarEventosSkill(eventos: EventoSkill[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(EVENTOS_SKILL_STORAGE_KEY, JSON.stringify(eventos));
+  } catch {
+    // Almacenamiento no disponible — la sesión sigue funcionando en memoria.
+  }
+}
+
+/** Agrega eventos al final del historial ya persistido — nunca sobrescribe. */
+export function agregarEventosSkill(nuevos: EventoSkill[]): EventoSkill[] {
+  if (nuevos.length === 0) return leerEventosSkill();
+  const todos = [...leerEventosSkill(), ...nuevos];
+  guardarEventosSkill(todos);
+  return todos;
+}
+
+/** Línea de tiempo de UN skill de UN niño, del más antiguo al más reciente. */
+export function eventosDeSkill(ninoId: string, skillId: string, eventos: EventoSkill[] = leerEventosSkill()): EventoSkill[] {
+  return eventos.filter((e) => e.ninoId === ninoId && e.skillId === skillId).sort((a, b) => a.fecha.localeCompare(b.fecha));
+}
+
+/** Eventos que produce aprobar una evaluación: solo los skills cuyo estado realmente cambió (o que
+ * aparecen por primera vez) — un resultado idéntico al vivo no genera ruido en el historial. Se
+ * calcula con el niño ANTES de aprobar (`aprobarEvaluacion` sobrescribe `nino.skills`). */
+export function eventosDeAprobacion(ninoAntes: Nino, evaluacion: EvaluacionNino): EventoSkill[] {
+  const eventos: EventoSkill[] = [];
+  for (const r of evaluacion.resultados) {
+    const previo = ninoAntes.skills.find((s) => s.id === r.skillId);
+    if (previo && previo.estadoDesarrollo === r.estadoDesarrollo && previo.estadoEvidencia === r.estadoEvidencia) continue;
+    const catalogo = SKILLS_CATALOG.find((c) => c.id === r.skillId);
+    eventos.push({
+      id: `evt-${Date.now()}-${r.skillId}`,
+      ninoId: ninoAntes.id,
+      skillId: r.skillId,
+      nombreSkill: previo?.nombre ?? catalogo?.nombre ?? r.skillId,
+      fecha: FECHA_HOY,
+      anterior: previo ? { estadoDesarrollo: previo.estadoDesarrollo, estadoEvidencia: previo.estadoEvidencia } : undefined,
+      nuevo: { estadoDesarrollo: r.estadoDesarrollo, estadoEvidencia: r.estadoEvidencia },
+      fuente: 'evaluacion',
+      evaluacionId: evaluacion.id,
+      nota: evaluacion.tipo === 'ingreso' ? 'Evaluación de ingreso' : 'Evaluación periódica',
+      confirmadoPorMaestra: true,
+    });
+  }
+  return eventos;
+}
+
+/** "Revisar habilidad": la maestra decide un nuevo estado tras ver la evidencia — es el ÚNICO
+ * camino (además de aprobar una evaluación) que cambia `Nino.skills`. Devuelve el niño
+ * actualizado y el evento a registrar; quien llama persiste ambos. */
+export function revisarHabilidad(
+  nino: Nino,
+  skillId: string,
+  nuevo: EstadosSkill,
+  opciones: { observacionIds?: string[]; nota?: string } = {}
+): { nino: Nino; evento: EventoSkill } {
+  const previo = nino.skills.find((s) => s.id === skillId);
+  const catalogo = SKILLS_CATALOG.find((c) => c.id === skillId);
+  const nombre = previo?.nombre ?? catalogo?.nombre ?? skillId;
+  const skillActualizado: Skill = { id: skillId, nombre, estadoDesarrollo: nuevo.estadoDesarrollo, estadoEvidencia: nuevo.estadoEvidencia, actualizado: FECHA_HOY };
+  const skills = previo ? nino.skills.map((s) => (s.id === skillId ? skillActualizado : s)) : [...nino.skills, skillActualizado];
+  const evento: EventoSkill = {
+    id: `evt-${Date.now()}-${skillId}`,
+    ninoId: nino.id,
+    skillId,
+    nombreSkill: nombre,
+    fecha: FECHA_HOY,
+    anterior: previo ? { estadoDesarrollo: previo.estadoDesarrollo, estadoEvidencia: previo.estadoEvidencia } : undefined,
+    nuevo,
+    fuente: 'revision_maestra',
+    observacionIds: opciones.observacionIds,
+    nota: opciones.nota?.trim() || undefined,
+    confirmadoPorMaestra: true,
+  };
+  return { nino: { ...nino, skills }, evento };
+}
+
+/** Descripción en palabras que conserva AMBOS ejes (la etiqueta corta de `etiquetaSkill` los
+ * colapsa) — para el historial, donde "en desarrollo con poca evidencia" y "en desarrollo con
+ * evidencia suficiente" son momentos distintos de la evolución. */
+export function describirEstadoSkill(e: EstadosSkill): string {
+  if (e.estadoDesarrollo === 'desconocido' || e.estadoEvidencia === 'no_observado') return 'Aún no observado';
+  const base = e.estadoDesarrollo === 'dominado' ? 'Dominado' : 'En desarrollo';
+  if (e.estadoEvidencia === 'insuficiente') return `${base} · con poca evidencia`;
+  if (e.estadoEvidencia === 'contradictoria') return `${base} · evidencia contradictoria`;
+  return e.estadoDesarrollo === 'dominado' ? base : `${base} · con evidencia suficiente`;
+}
+
+export type GrupoProgreso = 'consolidado' | 'en_desarrollo' | 'necesita_evidencia' | 'sin_observar';
+
+export const GRUPO_PROGRESO_LABEL: Record<GrupoProgreso, string> = {
+  consolidado: 'Fortalezas / consolidado',
+  en_desarrollo: 'En desarrollo',
+  necesita_evidencia: 'Necesita más evidencia',
+  sin_observar: 'Aún no observado',
+};
+
+/** Agrupa un skill por lo que la maestra necesita entender, no por un número. Precedencia: sin
+ * dato → evidencia débil/contradictoria → consolidado → en desarrollo. */
+export function grupoProgreso(estados: EstadosSkill): GrupoProgreso {
+  if (estados.estadoDesarrollo === 'desconocido' || estados.estadoEvidencia === 'no_observado') return 'sin_observar';
+  if (estados.estadoEvidencia === 'insuficiente' || estados.estadoEvidencia === 'contradictoria') return 'necesita_evidencia';
+  if (estados.estadoDesarrollo === 'dominado') return 'consolidado';
+  return 'en_desarrollo';
+}
+
+/** Skills de la(s) plantilla(s) de la etapa actual que el niño todavía no tiene registrados —
+ * "aún no observado" con sentido de edad (nunca se muestra lo que aún no le corresponde). */
+export function skillsEsperadosSinEstado(nino: Nino, tracksActivos: TrackOpcional[]): { id: string; nombre: string }[] {
+  const edadMeses = edadEnMeses(nino.fechaNacimiento);
+  const ids = new Set<string>();
+  for (const plantilla of plantillasAplicables(nino.etapa, tracksActivos)) {
+    for (const ts of ASSESSMENT_TEMPLATE_SKILLS.filter((s) => s.assessmentTemplateId === plantilla.id)) ids.add(ts.skillId);
+  }
+  const resultado: { id: string; nombre: string }[] = [];
+  for (const id of ids) {
+    if (nino.skills.some((s) => s.id === id)) continue;
+    const catalogo = SKILLS_CATALOG.find((c) => c.id === id);
+    if (!catalogo || edadMeses < catalogo.rangoEdadMesesMin) continue;
+    resultado.push({ id, nombre: catalogo.nombre });
+  }
+  return resultado;
+}
+
+export interface EvidenciaDeSkill {
+  observacion: Observacion;
+  relacion: ObservacionSkill;
+}
+
+/** Observaciones cuya relación con este skill la maestra ACEPTÓ — es lo que cuenta como evidencia.
+ * (`sugerido`/`rechazado` nunca cuentan; las oportunidades "No observado" van aparte.) Sale
+ * indicado si todavía no tienen redacción profesional aprobada. */
+export function evidenciaDeSkill(ninoId: string, skillId: string, observaciones: Observacion[], relaciones: ObservacionSkill[]): EvidenciaDeSkill[] {
+  const resultado: EvidenciaDeSkill[] = [];
+  for (const o of observaciones) {
+    if (o.ninoId !== ninoId) continue;
+    const relacion = relaciones.find((r) => r.observacionId === o.id && r.skillId === skillId && r.estado === 'aceptado');
+    if (relacion) resultado.push({ observacion: o, relacion });
+  }
+  return resultado.sort((a, b) => b.observacion.fecha.localeCompare(a.observacion.fecha));
+}
+
+export function oportunidadesSinEvidenciaDeSkill(ninoId: string, skillId: string, observaciones: Observacion[]): Observacion[] {
+  return observaciones
+    .filter((o) => o.ninoId === ninoId && o.oportunidadSinEvidencia && o.triggeredBySkillId === skillId)
+    .sort((a, b) => b.fecha.localeCompare(a.fecha));
+}
+
+export function sugeridasSinRevisarDeSkill(ninoId: string, skillId: string, observaciones: Observacion[], relaciones: ObservacionSkill[]): number {
+  const idsDelNino = new Set(observaciones.filter((o) => o.ninoId === ninoId).map((o) => o.id));
+  return relaciones.filter((r) => idsDelNino.has(r.observacionId) && r.skillId === skillId && r.estado === 'sugerido').length;
+}
+
+/** "Hay nueva evidencia para revisar esta habilidad": observaciones con este skill ACEPTADO
+ * posteriores al último cambio aprobado (o a la fecha del estado vivo si nunca hubo eventos). Solo
+ * avisa — cambiar el estado sigue siendo una acción explícita de la maestra. */
+export function evidenciaNuevaParaRevisar(
+  ninoId: string,
+  skill: { id: string; actualizado?: string },
+  observaciones: Observacion[],
+  relaciones: ObservacionSkill[],
+  eventos: EventoSkill[]
+): EvidenciaDeSkill[] {
+  const ultimoEvento = eventosDeSkill(ninoId, skill.id, eventos).slice(-1)[0];
+  const fechaBase = ultimoEvento?.fecha ?? skill.actualizado ?? '0000-00-00';
+  return evidenciaDeSkill(ninoId, skill.id, observaciones, relaciones).filter((e) => e.observacion.fecha > fechaBase);
+}
+
+/** Frase corta en palabras (sin porcentajes) sobre cómo va el niño — describe lo registrado, no
+ * diagnostica ni compara con una norma. */
+export function resumenProgresoTexto(nombre: string, conteo: Record<GrupoProgreso, number>, conNuevaEvidencia: number): string {
+  const partes: string[] = [];
+  if (conteo.consolidado > 0) partes.push(`${conteo.consolidado} ${conteo.consolidado === 1 ? 'habilidad consolidada' : 'habilidades consolidadas'}`);
+  if (conteo.en_desarrollo > 0) partes.push(`${conteo.en_desarrollo} en desarrollo`);
+  if (conteo.necesita_evidencia > 0) partes.push(`${conteo.necesita_evidencia} que necesita${conteo.necesita_evidencia === 1 ? '' : 'n'} más evidencia`);
+  if (conteo.sin_observar > 0) partes.push(`${conteo.sin_observar} aún sin observar`);
+  if (partes.length === 0) return `Todavía no hay habilidades registradas para ${nombre}.`;
+  const base = `${nombre} tiene ${partes.join(', ').replace(/, ([^,]*)$/, ' y $1')}.`;
+  return conNuevaEvidencia > 0 ? `${base} Hay nueva evidencia para revisar en ${conNuevaEvidencia}.` : base;
 }
