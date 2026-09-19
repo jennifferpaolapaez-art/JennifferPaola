@@ -13,6 +13,7 @@ import { motion, type Variants } from 'motion/react';
 import { ArrowLeft, ChevronRight, Pencil, Plus } from 'lucide-react';
 import { AppShell, AvatarInicial, Colapsable, FilaObservacion, SkillBadge } from '@/components/app/shell';
 import {
+  ESTADO_META_LABEL,
   calcularEdadTexto,
   calcularFechaProximaEvaluacion,
   evidenciaNuevaParaRevisar,
@@ -22,7 +23,10 @@ import {
   leerObservaciones,
   leerObservacionSkills,
   leerProgramaConfig,
+  metasActivasDeNino,
   ninoPorId,
+  planActivoDeNino,
+  planesDeNino,
   observacionesDeNino,
   resumenProgresoTexto,
   skillsDeObservacion,
@@ -33,12 +37,6 @@ import {
 } from '@/lib/seed-data';
 
 const ESTADO_EVAL_LABEL: Record<string, string> = { borrador: 'Borrador', aprobada: 'Aprobada' };
-const ESTADO_META_LABEL: Record<string, string> = {
-  por_trabajar: 'Por trabajar',
-  en_progreso: 'En progreso',
-  casi: 'Casi',
-  alcanzado: 'Alcanzado',
-};
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
 const item: Variants = {
@@ -323,11 +321,20 @@ export default function Perfil() {
             </p>
           </Colapsable>
 
-          <Colapsable titulo="Plan Individual" subtitulo={nino.planIndividual ? `${nino.planIndividual.metas.length} meta(s) activa(s)` : 'Opcional — no todos los niños lo necesitan'}>
-            {nino.planIndividual ? (
+          <Colapsable
+            titulo="Plan Individual"
+            subtitulo={
+              planActivoDeNino(nino)
+                ? `${metasActivasDeNino(nino).length} meta(s) activa(s)${planesDeNino(nino).length > 1 ? ` · ${planesDeNino(nino).length - 1} plan(es) anterior(es)` : ''}`
+                : planesDeNino(nino).length > 0
+                  ? `Sin plan activo · ${planesDeNino(nino).length} anterior(es)`
+                  : 'Opcional — no todos los niños lo necesitan'
+            }
+          >
+            {planActivoDeNino(nino) ? (
               <>
                 <ul className="mb-3 flex flex-col gap-2">
-                  {nino.planIndividual.metas.map((m) => (
+                  {planActivoDeNino(nino)!.metas.map((m) => (
                     <li key={m.id} className="rounded-[var(--radius-card)] bg-[var(--surface-2)] p-3.5">
                       <p className="text-[14px] font-medium text-[var(--text-primary)]">{m.descripcion}</p>
                       <p className="mt-1 text-[12px] font-semibold text-[var(--accent)]">{ESTADO_META_LABEL[m.estado]}</p>

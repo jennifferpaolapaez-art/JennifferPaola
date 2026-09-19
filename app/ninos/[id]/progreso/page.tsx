@@ -11,9 +11,11 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, type Variants } from 'motion/react';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight } from 'lucide-react';
 import { AppShell, AvatarInicial, SkillBadge } from '@/components/app/shell';
+import { TarjetaPrioridades } from '@/components/app/prioridades-card';
 import {
+  ESTADO_META_LABEL,
   GRUPO_PROGRESO_LABEL,
   SKILLS_CATALOG,
   calcularEdadTexto,
@@ -24,6 +26,7 @@ import {
   leerObservacionSkills,
   leerObservaciones,
   leerProgramaConfig,
+  metasActivasDeNino,
   ninoPorId,
   resumenProgresoTexto,
   skillsEsperadosSinEstado,
@@ -35,6 +38,7 @@ import {
   type ObservacionSkill,
   type ProgramaConfig,
 } from '@/lib/seed-data';
+import { evidenciaNuevaParaMeta, fechaCorta, mesAnio, metasConPlan, periodoTexto } from '@/lib/prioridades';
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.05 } } };
 const item: Variants = {
@@ -43,12 +47,6 @@ const item: Variants = {
 };
 
 const ORDEN_GRUPOS: GrupoProgreso[] = ['consolidado', 'en_desarrollo', 'necesita_evidencia', 'sin_observar'];
-const ESTADO_META_LABEL: Record<string, string> = {
-  por_trabajar: 'Por trabajar',
-  en_progreso: 'En progreso',
-  casi: 'Casi lograda',
-  alcanzado: 'Cumplida',
-};
 
 interface FilaSkill {
   id: string;
@@ -121,7 +119,11 @@ export default function ProgresoNino() {
   const conteo: Record<GrupoProgreso, number> = { consolidado: 0, en_desarrollo: 0, necesita_evidencia: 0, sin_observar: 0 };
   for (const f of filas) conteo[f.grupo] += 1;
   const conNuevaEvidencia = filas.filter((f) => f.nuevaEvidencia > 0);
-  const metasActivas = (nino.planIndividual?.metas ?? []).filter((m) => m.estado !== 'alcanzado');
+  const metasActivas = metasActivasDeNino(nino);
+  const todasLasMetas = metasConPlan(nino);
+  const logros = todasLasMetas.filter((x) => x.meta.estado === 'alcanzado');
+  const cerradas = todasLasMetas.filter((x) => x.meta.estado === 'cerrada');
+  const datos = { observaciones, relaciones, eventos };
 
   return (
     <AppShell>
@@ -151,6 +153,10 @@ export default function ProgresoNino() {
           {resumenProgresoTexto(nino.nombre, conteo, conNuevaEvidencia.length)}
         </motion.p>
 
+        <motion.div variants={item}>
+          <TarjetaPrioridades nino={nino} datos={datos} />
+        </motion.div>
+
         {conNuevaEvidencia.length > 0 && (
           <motion.section variants={item} className="mb-6 rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--butter)_14%,transparent)] p-4">
             <h2 className="text-[14px] font-semibold text-[var(--text-primary)]">Hay nueva evidencia para revisar</h2>
@@ -174,18 +180,60 @@ export default function ProgresoNino() {
           <motion.section variants={item} className="mb-6">
             <h2 className="mb-2 text-[16px] font-semibold text-[var(--text-primary)]">Metas activas</h2>
             <ul className="flex flex-col gap-2">
-              {metasActivas.map((m) => (
-                <li key={m.id}>
-                  <Link
-                    href={m.skillId ? `/ninos/${nino.id}/progreso/${m.skillId}` : `/ninos/${nino.id}/plan-individual`}
-                    className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-[14px] font-medium text-[var(--text-primary)]">{m.descripcion}</p>
-                      <p className="mt-0.5 text-[12px] font-semibold text-[var(--accent)]">{ESTADO_META_LABEL[m.estado]}</p>
-                    </div>
-                    <ChevronRight size={16} className="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
-                  </Link>
+              {metasActivas.map((m) => {
+                const nuevas = evidenciaNuevaParaMeta(nino, m, observaciones, relaciones).length;
+                return (
+                  <li key={m.id}>
+                    <Link
+                      href={`/ninos/${nino.id}/plan-individual?revisar=${m.id}`}
+                      className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[14px] font-medium text-[var(--text-primary)]">{m.descripcion}</p>
+                        <p className="mt-0.5 text-[12px] font-semibold text-[var(--accent)]">{ESTADO_META_LABEL[m.estado]}</p>
+                        {nuevas > 0 && (
+                          <p className="mt-1 text-[12px] font-semibold text-[var(--butter)]">
+                            Esta meta tiene nueva evidencia. ¿Quieres revisar su estado?
+                          </p>
+                        )}
+                      </div>
+                      <ChevronRight size={16} className="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </motion.section>
+        )}
+
+        {(logros.length > 0 || cerradas.length > 0) && (
+          <motion.section variants={item} className="mb-6">
+            <h2 className="mb-2 text-[16px] font-semibold text-[var(--text-primary)]">
+              Logros y metas anteriores <span className="text-[13px] font-normal text-[var(--text-tertiary)]">· {logros.length + cerradas.length}</span>
+            </h2>
+            <ul className="flex flex-col gap-2">
+              {logros.map(({ meta: m, plan }) => (
+                <li key={m.id} className="flex items-start gap-3 rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--sage)_12%,var(--surface))] p-4">
+                  <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_24%,transparent)] text-[var(--sage)]">
+                    <Check size={14} aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-medium text-[var(--text-primary)]">{m.descripcion}</p>
+                    <p className="mt-0.5 text-[12px] font-semibold text-[var(--sage)]">
+                      Cumplida{m.fechaCumplimiento ? ` — ${mesAnio(m.fechaCumplimiento)}` : ''}
+                    </p>
+                    {plan.estado === 'archivado' && <p className="text-[12px] text-[var(--text-tertiary)]">Plan {periodoTexto(plan)}</p>}
+                  </div>
+                </li>
+              ))}
+              {cerradas.map(({ meta: m, plan }) => (
+                <li key={m.id} className="rounded-[var(--radius-card)] bg-[var(--surface-2)] p-4">
+                  <p className="text-[14px] font-medium text-[var(--text-primary)]">{m.descripcion}</p>
+                  <p className="mt-0.5 text-[12px] font-semibold text-[var(--text-secondary)]">
+                    Cerrada / no continuar{m.fechaCierre ? ` — ${fechaCorta(m.fechaCierre)}` : ''}
+                  </p>
+                  {m.motivoCierre && <p className="mt-0.5 text-[12px] text-[var(--text-tertiary)]">Motivo: {m.motivoCierre}</p>}
+                  {plan.estado === 'archivado' && <p className="text-[12px] text-[var(--text-tertiary)]">Plan {periodoTexto(plan)}</p>}
                 </li>
               ))}
             </ul>

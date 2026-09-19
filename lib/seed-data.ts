@@ -234,8 +234,37 @@ export interface EvaluacionExterna {
   hallazgos: HallazgoEvaluacionExterna[];
 }
 
-export type EstadoPlanIndividual = 'activo' | 'pausado' | 'cerrado';
-export type EstadoMetaIndividual = 'por_trabajar' | 'en_progreso' | 'casi' | 'alcanzado';
+export type EstadoPlanIndividual = 'activo' | 'pausado' | 'cerrado' | 'archivado';
+/** `alcanzado` se muestra como "Cumplida" (el id se conserva por compatibilidad con datos ya
+ * guardados); `cerrada` = "Cerrada / no continuar" (Sesión 6 paso 7 / 6d). */
+export type EstadoMetaIndividual = 'por_trabajar' | 'en_progreso' | 'casi' | 'alcanzado' | 'cerrada';
+
+export const ESTADO_META_LABEL: Record<EstadoMetaIndividual, string> = {
+  por_trabajar: 'Por trabajar',
+  en_progreso: 'En progreso',
+  casi: 'Casi lograda',
+  alcanzado: 'Cumplida',
+  cerrada: 'Cerrada / no continuar',
+};
+
+/** Una meta ACTIVA es la única que puede alimentar Planeación, Hoy y "niños foco". Cumplida y
+ * Cerrada se conservan como historia pero nunca vuelven a personalizar una planeación. */
+export function metaEstaActiva(m: { estado: EstadoMetaIndividual }): boolean {
+  return m.estado === 'por_trabajar' || m.estado === 'en_progreso' || m.estado === 'casi';
+}
+
+/** Un cambio de estado de una meta — cada uno lo confirma la maestra (RAÍZ nunca mueve el estado
+ * sola). `de === a` = "la revisé y la dejo como está" (queda registrado para no volver a avisar). */
+export interface CambioEstadoMeta {
+  fecha: string;
+  de?: EstadoMetaIndividual;
+  a: EstadoMetaIndividual;
+  nota?: string;
+  /** Observaciones aprobadas que la maestra tenía a la vista al decidir (trazabilidad). */
+  observacionIds?: string[];
+}
+
+export type OrigenMeta = 'maestra' | 'raiz_sugerido_aprobado';
 
 /** UNA meta dentro del Plan Individual — RAÍZ nunca la marca `alcanzado` sola (regla del
  * usuario); solo puede sugerir revisar cuando hay evidencia, la maestra decide. */
@@ -247,17 +276,36 @@ export interface MetaIndividual {
   estrategias?: string;
   siguientePaso?: string;
   fechaActualizacion: string;
+  /** 6d — ciclo de vida e historial. Todos opcionales: una meta guardada antes de 6d sigue leyéndose. */
+  fechaCreacion?: string;
+  historial?: CambioEstadoMeta[];
+  fechaCumplimiento?: string;
+  evidenciaCumplimientoIds?: string[];
+  motivoCierre?: string;
+  fechaCierre?: string;
+  origen?: OrigenMeta;
+  /** Nada de la meta sale hacia la familia sin que la maestra lo marque (reportes, 6f). */
+  compartibleConFamilia?: boolean;
+  fechaRevision?: string;
+  /** Observaciones aprobadas que la maestra ya vio (al crear la meta o al revisarla) — sirve para
+   * avisar SOLO de evidencia realmente nueva. Ausente en metas anteriores: se usa la fecha. */
+  evidenciaVistaIds?: string[];
+  /** Si continúa una meta de un plan anterior (archivado). */
+  continuaDeMetaId?: string;
 }
 
-/** Plan Individual — OPCIONAL, vive dentro del perfil del niño (nunca un módulo aparte que
- * aparece después). Una necesidad/adaptación NUNCA lo crea automáticamente — la maestra decide
- * cuándo. Simplificación de esta ronda: un plan activo a la vez por niño (el historial de planes
- * cerrados queda para una ronda futura si hace falta). */
+/** Plan Individual — OPCIONAL, vive dentro del perfil del niño. Una necesidad/adaptación o una
+ * evaluación NUNCA lo crea automáticamente — la maestra decide. Desde 6d un niño puede tener
+ * VARIOS planes (`Nino.planesIndividuales`): uno activo y los anteriores archivados por periodo;
+ * empezar uno nuevo nunca sobrescribe el anterior. */
 export interface PlanIndividual {
   id: string;
   fechaCreacion: string;
   estado: EstadoPlanIndividual;
   motivo?: string;
+  /** Periodo que cubre (ISO). `fin` se completa al archivar (o es la fecha de revisión prevista). */
+  periodo?: { inicio: string; fin?: string };
+  archivadoEn?: string;
   metas: MetaIndividual[];
 }
 
@@ -294,7 +342,38 @@ export interface Nino {
   fechaUltimaEvaluacionAprobada?: string;
   evaluaciones: EvaluacionNino[];
   evaluacionesExternas: EvaluacionExterna[];
-  planIndividual?: PlanIndividual;
+  /** Planes Individuales por periodo (6d). El campo singular `planIndividual` de datos guardados
+   * antes de 6d se convierte al leer (`normalizarNino`) — nunca se pierde nada. */
+  planesIndividuales?: PlanIndividual[];
+}
+
+/** Planes de un niño, del más reciente al más antiguo. */
+export function planesDeNino(nino: Nino): PlanIndividual[] {
+  return [...(nino.planesIndividuales ?? [])].sort((a, b) => b.fechaCreacion.localeCompare(a.fechaCreacion));
+}
+
+export function planActivoDeNino(nino: Nino): PlanIndividual | undefined {
+  return planesDeNino(nino).find((p) => p.estado === 'activo');
+}
+
+/** Metas que hoy alimentan Planeación/Hoy/niños foco: solo las ACTIVAS del plan ACTIVO. */
+export function metasActivasDeNino(nino: Nino): MetaIndividual[] {
+  const plan = planActivoDeNino(nino);
+  return plan ? plan.metas.filter(metaEstaActiva) : [];
+}
+
+/** Skills que YA tuvieron una meta Cumplida o Cerrada (en cualquier plan) y hoy no tienen una meta
+ * activa: dejan de sugerirse solos como foco (regla del usuario, 6d — la maestra puede volver a
+ * ponerlos a mano). */
+export function skillsConMetaTerminada(nino: Nino): Set<string> {
+  const activos = new Set(metasActivasDeNino(nino).map((m) => m.skillId).filter((s): s is string => !!s));
+  const terminados = new Set<string>();
+  for (const plan of nino.planesIndividuales ?? []) {
+    for (const m of plan.metas) {
+      if (m.skillId && (m.estado === 'alcanzado' || m.estado === 'cerrada') && !activos.has(m.skillId)) terminados.add(m.skillId);
+    }
+  }
+  return terminados;
 }
 
 /** Bandas de edad por defecto para sugerir la etapa desde el DOB — punto de partida razonable
@@ -476,23 +555,32 @@ const NINOS_SEMILLA: Nino[] = [
         ],
       },
     ],
-    planIndividual: {
-      id: 'plan-sofia',
-      fechaCreacion: '2026-02-12',
-      estado: 'activo',
-      motivo: 'Seguimiento de lenguaje expresivo tras evaluación externa.',
-      metas: [
-        {
-          id: 'meta-sofia-vocabulario',
-          skillId: 'palabras',
-          descripcion: 'Ampliar vocabulario expresivo a 20+ palabras espontáneas.',
-          estado: 'en_progreso',
-          estrategias: 'Ofrecer 2 opciones con apoyo visual; celebrar cualquier intento verbal, no solo la palabra exacta.',
-          siguientePaso: 'Observar en Circle Time y Centros durante 2 semanas antes de revisar el estado de la meta.',
-          fechaActualizacion: '2026-08-01',
-        },
-      ],
-    },
+    planesIndividuales: [
+      {
+        id: 'plan-sofia',
+        fechaCreacion: '2026-02-12',
+        estado: 'activo',
+        motivo: 'Seguimiento de lenguaje expresivo tras evaluación externa.',
+        periodo: { inicio: '2026-02-12' },
+        metas: [
+          {
+            id: 'meta-sofia-vocabulario',
+            skillId: 'palabras',
+            descripcion: 'Ampliar vocabulario expresivo a 20+ palabras espontáneas.',
+            estado: 'en_progreso',
+            estrategias: 'Ofrecer 2 opciones con apoyo visual; celebrar cualquier intento verbal, no solo la palabra exacta.',
+            siguientePaso: 'Observar en Circle Time y Centros durante 2 semanas antes de revisar el estado de la meta.',
+            fechaActualizacion: '2026-08-01',
+            fechaCreacion: '2026-02-12',
+            origen: 'maestra',
+            historial: [
+              { fecha: '2026-02-12', a: 'por_trabajar', nota: 'Meta creada tras la evaluación de ingreso.' },
+              { fecha: '2026-08-01', de: 'por_trabajar', a: 'en_progreso', nota: 'Empezó a decir palabras sueltas con más frecuencia.' },
+            ],
+          },
+        ],
+      },
+    ],
     skills: [
       { id: 'palabras', nombre: 'Vocabulario de 2 palabras', estadoDesarrollo: 'en_desarrollo', estadoEvidencia: 'suficiente', actualizado: '2026-09-05' },
       { id: 'apilar', nombre: 'Apila 4+ bloques', estadoDesarrollo: 'dominado', estadoEvidencia: 'suficiente', actualizado: '2026-08-22' },
@@ -540,12 +628,24 @@ const NINOS_STORAGE_KEY = 'raiz_ninos';
 /** Lee el roster real desde este dispositivo — localStorage mientras no exista Supabase (paso 8
  * del orden acordado), mismo patrón que `leerProgramaConfig`. Nunca lanza si el storage no está
  * disponible (SSR/modo privado). */
+/** Datos guardados antes de 6d tenían `planIndividual` (un solo plan) — se convierte al leer a
+ * `planesIndividuales[]` para no perder nada ni pedir borrar el almacenamiento (misma técnica que
+ * la mini-migración de `evidencias[]`). */
+type NinoLegado = Nino & { planIndividual?: PlanIndividual };
+function normalizarNino(n: NinoLegado): Nino {
+  const { planIndividual, ...resto } = n;
+  if (planIndividual && !resto.planesIndividuales) {
+    return { ...resto, planesIndividuales: [{ ...planIndividual, periodo: planIndividual.periodo ?? { inicio: planIndividual.fechaCreacion } }] };
+  }
+  return resto;
+}
+
 export function leerNinos(): Nino[] {
   if (typeof window === 'undefined') return NINOS_SEMILLA;
   try {
     const guardado = window.localStorage.getItem(NINOS_STORAGE_KEY);
     if (!guardado) return NINOS_SEMILLA;
-    const parseado = JSON.parse(guardado) as Nino[];
+    const parseado = (JSON.parse(guardado) as NinoLegado[]).map(normalizarNino);
     return Array.isArray(parseado) && parseado.length > 0 ? parseado : NINOS_SEMILLA;
   } catch {
     return NINOS_SEMILLA;
@@ -1999,14 +2099,16 @@ type CandidatoFoco = { prioridad: 1 | 2 | 3; skillId: string; individualGoalId?:
  * real de observar en ESTA experiencia). */
 function candidatoFocoParaActividad(nino: Nino, actividad: Actividad): CandidatoFoco | null {
   if (!actividad.skillsRelacionados || actividad.skillsRelacionados.length === 0) return null;
-  const metaPlan = nino.planIndividual?.metas.find(
-    (m) => m.skillId && actividad.skillsRelacionados!.includes(m.skillId) && m.estado !== 'alcanzado'
-  );
+  // Solo metas ACTIVAS del plan ACTIVO (6d): Cumplida y Cerrada nunca vuelven a personalizar.
+  const metaPlan = metasActivasDeNino(nino).find((m) => m.skillId && actividad.skillsRelacionados!.includes(m.skillId));
   if (metaPlan) {
     return { prioridad: 1, skillId: metaPlan.skillId!, individualGoalId: metaPlan.id, meta: metaPlan.descripcion, observar: metaPlan.siguientePaso ?? metaPlan.descripcion };
   }
   const edadMeses = edadEnMeses(nino.fechaNacimiento);
+  // Un skill con meta Cumplida/Cerrada tampoco se sugiere solo por seguir "en desarrollo" (6d).
+  const skillsTerminados = skillsConMetaTerminada(nino);
   for (const skillId of actividad.skillsRelacionados) {
+    if (skillsTerminados.has(skillId)) continue;
     const catalogo = SKILLS_CATALOG.find((s) => s.id === skillId);
     // Nunca sugerir un skill fuera del rango de edad del catálogo (ej. "tijeras" 36-60m no aplica
     // a un bebé de 11 meses) — sin esto, "sin dato todavía" se confundía con "no le corresponde

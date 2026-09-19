@@ -1473,6 +1473,42 @@ Individual) — el usuario pidió validar 6c en navegador antes de avanzar.
   solo para los 2 skills nuevos (palabras/apilar sin cambio no generaron); registro legado
   convertido; 2 evidencias en una observación persistidas; revisión visual a 375px OK.
 
+### Sesión 6, paso 7 / 6d — Prioridades, Plan Individual asistido y ciclo de vida de metas (CONSTRUIDO; pendiente que el usuario lo valide)
+Plan aprobado por el usuario (A–I) + 2 precisiones (migrar a `planesIndividuales[]`, máx. 2 prioridades: una
+PRINCIPAL y otra "también conviene observar") + 3 ajustes (no_priorizar no silencia para siempre; umbrales
+0–1/2/3+ son SOLO demo y la maestra nunca ve "nivel 3"; una evaluación por sí sola NO genera Plan Individual).
+- **Código:** `lib/prioridades.ts` (toda la lógica y `RUTAS_DEMO`), `components/app/prioridades-card.tsx`,
+  `/ninos/[id]/plan-individual/propuesta` (nuevo), `/ninos/[id]/plan-individual` (reescrito), Progreso y
+  detalle de habilidad. `seed-data.ts`: `metaEstaActiva`, `planesDeNino/planActivoDeNino/metasActivasDeNino`,
+  `skillsConMetaTerminada`, `ESTADO_META_LABEL`, `normalizarNino` (lectura compatible `planIndividual` →
+  `planesIndividuales[]`); Sofía sembrada con historial de meta.
+- **Prioridades:** solo skills en desarrollo SIN meta activa ni meta cumplida/cerrada. 6 señales (edad, tiempo,
+  contexto, raíz, documentado, evaluación); nivel por señales DISTINTAS (demo). Solo evidencia profesional
+  aprobada. Decisiones en `raiz_prioridades_decisiones` con "huella" de lo que RAÍZ sabía:
+  `seguir_observando` calla 4 semanas o hasta información nueva; `no_priorizar` calla hasta información
+  MATERIALMENTE nueva (evaluación aprobada nueva, cambio de estado, ≥2 observaciones nuevas en ≥2 contextos)
+  y entonces solo muestra una línea discreta "¿quieres revisar esta prioridad?".
+- **Propuesta de plan:** solo si hay ruta demo + punto actual en la evidencia + nivel de apoyo intencional; ver
+  la propuesta NO crea nada; "Crear Plan Individual" (o editar y crear) es la aprobación. Raíces: relevantes
+  solo si siguen en desarrollo con evidencia; sin ruta definida no se inventan.
+- **Metas:** estados Por trabajar/En progreso/Casi lograda/Cumplida(`alcanzado`)/Cerrada(`cerrada`, motivo
+  obligatorio); `historial[]` de cada cambio (con observaciones vistas); RAÍZ solo AVISA "esta meta tiene
+  nueva evidencia" (`evidenciaVistaIds`), nunca cambia el estado; una meta Cumplida/Cerrada no se borra, deja
+  de personalizar Planeación (incluido el skill en desarrollo) y limpia `metaActiva` del perfil.
+- **Planes históricos:** "Cerrar este periodo" archiva (con `periodo.fin`) y crea uno nuevo; se pueden continuar
+  metas en curso (copia con `continuaDeMetaId`). Nada se sobrescribe.
+- **Demo (no oficial, espera Catálogo Pedagógico Oficial + IA):** umbrales/señales/semanas, `RUTAS_DEMO`
+  (solo tijeras y escribir el nombre), textos de estrategias y oportunidades.
+- **Verificado en navegador (12/12 del usuario):** Luca 1 prioridad principal sin lenguaje de diagnóstico;
+  seguir observando/no priorizar persisten tras recargar; 1 observación nueva no reabre un no priorizar, un
+  cambio de estado sí (línea discreta); ver propuesta no crea; crear requiere el botón; meta activa entra a
+  Planeación (`individualGoalId`); Cumplida y Cerrada salen; ambas quedan en "Logros y metas anteriores" con
+  historial; plan nuevo no sobrescribe; observación nueva → aviso sin cambiar estado; datos antiguos con
+  `planIndividual` se leen bien. tsc ✓ · build ✓ (28 rutas) · sin errores de consola.
+- **Limitaciones conocidas:** el caso de 2 prioridades simultáneas no se ve con la semilla (solo Luca tiene
+  candidata); `/ninos-foco` sigue leyendo la semilla fija; sin Supabase todo vive en localStorage.
+- **Siguiente:** 6e-1 Registro Mensual (solo tras validar 6d). **NO avanzar a 6e sin OK del usuario.**
+
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).
   MFA disponible para la cuenta de la directora/dueña del programa (doc maestro sec. 59). Los

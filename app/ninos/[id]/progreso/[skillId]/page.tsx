@@ -15,6 +15,7 @@ import { ArrowLeft } from 'lucide-react';
 import { AppShell, LeafCheck, SkillBadge } from '@/components/app/shell';
 import {
   BLOQUE_LABEL,
+  ESTADO_META_LABEL,
   SKILLS_CATALOG,
   actividadYPlanPorId,
   agregarEventosSkill,
@@ -38,6 +39,7 @@ import {
   type Observacion,
   type ObservacionSkill,
 } from '@/lib/seed-data';
+import { metasConPlan, periodoTexto } from '@/lib/prioridades';
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.05 } } };
 const item: Variants = {
@@ -54,7 +56,6 @@ const OPCIONES_REVISION: { id: string; texto: string; estados: EstadosSkill }[] 
 ];
 
 const FUENTE_EVENTO_LABEL: Record<string, string> = { evaluacion: 'Evaluación aprobada', revision_maestra: 'Revisión de la maestra' };
-const ESTADO_META_LABEL: Record<string, string> = { por_trabajar: 'Por trabajar', en_progreso: 'En progreso', casi: 'Casi lograda', alcanzado: 'Cumplida' };
 const FECHA_LARGA = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'short', year: 'numeric' });
 
 function formatearFecha(iso: string): string {
@@ -130,7 +131,7 @@ function DetalleHabilidadContenido() {
     .map((e) => ({ evaluacion: e, resultado: e.resultados.find((r) => r.skillId === params.skillId) }))
     .filter((x) => x.resultado)
     .sort((a, b) => a.evaluacion.fecha.localeCompare(b.evaluacion.fecha));
-  const metas = (nino.planIndividual?.metas ?? []).filter((m) => m.skillId === params.skillId);
+  const metas = metasConPlan(nino).filter((x) => x.meta.skillId === params.skillId);
 
   const opcionActualId = OPCIONES_REVISION.find((o) => coinciden(estadosActuales, o.estados))?.id ?? null;
   const seleccion = OPCIONES_REVISION.find((o) => o.id === opcionElegida);
@@ -397,11 +398,15 @@ function DetalleHabilidadContenido() {
           <motion.section variants={item} className="mb-6">
             <Etiqueta>Plan Individual</Etiqueta>
             <ul className="mt-2 flex flex-col gap-2">
-              {metas.map((m) => (
+              {metas.map(({ meta: m, plan }) => (
                 <li key={m.id}>
                   <Link href={`/ninos/${nino.id}/plan-individual`} className="block rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]">
                     <p className="text-[14px] font-medium text-[var(--text-primary)]">{m.descripcion}</p>
-                    <p className="mt-0.5 text-[12px] font-semibold text-[var(--accent)]">{ESTADO_META_LABEL[m.estado]}</p>
+                    <p className="mt-0.5 text-[12px] font-semibold text-[var(--accent)]">
+                      {ESTADO_META_LABEL[m.estado]}
+                      {m.fechaCumplimiento ? ` — ${formatearFecha(m.fechaCumplimiento)}` : m.fechaCierre ? ` — ${formatearFecha(m.fechaCierre)}` : ''}
+                      {plan.estado === 'archivado' ? ` · plan ${periodoTexto(plan)}` : ''}
+                    </p>
                   </Link>
                 </li>
               ))}

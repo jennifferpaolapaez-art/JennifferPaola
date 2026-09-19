@@ -136,7 +136,7 @@ export function NinoFormulario({
       fechaUltimaEvaluacionAprobada: ninoExistente?.fechaUltimaEvaluacionAprobada,
       evaluaciones: ninoExistente?.evaluaciones ?? [],
       evaluacionesExternas: ninoExistente?.evaluacionesExternas ?? [],
-      planIndividual: ninoExistente?.planIndividual,
+      planesIndividuales: ninoExistente?.planesIndividuales,
     };
     onGuardar(nino);
   }
