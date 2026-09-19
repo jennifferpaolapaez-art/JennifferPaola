@@ -3034,10 +3034,7 @@ export interface EvidenciaDeSkill {
   relacion: ObservacionSkill;
 }
 
-/** Observaciones cuya relación con este skill la maestra ACEPTÓ — es lo que cuenta como evidencia.
- * (`sugerido`/`rechazado` nunca cuentan; las oportunidades "No observado" van aparte.) Sale
- * indicado si todavía no tienen redacción profesional aprobada. */
-export function evidenciaDeSkill(ninoId: string, skillId: string, observaciones: Observacion[], relaciones: ObservacionSkill[]): EvidenciaDeSkill[] {
+function observacionesConSkillAceptado(ninoId: string, skillId: string, observaciones: Observacion[], relaciones: ObservacionSkill[]): EvidenciaDeSkill[] {
   const resultado: EvidenciaDeSkill[] = [];
   for (const o of observaciones) {
     if (o.ninoId !== ninoId) continue;
@@ -3045,6 +3042,33 @@ export function evidenciaDeSkill(ninoId: string, skillId: string, observaciones:
     if (relacion) resultado.push({ observacion: o, relacion });
   }
   return resultado.sort((a, b) => b.observacion.fecha.localeCompare(a.observacion.fecha));
+}
+
+/** EVIDENCIA PEDAGÓGICA VÁLIDA: observaciones con este skill ACEPTADO **y** redacción profesional
+ * aprobada (regla del usuario, Sesión 6 paso 7). Es lo único que cuenta para "nueva evidencia para
+ * revisar" y lo que consumirán después evaluación, prioridades y Plan Individual — por eso este es
+ * el default seguro. (`sugerido`/`rechazado` nunca cuentan; las oportunidades "No observado" van
+ * aparte; las notas pendientes de redacción van en `pendientesRedaccionDeSkill`.) */
+export function evidenciaDeSkill(ninoId: string, skillId: string, observaciones: Observacion[], relaciones: ObservacionSkill[]): EvidenciaDeSkill[] {
+  return observacionesConSkillAceptado(ninoId, skillId, observaciones, relaciones).filter((e) => estadoRegistroObservacion(e.observacion) === 'profesional_aprobada');
+}
+
+/** Notas con este skill aceptado que TODAVÍA no tienen redacción profesional aprobada: visibles
+ * (para que no se pierdan) pero NO cuentan como evidencia, no disparan "nueva evidencia para
+ * revisar" y no alimentan nada más hasta que la maestra apruebe la redacción. */
+export function pendientesRedaccionDeSkill(ninoId: string, skillId: string, observaciones: Observacion[], relaciones: ObservacionSkill[]): EvidenciaDeSkill[] {
+  return observacionesConSkillAceptado(ninoId, skillId, observaciones, relaciones).filter((e) => estadoRegistroObservacion(e.observacion) === 'pendiente_redaccion');
+}
+
+/** Aprueba la redacción profesional de una observación YA guardada (estaba pendiente): a partir de
+ * ese momento pasa a contar como evidencia utilizable. La `notaOriginal` no se toca. */
+export function aprobarRedaccionObservacion(observacionId: string, redaccion: string, idioma: string = 'es'): Observacion[] {
+  const texto = redaccion.trim();
+  const actualizadas = leerObservaciones().map((o) =>
+    o.id === observacionId && texto ? { ...o, redaccionProfesional: texto, idiomaRedaccion: idioma } : o
+  );
+  guardarObservaciones(actualizadas);
+  return actualizadas;
 }
 
 export function oportunidadesSinEvidenciaDeSkill(ninoId: string, skillId: string, observaciones: Observacion[]): Observacion[] {
@@ -3058,8 +3082,8 @@ export function sugeridasSinRevisarDeSkill(ninoId: string, skillId: string, obse
   return relaciones.filter((r) => idsDelNino.has(r.observacionId) && r.skillId === skillId && r.estado === 'sugerido').length;
 }
 
-/** "Hay nueva evidencia para revisar esta habilidad": observaciones con este skill ACEPTADO
- * posteriores al último cambio aprobado (o a la fecha del estado vivo si nunca hubo eventos). Solo
+/** "Hay nueva evidencia para revisar esta habilidad": observaciones VÁLIDAS (skill aceptado + redacción
+ * profesional aprobada — las pendientes de redacción NO disparan este aviso) posteriores al último cambio aprobado (o a la fecha del estado vivo si nunca hubo eventos). Solo
  * avisa — cambiar el estado sigue siendo una acción explícita de la maestra. */
 export function evidenciaNuevaParaRevisar(
   ninoId: string,

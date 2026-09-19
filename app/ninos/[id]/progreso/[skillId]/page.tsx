@@ -19,7 +19,6 @@ import {
   actividadYPlanPorId,
   agregarEventosSkill,
   describirEstadoSkill,
-  estadoRegistroObservacion,
   evidenciaDeSkill,
   evidenciaNuevaParaRevisar,
   eventosDeSkill,
@@ -30,6 +29,7 @@ import {
   leerObservaciones,
   ninoPorId,
   oportunidadesSinEvidenciaDeSkill,
+  pendientesRedaccionDeSkill,
   revisarHabilidad,
   sugeridasSinRevisarDeSkill,
   type EstadosSkill,
@@ -113,6 +113,14 @@ function DetalleHabilidadContenido() {
   const estadosActuales: EstadosSkill | undefined = skill ? { estadoDesarrollo: skill.estadoDesarrollo, estadoEvidencia: skill.estadoEvidencia } : undefined;
   const historial = eventosDeSkill(nino.id, params.skillId, eventos);
   const evidencia = evidenciaDeSkill(nino.id, params.skillId, observaciones, relaciones);
+  const pendientes = pendientesRedaccionDeSkill(nino.id, params.skillId, observaciones, relaciones);
+  // Línea de tiempo: cambios de estado aprobados + notas pendientes de redacción (visibles para no
+  // perderse, pero distintas: no son un cambio de estado ni cuentan como evidencia todavía).
+  const linea = [
+    ...historial.map((e) => ({ tipo: 'evento' as const, fecha: e.fecha, evento: e })),
+    ...pendientes.map((p) => ({ tipo: 'pendiente' as const, fecha: p.observacion.fecha, observacion: p.observacion })),
+  ].sort((a, b) => a.fecha.localeCompare(b.fecha));
+  const ultimoEventoId = historial.slice(-1)[0]?.id;
   const nuevas = evidenciaNuevaParaRevisar(nino.id, { id: params.skillId, actualizado: skill?.actualizado }, observaciones, relaciones, eventos);
   const idsNuevas = new Set(nuevas.map((n) => n.observacion.id));
   const oportunidades = oportunidadesSinEvidenciaDeSkill(nino.id, params.skillId, observaciones);
@@ -259,26 +267,45 @@ function DetalleHabilidadContenido() {
 
         <motion.section variants={item} className="mb-6">
           <Etiqueta>Cómo ha evolucionado</Etiqueta>
-          {historial.length === 0 ? (
+          {linea.length === 0 ? (
             <p className="mt-2 text-[14px] leading-snug text-[var(--text-secondary)]">
               {skill ? `Sin cambios registrados todavía. Estado actual desde ${formatearFecha(skill.actualizado)}.` : 'Todavía no hay un estado registrado para esta habilidad.'}
             </p>
           ) : (
             <ol className="mt-3 flex flex-col">
-              {historial.map((e, i) => {
-                const esUltimo = i === historial.length - 1;
+              {linea.map((entrada, i) => {
+                const hayMas = i < linea.length - 1;
+                if (entrada.tipo === 'pendiente') {
+                  return (
+                    <li key={`pend-${entrada.observacion.id}`} className="relative flex gap-3 pb-4 last:pb-0">
+                      {hayMas && <span className="absolute left-[5px] top-4 h-full w-px bg-[color-mix(in_oklab,var(--text-tertiary)_30%,transparent)]" aria-hidden="true" />}
+                      <span className="relative mt-1 size-[11px] shrink-0 rounded-full border-2 border-dashed border-[var(--butter)] bg-transparent" aria-hidden="true" />
+                      <div className="min-w-0">
+                        <p className="text-[14px] font-semibold text-[var(--butter)]">Nota pendiente de redacción profesional</p>
+                        <p className="text-[12px] text-[var(--text-secondary)]">
+                          {formatearFecha(entrada.fecha)} · no cuenta todavía como evidencia ·{' '}
+                          <Link href={`/observaciones/${entrada.observacion.id}`} className="font-semibold text-[var(--accent)] underline">
+                            Ver nota
+                          </Link>
+                        </p>
+                      </div>
+                    </li>
+                  );
+                }
+                const e = entrada.evento;
+                const esActual = e.id === ultimoEventoId;
                 return (
                   <li key={e.id} className="relative flex gap-3 pb-4 last:pb-0">
-                    {!esUltimo && <span className="absolute left-[5px] top-4 h-full w-px bg-[color-mix(in_oklab,var(--text-tertiary)_30%,transparent)]" aria-hidden="true" />}
+                    {hayMas && <span className="absolute left-[5px] top-4 h-full w-px bg-[color-mix(in_oklab,var(--text-tertiary)_30%,transparent)]" aria-hidden="true" />}
                     <span
                       className="relative mt-1 size-[11px] shrink-0 rounded-full"
-                      style={{ background: esUltimo ? 'var(--accent)' : 'var(--text-tertiary)' }}
+                      style={{ background: esActual ? 'var(--accent)' : 'var(--text-tertiary)' }}
                       aria-hidden="true"
                     />
                     <div className="min-w-0">
                       <p className="text-[14px] font-semibold text-[var(--text-primary)]">
                         {describirEstadoSkill(e.nuevo)}
-                        {esUltimo && <span className="ml-1.5 text-[11px] font-semibold text-[var(--accent)]">· actual</span>}
+                        {esActual && <span className="ml-1.5 text-[11px] font-semibold text-[var(--accent)]">· actual</span>}
                       </p>
                       <p className="text-[12px] text-[var(--text-secondary)]">
                         {formatearFecha(e.fecha)} · {FUENTE_EVENTO_LABEL[e.fuente]}
@@ -304,7 +331,6 @@ function DetalleHabilidadContenido() {
                     <p className="text-[12px] text-[var(--text-tertiary)]">
                       {formatearFecha(o.fecha)}
                       {idsNuevas.has(o.id) && <span className="ml-1.5 font-semibold text-[var(--butter)]">· nueva</span>}
-                      {estadoRegistroObservacion(o) === 'pendiente_redaccion' && <span className="ml-1.5 font-semibold text-[var(--butter)]">· pendiente de redacción profesional</span>}
                     </p>
                     <p className="mt-1 text-[14px] leading-snug text-[var(--text-primary)]">{o.redaccionProfesional ?? o.notaOriginal}</p>
                     {o.actividadId && (() => {
@@ -319,6 +345,11 @@ function DetalleHabilidadContenido() {
                 </li>
               ))}
             </ul>
+          )}
+          {pendientes.length > 0 && (
+            <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">
+              Hay {pendientes.length} {pendientes.length === 1 ? 'nota' : 'notas'} con esta habilidad aceptada pero pendiente{pendientes.length === 1 ? '' : 's'} de redacción profesional — aparece{pendientes.length === 1 ? '' : 'n'} en la línea de tiempo y cuenta{pendientes.length === 1 ? '' : 'n'} como evidencia cuando apruebes la redacción.
+            </p>
           )}
           {sugeridas > 0 && (
             <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">

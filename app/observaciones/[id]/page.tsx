@@ -14,8 +14,10 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, type Variants } from 'motion/react';
 import { ArrowLeft, Paperclip, X } from 'lucide-react';
-import { AppShell, AvatarInicial, LeafCheck } from '@/components/app/shell';
+import { AppShell, AvatarInicial, Chip, LeafCheck } from '@/components/app/shell';
 import {
+  aprobarRedaccionObservacion,
+  generarRedaccionProfesionalSimulada,
   leerNinos,
   leerObservaciones,
   skillsDeObservacion,
@@ -28,6 +30,7 @@ import {
   type Nino,
   type Observacion,
   type ObservacionSkill,
+  type RedaccionSugerida,
 } from '@/lib/seed-data';
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } } };
@@ -56,6 +59,10 @@ export default function DetalleObservacion() {
   const [skills, setSkills] = useState<ObservacionSkill[]>([]);
   const [cargado, setCargado] = useState(false);
   const [verNotaOriginal, setVerNotaOriginal] = useState(false);
+  const [organizando, setOrganizando] = useState(false);
+  const [sugerida, setSugerida] = useState<RedaccionSugerida | null>(null);
+  const [textoRedaccion, setTextoRedaccion] = useState('');
+  const [aclaracionDescartada, setAclaracionDescartada] = useState(false);
 
   useEffect(() => {
     setNinos(leerNinos());
@@ -84,6 +91,27 @@ export default function DetalleObservacion() {
 
   function revisarSkill(skillId: string, nuevoEstado: 'aceptado' | 'rechazado') {
     setSkills(actualizarEstadoObservacionSkill(observacion!.id, skillId, nuevoEstado));
+  }
+
+  /** Genera la redacción sugerida para una observación que quedó "pendiente" (mismo generador de
+   * `/observar`, misma anonimización) — la maestra la edita y aprueba; solo entonces cuenta. */
+  function organizarRedaccion() {
+    const s = generarRedaccionProfesionalSimulada(observacion!.notaOriginal, observacion!.ninoId, ninos);
+    setSugerida(s);
+    setTextoRedaccion(s.texto);
+    setAclaracionDescartada(false);
+    setOrganizando(true);
+  }
+
+  function regenerarConAclaracion(opcion: string) {
+    const s = generarRedaccionProfesionalSimulada(observacion!.notaOriginal, observacion!.ninoId, ninos, opcion);
+    setSugerida(s);
+    setTextoRedaccion(s.texto);
+  }
+
+  function aprobarRedaccion() {
+    setObservaciones(aprobarRedaccionObservacion(observacion!.id, textoRedaccion));
+    setOrganizando(false);
   }
 
   const skillsRelacionados = skillsDeObservacion(observacion.id, skills);
@@ -153,6 +181,65 @@ export default function DetalleObservacion() {
           )}
         </motion.section>
 
+        {estadoRegistro === 'pendiente_redaccion' && (
+          <motion.section variants={item} className="mb-5">
+            {!organizando ? (
+              <button
+                type="button"
+                onClick={organizarRedaccion}
+                className="flex h-11 w-full items-center justify-center rounded-[var(--radius-button)] border-2 border-dashed border-[color-mix(in_oklab,var(--accent)_45%,transparent)] text-[14px] font-semibold text-[var(--accent)]"
+              >
+                Organizar redacción profesional
+              </button>
+            ) : (
+              <div className="rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]">
+                <Etiqueta>Observación profesional sugerida</Etiqueta>
+                <textarea
+                  id="redaccion-pendiente"
+                  value={textoRedaccion}
+                  onChange={(e) => setTextoRedaccion(e.target.value)}
+                  rows={5}
+                  placeholder="RAÍZ no encontró hechos suficientes — escribe tu propia versión objetiva."
+                  className="mt-2 w-full resize-none rounded-[var(--radius-button)] border border-[color-mix(in_oklab,var(--text-tertiary)_28%,transparent)] bg-[var(--surface)] p-3 text-[15px] text-[var(--text-primary)] outline-none focus-visible:border-[var(--accent)]"
+                />
+                {sugerida && sugerida.excluidas.length > 0 && (
+                  <p className="mt-2 text-[12px] leading-snug text-[var(--text-tertiary)]">
+                    No incluimos: {sugerida.excluidas.map((ex) => `“${ex.fragmento}” (${ex.motivo})`).join('; ')}.
+                  </p>
+                )}
+                {sugerida?.aclaracionDisponible && !aclaracionDescartada && (
+                  <div className="mt-3 rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--butter)_12%,transparent)] p-3">
+                    <p className="text-[13px] leading-snug text-[var(--text-primary)]">{sugerida.aclaracionDisponible.pregunta}</p>
+                    <p className="mt-1 text-[12px] text-[var(--text-tertiary)]">Opcional.</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {sugerida.aclaracionDisponible.opciones.map((op) => (
+                        <Chip key={op} label={op} activo={false} onClick={() => regenerarConAclaracion(op)} />
+                      ))}
+                      <button type="button" onClick={() => setAclaracionDescartada(true)} className="text-[13px] font-semibold text-[var(--text-secondary)] underline">
+                        No es necesario
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div className="mt-4 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    disabled={!textoRedaccion.trim()}
+                    onClick={aprobarRedaccion}
+                    className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[var(--radius-button)] bg-[var(--accent)] text-[16px] font-semibold text-[var(--bg)] disabled:opacity-50"
+                  >
+                    <LeafCheck size={16} />
+                    Usar esta redacción
+                  </button>
+                  <button type="button" onClick={() => setOrganizando(false)} className="text-center text-[13px] font-semibold text-[var(--text-secondary)] underline">
+                    Ahora no
+                  </button>
+                </div>
+              </div>
+            )}
+          </motion.section>
+        )}
+
         {skillsRelacionados.length > 0 && (
           <motion.section variants={item} className="mb-5">
             <Etiqueta>Skills relacionados</Etiqueta>
@@ -168,13 +255,16 @@ export default function DetalleObservacion() {
                       </span>
                     </div>
                     {s.evidenciaTextual && <p className="mt-1.5 text-[13px] leading-snug text-[var(--text-secondary)]">Evidencia: “{s.evidenciaTextual}”</p>}
-                    {s.estado === 'aceptado' && (
+                    {s.estado === 'aceptado' && estadoRegistro === 'profesional_aprobada' && (
                       <Link
                         href={`/ninos/${nino.id}/progreso/${s.skillId}?revisar=1`}
                         className="mt-2 inline-block text-[13px] font-semibold text-[var(--accent)] underline"
                       >
                         Revisar habilidad
                       </Link>
+                    )}
+                    {s.estado === 'aceptado' && estadoRegistro === 'pendiente_redaccion' && (
+                      <p className="mt-2 text-[12px] text-[var(--text-tertiary)]">Cuenta como evidencia cuando apruebes la redacción profesional.</p>
                     )}
                     {s.estado === 'sugerido' && (
                       <div className="mt-3 flex gap-2">

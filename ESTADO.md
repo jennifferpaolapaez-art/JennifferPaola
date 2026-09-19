@@ -1425,7 +1425,7 @@ Informe Mensual (nace `child_reports` con `tipo`, `audiencia`, `version`, `reemp
 Álbum Anual = fase independiente posterior. El plan anterior de "My Learning Journey mensual" queda
 DESCARTADO.
 
-### Sesión 6, paso 7 / 6c — Progreso vivo + historial de skills + Revisar habilidad (CONSTRUIDO, pendiente validación del usuario)
+### Sesión 6, paso 7 / 6c — Progreso vivo + historial de skills + Revisar habilidad (CONSTRUIDO, APROBADO por el usuario tras el ajuste de niveles de evidencia)
 **Alcance exacto (sin ampliar):** Progreso vivo, `child_skill_events`, detalle de habilidad,
 "Revisar habilidad", trazabilidad y mini-migración de evidencia. NO se tocó 6d (prioridades/Plan
 Individual) — el usuario pidió validar 6c en navegador antes de avanzar.
@@ -1452,10 +1452,17 @@ Individual) — el usuario pidió validar 6c en navegador antes de avanzar.
   "Revisar habilidad" con 5 opciones compactas + nota opcional). El perfil gana la tarjeta
   "Progreso" y las habilidades enlazan al detalle; el detalle de observación enlaza "Revisar
   habilidad" desde cada skill aceptado.
-- **Decisión a confirmar:** en Progreso, una observación con skill aceptado pero "pendiente de
-  redacción" SÍ cuenta como evidencia visible (con etiqueta "pendiente de redacción profesional"),
-  porque la maestra ya la aceptó; lo que no puede es alimentar Registro/Informe/evaluaciones/
-  reportes. Fácil de cambiar si se prefiere excluirla también de Progreso.
+- **DECISIÓN DEL USUARIO (aprobada, 6c cerrado): tres niveles distintos.** (1) Evidencia profesional
+  aprobada (skill aceptado + redacción aprobada): visible, cuenta como evidencia, dispara "hay
+  nueva evidencia para revisar" y podrá alimentar evaluación/prioridades/Plan Individual. (2)
+  Pendiente de redacción profesional: VISIBLE en la línea de tiempo del skill (marcador hueco,
+  "no cuenta todavía como evidencia") pero NO cuenta como evidencia, NO dispara el aviso, NO
+  alimenta prioridades/evaluación/Plan Individual/Registro/Informe/reportes; al aprobar su
+  redacción (botón "Organizar redacción profesional" en el detalle de la observación, mismo
+  generador y anonimización de `/observar`) pasa al nivel 1. (3) Oportunidad "No observado": aparte,
+  ni evidencia, ni dificultad, ni pendiente. Implementación: `evidenciaDeSkill` (default seguro para
+  todo consumidor futuro, 6d incluido) solo devuelve el nivel 1; `pendientesRedaccionDeSkill` el 2;
+  `oportunidadesSinEvidenciaDeSkill` el 3; `aprobarRedaccionObservacion` mueve 2→1.
 - Micro-observaciones: `OpcionRapida.frase` da redacciones gramaticales ("siguió una línea recta
   de forma independiente").
 - **Verificado:** tsc ✓ · build ✓ (27 rutas) · en navegador con Luca: la observación nueva de tijeras
