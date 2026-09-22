@@ -1519,6 +1519,71 @@ PRINCIPAL y otra "también conviene observar") + 3 ajustes (no_priorizar no sile
 - **Limitaciones conocidas:** el caso de 2 prioridades simultáneas no se ve con la semilla (solo Luca tiene
   candidata); sin Supabase todo vive en localStorage; con un roster vacío la app cae a la semilla completa
   (comportamiento previo de `leerNinos`, no cambiado).
+
+### Sesión 6, paso 7 / 6d — AMPLIACIÓN: varias áreas/metas por plan + checkpoints mensuales (CONSTRUIDO Y APROBADO por el usuario)
+El usuario corrigió 6d antes de pasar a 6e-1: **un Plan Individual NO es "1 área = 1 meta"** — pertenece al
+niño durante un periodo y puede tener varias áreas, cada una con una o varias metas. Plan aprobado (A–J) +
+3 precisiones (fecha de revisión = inicio + frecuencia, nunca "3 columnas de mes" fijas, editable; RAÍZ NUNCA
+sugiere "Aún no" sin una regla controlada — sin evidencia = `sin_evidencia`, nunca deducido; los checkpoints
+solo aplican mientras la meta existe/está activa — "no aplica" antes de crearse o después de Cumplida/Cerrada,
+nunca confundido con "sin revisar").
+- **El modelo YA soportaba varias metas por plan** (`PlanIndividual.metas[]`) — se reutilizó sin arquitectura
+  paralela. Solo se ampliaron campos opcionales en `seed-data.ts`: `MetaIndividual.areaId` (vocabulario de
+  dominios del catálogo; se deriva del skill si falta), `puntoActualInicial` (snapshot inmutable al crear, para
+  comparar inicio vs. final en 6f), `rutaPasoId`, `oportunidades/queObservar/raices` (snapshot al crear),
+  `checkpoints?: CheckpointMeta[]`; `PlanIndividual.fechaRevisionPrevista?`. Todo opcional — compatible con
+  los planes de una sola meta ya existentes (Sofía, Zayne) sin migración.
+- **Checkpoint mensual ≠ ciclo de vida de la meta** (regla central, separada explícitamente): `EstadoCheckpoint`
+  = `sin_evidencia | aun_no (NY) | emergente (E) | adquirido (A)`, uno por mes, SOLO si la maestra lo confirmó.
+  Un mes sin entrada es "sin revisar" (distinto de `sin_evidencia`, que es una decisión confirmada). El ciclo
+  de vida de la meta (Por trabajar…Cerrada) es intacto de 6c/6d — un checkpoint A solo SUGIERE revisar el
+  estado ("¿Quieres marcarla Cumplida?"), nunca la cambia solo.
+- **Nuevo `lib/plan-seguimiento.ts`:** `mesesDelPlan` (inicio → fin real o `fechaRevisionPrevista`, topado a
+  hoy si venció; meses futuros se listan pero se ven atenuados), `fechaRevisionPrevistaPorDefecto` (inicio +
+  frecuencia configurada, nunca fijo), `aplicacionDeMetaEnMes` (`no_aplica_antes/no_aplica_despues/aplica`,
+  usa `fechaCreacion` y `fechaCumplimiento`/`fechaCierre` de la meta), `sugerirCheckpoint` (DEMO: usa solo
+  evidencia profesional aprobada de ESE mes ligada al `skillId`; sin ruta o sin `rutaPasoId` → no sugiere
+  nada, la maestra decide viendo la evidencia; con ruta, compara el paso de la evidencia contra el paso
+  objetivo de la meta → Emergente/Adquirido; NUNCA sugiere Aún no), `confirmarCheckpoint`, `sugiereMarcarCumplida`,
+  `agruparMetasPorArea`, `metasParaRevisionDelMes`.
+- **`lib/prioridades.ts`:** `PrioridadesDelNino.sugeridasTodas` (sin tope de 2, para la propuesta),
+  `conclusionPlanDelNino` (`no_necesita | seguir_observando | hay_areas`, derivada, nunca guardada — banner
+  en la tarjeta de Progreso), `DOMINIO_AREA_OPCIONES`. Reemplazado `BorradorPlan`/`construirBorradorPlan`/
+  `crearPlanDesdeBorrador` (una sola meta) por `PropuestaArea`/`PropuestaGrupoSkill`/`PropuestaMeta` +
+  `construirPropuestaPlan` + `crearPlanDesdePropuesta`: agrupa por área, cada skill con ruta demo ofrece hasta
+  2 metas candidatas (paso siguiente + el que le sigue) marcando SOLO la primera por defecto ("sugerida por
+  RAÍZ", nunca "aprobada"); sin ruta, no inventa — ofrece agregar meta manual ligada al skill. `crearMetaManual`
+  ahora acepta `areaId`.
+- **Pantallas:** `/ninos/[id]/plan-individual` reescrita — agrupa por área, cada meta muestra su fila de meses
+  (tocar un mes abre sugerencia/evidencia/confirmar), aviso "¿Marcar Cumplida?" separado del aviso de nueva
+  evidencia, fecha de revisión editable. `/ninos/[id]/plan-individual/propuesta` reescrita — varias áreas con
+  checkboxes por meta, editar texto, agregar meta manual por habilidad, agregar área nueva (vocabulario
+  controlado), "Seguir observando" por área (NO persiste la decisión hasta "Crear Plan Individual" — ver bug
+  corregido abajo). Nueva `/ninos/[id]/plan-individual/revision` (Revisión Mensual, agrupada por área, con
+  navegación ← → entre meses del plan). Progreso, perfil y `/ninos-foco` agrupan/resumen por área.
+- **3 fallos reales encontrados y corregidos durante la verificación:**
+  1. Marcar un área "Seguir observando" en la propuesta no excluía sus metas ya marcadas al crear (`crear()`
+     no filtraba por área oculta) → se limpia `marcadas`/`manualesPorSkill` de esa área al ocultarla.
+  2. Eso a su vez rompía "Deshacer" (la decisión de prioridad se persistía de inmediato, así que deshacer el
+     toggle local no traía de vuelta el área) → se movió el registro de la decisión a `crear()` (solo si el
+     área sigue marcada al confirmar); "Seguir observando" y "Deshacer" ahora son 100% reversibles mientras no
+     se apruebe el Plan, igual que el resto de la propuesta.
+  3. La fecha de revisión prevista por defecto usaba `new Date()` (reloj real) en vez de `FECHA_HOY` → corregido.
+  4. La cuadrícula de meses en `/plan-individual` trataba `sin_evidencia` como si fuera una sugerencia de RAÍZ
+     (mismo texto que Emergente/Adquirido) en vez de la rama "no hay evidencia todavía" → corregido para que
+     coincida con Revisión Mensual.
+- **Verificado en navegador (14/14 del usuario + regresión de 6d):** propuesta con 3 áreas (2 con ruta y varias
+  metas candidatas, 1 sin ruta con meta manual); Mateo sin candidatos → "no necesita Plan Individual"; meta
+  creada hoy muestra SEP–DIC completos; meta agregada a mitad de periodo → meses previos "no aplica" (·),
+  nunca "sin revisar" (?); mes sin evidencia → `sin_evidencia`, nunca NY automático (Zayne, agosto); evidencia
+  real de septiembre → RAÍZ sugiere Emergente con criterio de ruta (Luca, tijeras); la maestra cambió la
+  sugerencia a Adquirido y quedó `sugeridoPorRaiz` ≠ `estado` guardado; checkpoint Adquirido → aviso
+  "¿Marcar Cumplida?" sin marcarla sola; al confirmar Cumplida conserva checkpoints/evidencia, sale de
+  Planeación; meta Cerrada igual (ya probado en 6d); metas de septiembre y noviembre coexisten en el mismo
+  plan; grid SEP/OCT/NOV/DIC visible sin confundir checkpoint con estado; con 2 metas activas en distintas
+  habilidades, Planeación solo selecciona la pertinente por actividad (`individualGoalId` correcto);
+  `/ninos-foco` resume "N metas activas" sin listar todas. tsc ✓ · build ✓ (29 rutas) · sin errores de consola
+  nuevos.
 - **Siguiente:** 6e-1 Registro Mensual (plan corto pendiente de aprobación). **NO avanzar a 6e sin OK.**
 
 ### Auth

@@ -23,6 +23,7 @@ import {
   leerObservaciones,
   leerObservacionSkills,
   leerProgramaConfig,
+  metaEstaActiva,
   metasActivasDeNino,
   ninoPorId,
   planActivoDeNino,
@@ -35,6 +36,7 @@ import {
   type GrupoProgreso,
   type Nino,
 } from '@/lib/seed-data';
+import { agruparMetasPorArea } from '@/lib/plan-seguimiento';
 
 const ESTADO_EVAL_LABEL: Record<string, string> = { borrador: 'Borrador', aprobada: 'Aprobada' };
 
@@ -333,15 +335,20 @@ export default function Perfil() {
           >
             {planActivoDeNino(nino) ? (
               <>
-                <ul className="mb-3 flex flex-col gap-2">
-                  {planActivoDeNino(nino)!.metas.map((m) => (
-                    <li key={m.id} className="rounded-[var(--radius-card)] bg-[var(--surface-2)] p-3.5">
-                      <p className="text-[14px] font-medium text-[var(--text-primary)]">{m.descripcion}</p>
-                      <p className="mt-1 text-[12px] font-semibold text-[var(--accent)]">{ESTADO_META_LABEL[m.estado]}</p>
-                      {m.siguientePaso && <p className="mt-1 text-[13px] leading-snug text-[var(--text-secondary)]">Siguiente paso: {m.siguientePaso}</p>}
-                    </li>
-                  ))}
-                </ul>
+                {agruparMetasPorArea(planActivoDeNino(nino)!.metas).map((a) => (
+                  <div key={a.areaId} className="mb-3">
+                    <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--text-tertiary)]">{a.area}</p>
+                    <ul className="flex flex-col gap-2">
+                      {a.metas.map((m) => (
+                        <li key={m.id} className="rounded-[var(--radius-card)] bg-[var(--surface-2)] p-3.5">
+                          <p className="text-[14px] font-medium text-[var(--text-primary)]">{m.descripcion}</p>
+                          <p className="mt-1 text-[12px] font-semibold text-[var(--accent)]">{ESTADO_META_LABEL[m.estado]}</p>
+                          {m.siguientePaso && metaEstaActiva(m) && <p className="mt-1 text-[13px] leading-snug text-[var(--text-secondary)]">Siguiente paso: {m.siguientePaso}</p>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
                 <Link href={`/ninos/${nino.id}/plan-individual`} className="text-[13px] font-semibold text-[var(--accent)] underline">
                   Ver y editar Plan Individual
                 </Link>

@@ -266,6 +266,52 @@ export interface CambioEstadoMeta {
 
 export type OrigenMeta = 'maestra' | 'raiz_sugerido_aprobado';
 
+/** Foto de una raíz/prerrequisito relevante AL MOMENTO de crear la meta (regla del usuario, 6d
+ * ampliación: "conservar dónde estaba y cómo lo vamos a trabajar"). No es la evaluación viva de la
+ * raíz (eso lo calcula `evaluarRaices` cada vez) — es el registro histórico de por qué se eligió
+ * esta meta, para no perderlo si la raíz cambia de estado después. */
+export interface RaizGuardada {
+  skillId?: string;
+  nombre: string;
+  nota: string;
+}
+
+/** Los CUATRO estados del checkpoint mensual — DISTINTO del ciclo de vida de la meta (6d ampliación,
+ * regla del usuario: "checkpoint mensual = evidencia de progreso; estado de meta = decisión
+ * pedagógica de la maestra"). `sin_evidencia` NUNCA es lo mismo que `aun_no`: uno significa "no
+ * observamos nada este mes", el otro significa "lo observamos y todavía no lo logra" — RAÍZ solo
+ * puede sugerir `aun_no` cuando exista una regla controlada que lo distinga (ver `plan-seguimiento.ts`,
+ * DEMO); si no hay esa regla, no sugiere nada y la maestra decide. Un mes sin `CheckpointMeta` es
+ * "todavía sin revisar" — un tercer estado implícito, distinto de `sin_evidencia` (que sí es una
+ * decisión confirmada de la maestra). */
+export type EstadoCheckpoint = 'sin_evidencia' | 'aun_no' | 'emergente' | 'adquirido';
+
+export const ESTADO_CHECKPOINT_ABREV: Record<EstadoCheckpoint, string> = {
+  sin_evidencia: '—',
+  aun_no: 'NY',
+  emergente: 'E',
+  adquirido: 'A',
+};
+
+export const ESTADO_CHECKPOINT_LABEL: Record<EstadoCheckpoint, string> = {
+  sin_evidencia: 'Sin evidencia / No observado',
+  aun_no: 'Aún no',
+  emergente: 'Emergente',
+  adquirido: 'Adquirido',
+};
+
+/** UN mes de seguimiento de UNA meta — solo existe si la maestra lo CONFIRMÓ (RAÍZ puede sugerir,
+ * nunca escribe sola). `sugeridoPorRaiz` guarda qué sugirió RAÍZ en ese momento, aunque la maestra
+ * haya confirmado otra cosa — así queda trazable cuándo coincidieron y cuándo no. */
+export interface CheckpointMeta {
+  mes: string; // 'AAAA-MM'
+  estado: EstadoCheckpoint;
+  sugeridoPorRaiz?: EstadoCheckpoint;
+  observacionIds?: string[];
+  nota?: string;
+  confirmadoEn: string; // ISO
+}
+
 /** UNA meta dentro del Plan Individual — RAÍZ nunca la marca `alcanzado` sola (regla del
  * usuario); solo puede sugerir revisar cuando hay evidencia, la maestra decide. */
 export interface MetaIndividual {
@@ -287,25 +333,52 @@ export interface MetaIndividual {
   /** Nada de la meta sale hacia la familia sin que la maestra lo marque (reportes, 6f). */
   compartibleConFamilia?: boolean;
   fechaRevision?: string;
-  /** Observaciones aprobadas que la maestra ya vio (al crear la meta o al revisarla) — sirve para
-   * avisar SOLO de evidencia realmente nueva. Ausente en metas anteriores: se usa la fecha. */
+  /** Observaciones aprobadas que la maestra ya vio (al crear la meta, al revisarla o al confirmar
+   * un checkpoint) — sirve para avisar SOLO de evidencia realmente nueva. Ausente en metas
+   * anteriores: se usa la fecha. */
   evidenciaVistaIds?: string[];
   /** Si continúa una meta de un plan anterior (archivado). */
   continuaDeMetaId?: string;
+  /** 6d ampliación — un Plan Individual puede tener VARIAS áreas con varias metas cada una (regla
+   * del usuario: "1 Plan Individual ≠ 1 área ≠ 1 meta"). Vocabulario de dominios del catálogo
+   * (`SkillCatalogEntry.dominio`) para metas con `skillId`; texto libre elegido por la maestra para
+   * una meta manual sin habilidad ligada. Ausente = se deriva del dominio de `skillId`, o "Sin área". */
+  areaId?: string;
+  /** Snapshot INMUTABLE de "dónde estaba" al crear la meta — nunca se recalcula (a diferencia del
+   * punto actual vivo que ya muestra Progreso); es lo que permite comparar inicio vs. final en 6f. */
+  puntoActualInicial?: string;
+  /** Qué paso de `RUTAS_DEMO` apunta esta meta — usado para que RAÍZ pueda sugerir un checkpoint
+   * (`sugerirCheckpoint`, `plan-seguimiento.ts`) sin inventar criterio. Ausente = sin ruta demo
+   * (meta manual o habilidad sin ruta controlada todavía) — RAÍZ nunca sugiere NY/E/A ahí. */
+  rutaPasoId?: string;
+  oportunidades?: string[];
+  queObservar?: string[];
+  /** Raíces relevantes AL CREAR la meta (ver `RaizGuardada`) — no se recalculan solas. */
+  raices?: RaizGuardada[];
+  /** Seguimiento mes a mes (ver `CheckpointMeta`) — SEPARADO del ciclo de vida (`estado`). Un mes sin
+   * entrada aquí es "todavía sin revisar", no "sin evidencia" (esa es una entrada explícita). */
+  checkpoints?: CheckpointMeta[];
 }
 
 /** Plan Individual — OPCIONAL, vive dentro del perfil del niño. Una necesidad/adaptación o una
  * evaluación NUNCA lo crea automáticamente — la maestra decide. Desde 6d un niño puede tener
  * VARIOS planes (`Nino.planesIndividuales`): uno activo y los anteriores archivados por periodo;
- * empezar uno nuevo nunca sobrescribe el anterior. */
+ * empezar uno nuevo nunca sobrescribe el anterior. Y desde la ampliación de 6d, UN plan puede
+ * contener varias áreas, cada una con una o varias metas (regla del usuario: "1 Plan Individual ≠
+ * 1 área ≠ 1 meta" — nunca crear un plan por cada meta). */
 export interface PlanIndividual {
   id: string;
   fechaCreacion: string;
   estado: EstadoPlanIndividual;
   motivo?: string;
-  /** Periodo que cubre (ISO). `fin` se completa al archivar (o es la fecha de revisión prevista). */
+  /** Periodo que cubre (ISO). `fin` se completa al archivar (fecha real de cierre). */
   periodo?: { inicio: string; fin?: string };
   archivadoEn?: string;
+  /** Fecha PREVISTA de revisión (6d ampliación, precisión del usuario: "fecha de inicio + frecuencia
+   * configurada", nunca asumir "trimestral = 3 columnas de mes"). Por defecto sale de la frecuencia
+   * de evaluación de Configuración; la maestra puede editarla. Define hasta qué mes muestra la
+   * cuadrícula de checkpoints mientras el plan sigue activo. */
+  fechaRevisionPrevista?: string;
   metas: MetaIndividual[];
 }
 
@@ -466,10 +539,12 @@ const NINOS_SEMILLA: Nino[] = [
         estado: 'activo',
         motivo: 'Consolidar el conteo hasta 8 antes de pasar a cantidades.',
         periodo: { inicio: '2026-08-17' },
+        fechaRevisionPrevista: '2026-11-17', // 6d ampliación: inicio + frecuencia trimestral configurada
         metas: [
           {
             id: 'meta-zayne-conteo',
             skillId: 'numeros-6-8',
+            areaId: 'pre_math',
             descripcion: 'Reconoce los números 6 a 8 sin contar con el dedo.',
             estado: 'en_progreso',
             estrategias: 'Usar fichas y huellas para contar, y pedirle que señale el número antes de contar.',
@@ -594,10 +669,12 @@ const NINOS_SEMILLA: Nino[] = [
         estado: 'activo',
         motivo: 'Seguimiento de lenguaje expresivo tras evaluación externa.',
         periodo: { inicio: '2026-02-12' },
+        fechaRevisionPrevista: '2026-05-12', // 6d ampliación: inicio + frecuencia trimestral (ya vencida — plan sigue activo, la maestra puede editarla)
         metas: [
           {
             id: 'meta-sofia-vocabulario',
             skillId: 'palabras',
+            areaId: 'comunicacion_lenguaje',
             descripcion: 'Ampliar vocabulario expresivo a 20+ palabras espontáneas.',
             estado: 'en_progreso',
             estrategias: 'Ofrecer 2 opciones con apoyo visual; celebrar cualquier intento verbal, no solo la palabra exacta.',

@@ -91,12 +91,16 @@ export function areaDeDominio(dominio: string): string {
   return DOMINIO_LABEL[dominio] ?? dominio.replace(/_/g, ' ');
 }
 
+/** Vocabulario de áreas para "Agregar otra área" en la propuesta de Plan Individual — mismos
+ * dominios del catálogo, nunca texto libre (regla del usuario, arquitectura del Perfil del niño v2). */
+export const DOMINIO_AREA_OPCIONES: { id: string; label: string }[] = Object.entries(DOMINIO_LABEL).map(([id, label]) => ({ id, label }));
+
 /* ── RUTAS DEMO ESCRITAS A MANO (solo tijeras y escribir el nombre — ver aviso de arriba) ──
    Una ruta es una progresión CONTROLADA: raíces relevantes, pasos observables en orden, y lo que la
    maestra puede hacer dentro de su rutina. Cualquier habilidad sin ruta aquí NO recibe raíces
    inventadas ni una propuesta de meta: RAÍZ dice honestamente que aún no hay ruta definida. */
 
-interface PasoRutaDemo {
+export interface PasoRutaDemo {
   id: string;
   /** Palabras (en minúsculas) que, si aparecen en una redacción profesional APROBADA, indican que el
    * niño ya muestra este paso. */
@@ -517,6 +521,10 @@ export interface PrioridadAceptada extends PrioridadSugerida {
 export interface PrioridadesDelNino {
   /** Máximo 2: la primera es la PRINCIPAL; la segunda, "también conviene observar". */
   sugeridas: PrioridadSugerida[];
+  /** Las mismas `sugeridas`, SIN el tope de 2 — usa esto cuando necesites saber TODAS las áreas
+   * candidatas (ej. la propuesta de Plan Individual, 6d ampliación), no solo lo que se muestra en
+   * la tarjeta de Progreso. */
+  sugeridasTodas: PrioridadSugerida[];
   /** Ya decididas antes pero con información nueva (o tiempo cumplido): se muestran discretas. */
   reabrir: PrioridadReabrir[];
   aceptadas: PrioridadAceptada[];
@@ -524,6 +532,21 @@ export interface PrioridadesDelNino {
   alternativas: PrioridadSugerida[];
   /** Cuántas prioridades están calladas por una decisión previa (para el enlace "decisiones anteriores"). */
   silenciadas: PrioridadSugerida[];
+}
+
+/** Los TRES veredictos que RAÍZ puede dar sobre si un niño necesita Plan Individual (6d ampliación,
+ * regla del usuario: "skill En desarrollo ≠ Plan Individual" y "evaluación realizada ≠ Plan
+ * Individual obligatorio"). Se deriva de `PrioridadesDelNino` — nunca es un estado guardado aparte. */
+export type ConclusionPlan = 'no_necesita' | 'seguir_observando' | 'hay_areas';
+
+/** `sugeridas`/`reabrir`/`aceptadas` conservan al menos un elemento cuando existe alguno (el tope de
+ * 2 solo recorta lo que sobra), así que basta mirarlos para saber si EXISTE algo en cada nivel —
+ * no hace falta recalcular sobre `sugeridasTodas` aquí. */
+export function conclusionPlanDelNino(calculo: PrioridadesDelNino): ConclusionPlan {
+  const relevantes = [...calculo.sugeridas, ...calculo.reabrir, ...calculo.aceptadas];
+  if (relevantes.some((p) => p.nivel === 'apoyo_intencional')) return 'hay_areas';
+  if (relevantes.some((p) => p.nivel === 'seguir_observando')) return 'seguir_observando';
+  return 'no_necesita';
 }
 
 const RANGO_NIVEL: Record<NivelPrioridad, number> = { apoyo_intencional: 2, seguir_observando: 1, esperado: 0 };
@@ -564,6 +587,7 @@ export function calcularPrioridadesDelNino(nino: Nino, datos: ContextoDatos, dec
   const alternativas = todas.filter((p) => ultimaDecision(decisiones, nino.id, p.skillId)?.decision !== 'aceptada');
   return {
     sugeridas: sugeribles.slice(0, MAX_PRIORIDADES_SUGERIDAS),
+    sugeridasTodas: sugeribles,
     reabrir: reabrir.slice(0, MAX_PRIORIDADES_SUGERIDAS),
     aceptadas,
     alternativas,
@@ -571,96 +595,191 @@ export function calcularPrioridadesDelNino(nino: Nino, datos: ContextoDatos, dec
   };
 }
 
-/* ── PROPUESTA DE PLAN INDIVIDUAL ── */
+/* ── PROPUESTA DE PLAN INDIVIDUAL (6d ampliación) ── Un Plan Individual NO es "1 área = 1 meta":
+   la propuesta reúne TODAS las áreas que podrían beneficiarse de apoyo intencional, y CADA área
+   puede traer más de una meta candidata (regla del usuario: "una prioridad puede generar más de una
+   meta"). La maestra selecciona, edita, agrega metas manuales o áreas nuevas, puede dejar un área
+   "seguir observando", y nada se crea hasta "Crear Plan Individual". ── */
 
-export interface BorradorPlan {
+export interface PropuestaMeta {
+  /** Id temporal solo para la UI (no es el id final de la meta, que se genera al crear). */
+  id: string;
   skillId: string;
-  area: string;
-  puntoActual: string;
-  metaSugerida: string;
+  descripcion: string;
   criterioDeLogro: string;
-  porQueEstaMeta: string;
+  rutaPasoId: string;
+  /** Solo la primera meta candidata de cada habilidad viene pre-marcada — el resto las elige la
+   * maestra (regla del usuario: "que quede claro que es 'sugerida por RAÍZ', no 'aprobada'"). */
+  porDefecto: boolean;
+}
+
+export interface PropuestaGrupoSkill {
+  skillId: string;
+  nombreSkill: string;
+  puntoActual: string;
+  porQue: string[];
   raices: RaizEvaluada[];
   estrategias: string[];
   oportunidades: string[];
   queObservar: string[];
   evidencia: { observacionId: string; fecha: string; texto: string }[];
-  fechaRevision: string;
+  /** Vacío cuando `sinRuta` — RAÍZ no inventa metas sin una ruta controlada (regla del usuario). */
+  metas: PropuestaMeta[];
+  sinRuta: boolean;
 }
 
-/** ¿Hay información suficiente para JUSTIFICAR una propuesta? Debe existir: un área prioritaria,
- * un punto actual determinable en una ruta definida, una meta observable, un porqué y evidencia
- * aprobada. Una evaluación por sí sola no alcanza — el resultado de una evaluación NUNCA es un
- * Plan Individual automático (regla del usuario). Y nunca se crea nada solo. */
-export function puedeSugerirPlan(prioridad: PrioridadSugerida, nino: Nino): { ok: boolean; motivo?: string } {
-  if (metasActivasDeNino(nino).some((m) => m.skillId === prioridad.skillId)) return { ok: false, motivo: 'Ya tiene una meta activa en esta área.' };
-  if (!prioridad.hayRuta) return { ok: false, motivo: 'Todavía no hay una ruta definida para esta habilidad, así que RAÍZ no propone una meta. Puedes crear tu propia meta.' };
-  if (prioridad.pasoActual < 0 || prioridad.observacionIds.length === 0) return { ok: false, motivo: 'Todavía falta evidencia aprobada para saber en qué punto está.' };
-  if (prioridad.nivel !== 'apoyo_intencional') return { ok: false, motivo: 'Por ahora conviene seguir observando antes de proponer un plan.' };
-  return { ok: true };
+export interface PropuestaArea {
+  areaId: string;
+  area: string;
+  grupos: PropuestaGrupoSkill[];
 }
 
-export function construirBorradorPlan(nino: Nino, prioridad: PrioridadSugerida, datos: ContextoDatos): BorradorPlan | null {
-  if (!puedeSugerirPlan(prioridad, nino).ok) return null;
-  const ruta = RUTAS_DEMO[prioridad.skillId];
-  const catalogo = SKILLS_CATALOG.find((c) => c.id === prioridad.skillId);
-  const siguiente = ruta.pasos[prioridad.pasoActual + 1] ?? ruta.pasos[prioridad.pasoActual];
-  const raices = evaluarRaices(nino, prioridad.skillId);
-  const evidencia = evidenciaDeSkill(nino.id, prioridad.skillId, datos.observaciones, datos.relaciones);
-  const rezagadas = raices.filter((r) => r.relevante);
-
-  let criterio = 'Observado en distintos momentos, no solo en uno.';
-  if (catalogo?.evidenciaRequerida === 'consistencia_repetida') criterio = `Observado al menos ${catalogo.vecesMinimas ?? 3} veces en momentos distintos.`;
-  else if (catalogo?.evidenciaRequerida === 'una_demostracion_clara') criterio = 'Una demostración clara es suficiente.';
-
-  const porQue = [
-    `Ya ${ruta.pasos[prioridad.pasoActual].logrado}, y el siguiente paso natural es "${siguiente.proximo.toLowerCase()}".`,
-    ...prioridad.porQue,
-    rezagadas.length > 0 ? `Antes de insistir, conviene tener presente su raíz: ${rezagadas.map((r) => r.nombre.toLowerCase()).join(' y ')}.` : null,
-  ].filter((x): x is string => !!x);
-
-  return {
-    skillId: prioridad.skillId,
-    area: prioridad.area,
-    puntoActual: prioridad.puntoActual,
-    metaSugerida: siguiente.meta.replace('{nombre}', nino.nombre),
-    criterioDeLogro: criterio,
-    porQueEstaMeta: porQue.join(' '),
-    raices,
-    estrategias: ruta.estrategias,
-    oportunidades: prioridad.oportunidades,
-    queObservar: ruta.queObservar,
-    evidencia: evidencia.map((e) => ({ observacionId: e.observacion.id, fecha: e.observacion.fecha, texto: e.observacion.redaccionProfesional ?? '' })),
-    fechaRevision: sumarDias(FECHA_HOY, ruta.semanasRevision * 7),
-  };
+/** Todas las habilidades que hoy podrían beneficiarse de apoyo intencional (SIN el tope de 2 de la
+ * tarjeta de Progreso) y que todavía no tienen una meta activa — la base de la propuesta. */
+function skillsParaPropuesta(nino: Nino, datos: ContextoDatos, decisiones: DecisionPrioridad[]): PrioridadSugerida[] {
+  const calculo = calcularPrioridadesDelNino(nino, datos, decisiones);
+  const candidatas = [...calculo.sugeridasTodas, ...calculo.reabrir, ...calculo.aceptadas].filter((p) => p.nivel === 'apoyo_intencional');
+  const porSkill = new Map<string, PrioridadSugerida>();
+  for (const p of candidatas) if (!porSkill.has(p.skillId)) porSkill.set(p.skillId, p);
+  const conMetaActiva = new Set(metasActivasDeNino(nino).map((m) => m.skillId));
+  return Array.from(porSkill.values()).filter((p) => !conMetaActiva.has(p.skillId));
 }
 
-export interface EdicionesBorrador {
-  meta: string;
-  estrategias: string;
-  siguientePaso: string;
-  fechaRevision: string;
+function criterioDeLogro(skillId: string): string {
+  const catalogo = SKILLS_CATALOG.find((c) => c.id === skillId);
+  if (catalogo?.evidenciaRequerida === 'consistencia_repetida') return `Observado al menos ${catalogo.vecesMinimas ?? 3} veces en momentos distintos.`;
+  if (catalogo?.evidenciaRequerida === 'una_demostracion_clara') return 'Una demostración clara es suficiente.';
+  return 'Observado en distintos momentos, no solo en uno.';
 }
 
-/** Aprobación explícita de la maestra: crea la meta (y el plan si no hay uno activo). Devuelve el
- * niño actualizado; quien llama lo persiste. Nunca se llama solo. */
-export function crearPlanDesdeBorrador(nino: Nino, borrador: BorradorPlan, ediciones: EdicionesBorrador): Nino {
-  const meta: MetaIndividual = {
-    id: `meta-${Date.now()}`,
-    skillId: borrador.skillId,
-    descripcion: ediciones.meta.trim() || borrador.metaSugerida,
-    estado: 'por_trabajar',
-    estrategias: ediciones.estrategias.trim() || undefined,
-    siguientePaso: ediciones.siguientePaso.trim() || undefined,
-    fechaActualizacion: FECHA_HOY,
-    fechaCreacion: FECHA_HOY,
-    fechaRevision: ediciones.fechaRevision || borrador.fechaRevision,
-    origen: 'raiz_sugerido_aprobado',
-    compartibleConFamilia: false,
-    evidenciaVistaIds: borrador.evidencia.map((e) => e.observacionId),
-    historial: [{ fecha: FECHA_HOY, a: 'por_trabajar', nota: 'Meta creada a partir de una propuesta de RAÍZ que la maestra aprobó.', observacionIds: borrador.evidencia.map((e) => e.observacionId) }],
-  };
-  return agregarMetaAlPlanActivo(nino, meta, `Prioridad: ${borrador.area.toLowerCase()}`);
+/** Arma la propuesta agrupada por área. RAÍZ SUGIERE — nada de esto crea ni guarda nada; solo
+ * `crearPlanDesdePropuesta` (con la selección de la maestra) escribe algo. */
+export function construirPropuestaPlan(nino: Nino, datos: ContextoDatos, decisiones: DecisionPrioridad[]): PropuestaArea[] {
+  const candidatas = skillsParaPropuesta(nino, datos, decisiones);
+  const porArea = new Map<string, PropuestaGrupoSkill[]>();
+  const areaLabelPorId = new Map<string, string>();
+
+  for (const p of candidatas) {
+    const areaId = p.dominio || 'sin-area';
+    areaLabelPorId.set(areaId, p.area);
+    const ruta = RUTAS_DEMO[p.skillId];
+    const evidencia = evidenciaDeSkill(nino.id, p.skillId, datos.observaciones, datos.relaciones);
+    const raices = evaluarRaices(nino, p.skillId);
+    // Hasta 2 metas candidatas: el siguiente paso de la ruta y el que le sigue — no una sola meta
+    // fija (regla del usuario: "una prioridad puede generar más de una meta cuando sea necesario").
+    let metas: PropuestaMeta[] = [];
+    if (ruta) {
+      const criterio = criterioDeLogro(p.skillId);
+      metas = [ruta.pasos[p.pasoActual + 1], ruta.pasos[p.pasoActual + 2]]
+        .filter((paso): paso is PasoRutaDemo => !!paso)
+        .map((paso, i) => ({
+          id: `${p.skillId}-${paso.id}`,
+          skillId: p.skillId,
+          descripcion: paso.meta.replace('{nombre}', nino.nombre),
+          criterioDeLogro: criterio,
+          rutaPasoId: paso.id,
+          porDefecto: i === 0,
+        }));
+    }
+    const grupo: PropuestaGrupoSkill = {
+      skillId: p.skillId,
+      nombreSkill: p.nombreSkill,
+      puntoActual: p.puntoActual,
+      porQue: p.porQue,
+      raices,
+      estrategias: ruta?.estrategias ?? [],
+      oportunidades: p.oportunidades,
+      queObservar: ruta?.queObservar ?? [],
+      evidencia: evidencia.map((e) => ({ observacionId: e.observacion.id, fecha: e.observacion.fecha, texto: e.observacion.redaccionProfesional ?? '' })),
+      metas,
+      sinRuta: !ruta,
+    };
+    const arr = porArea.get(areaId) ?? [];
+    arr.push(grupo);
+    porArea.set(areaId, arr);
+  }
+
+  return Array.from(porArea.entries()).map(([areaId, grupos]) => ({ areaId, area: areaLabelPorId.get(areaId) ?? areaId, grupos }));
+}
+
+export interface MetaManualPropuesta {
+  descripcion: string;
+  skillId?: string;
+  areaId: string;
+}
+
+export interface SeleccionPropuesta {
+  /** Metas sugeridas que la maestra dejó marcadas, con su texto (editable). */
+  metasSeleccionadas: { meta: PropuestaMeta; descripcion: string }[];
+  /** Agregadas a mano — dentro de un área sugerida (sin ruta) o en un área nueva. */
+  metasManuales: MetaManualPropuesta[];
+}
+
+/** Aprobación explícita de la maestra: crea (o reutiliza) el plan activo y agrega TODAS las metas
+ * seleccionadas, con su área, raíces, estrategias y evidencia ya vistas — nunca se llama solo.
+ * Devuelve los `skillId` que quedaron con meta, para limpiar sus decisiones de prioridad. */
+export function crearPlanDesdePropuesta(
+  nino: Nino,
+  areas: PropuestaArea[],
+  seleccion: SeleccionPropuesta,
+  fechaRevisionPrevista: string
+): { nino: Nino; skillIdsConMeta: string[] } {
+  const grupoPorSkill = new Map<string, PropuestaGrupoSkill>();
+  const areaIdPorSkill = new Map<string, string>();
+  for (const a of areas) for (const g of a.grupos) {
+    grupoPorSkill.set(g.skillId, g);
+    areaIdPorSkill.set(g.skillId, a.areaId);
+  }
+
+  const nuevasMetas: MetaIndividual[] = [];
+  const skillIdsConMeta: string[] = [];
+
+  for (const { meta, descripcion } of seleccion.metasSeleccionadas) {
+    const grupo = grupoPorSkill.get(meta.skillId);
+    if (!grupo) continue;
+    const rezagadas = grupo.raices.filter((r) => r.relevante);
+    nuevasMetas.push({
+      id: `meta-${Date.now()}-${meta.id}`,
+      skillId: meta.skillId,
+      areaId: areaIdPorSkill.get(meta.skillId),
+      descripcion: descripcion.trim() || meta.descripcion,
+      estado: 'por_trabajar',
+      estrategias: grupo.estrategias.join(' · ') || undefined,
+      siguientePaso: grupo.queObservar[0],
+      oportunidades: grupo.oportunidades,
+      queObservar: grupo.queObservar,
+      raices: rezagadas.map((r) => ({ skillId: r.skillId, nombre: r.nombre, nota: r.nota })),
+      puntoActualInicial: grupo.puntoActual,
+      rutaPasoId: meta.rutaPasoId,
+      fechaActualizacion: FECHA_HOY,
+      fechaCreacion: FECHA_HOY,
+      fechaRevision: fechaRevisionPrevista,
+      origen: 'raiz_sugerido_aprobado',
+      compartibleConFamilia: false,
+      evidenciaVistaIds: grupo.evidencia.map((e) => e.observacionId),
+      historial: [{ fecha: FECHA_HOY, a: 'por_trabajar', nota: 'Meta creada a partir de una propuesta de RAÍZ que la maestra aprobó.', observacionIds: grupo.evidencia.map((e) => e.observacionId) }],
+    });
+    if (!skillIdsConMeta.includes(meta.skillId)) skillIdsConMeta.push(meta.skillId);
+  }
+
+  for (const m of seleccion.metasManuales) {
+    if (!m.descripcion.trim()) continue;
+    nuevasMetas.push(crearMetaManual(m.descripcion, m.skillId, m.areaId));
+    if (m.skillId && !skillIdsConMeta.includes(m.skillId)) skillIdsConMeta.push(m.skillId);
+  }
+
+  let actualizado = nino;
+  for (const meta of nuevasMetas) actualizado = agregarMetaAlPlanActivo(actualizado, meta, 'Creado desde la propuesta de RAÍZ.');
+  const planId = planActivoDeNino(actualizado)?.id;
+  if (planId) {
+    actualizado = {
+      ...actualizado,
+      planesIndividuales: (actualizado.planesIndividuales ?? []).map((p) =>
+        p.id === planId && !p.fechaRevisionPrevista ? { ...p, fechaRevisionPrevista } : p
+      ),
+    };
+  }
+  return { nino: actualizado, skillIdsConMeta };
 }
 
 /** Agrega una meta al plan activo; si no hay uno, crea un plan nuevo (con periodo que empieza hoy). */
@@ -685,10 +804,15 @@ export function crearPlanVacio(nino: Nino, motivo?: string): Nino {
   return { ...nino, planesIndividuales: [...(nino.planesIndividuales ?? []), plan] };
 }
 
-export function crearMetaManual(descripcion: string, skillId?: string): MetaIndividual {
+/** Una meta manual puede o no estar ligada a una habilidad del catálogo. Sin `skillId`, nunca
+ * generará foco automático en Planeación (regla del usuario, 6d ampliación: "hasta que exista una
+ * relación pedagógica/skill/contexto que permita hacerlo de forma segura") — `candidatoFocoParaActividad`
+ * ya exige `m.skillId`, así que esto queda garantizado sin ningún cambio ahí. */
+export function crearMetaManual(descripcion: string, skillId?: string, areaId?: string): MetaIndividual {
   return {
-    id: `meta-${Date.now()}`,
+    id: `meta-${Date.now()}-${Math.round(Math.random() * 1000)}`,
     skillId,
+    areaId,
     descripcion: descripcion.trim(),
     estado: 'por_trabajar',
     fechaActualizacion: FECHA_HOY,
@@ -742,7 +866,9 @@ export function evidenciaNuevaParaMeta(nino: Nino, meta: MetaIndividual, observa
   return evidencia.filter((e) => e.observacion.fecha > meta.fechaActualizacion);
 }
 
-function actualizarMeta(nino: Nino, planId: string, metaId: string, cambio: (m: MetaIndividual) => MetaIndividual): Nino {
+/** Aplica un cambio a UNA meta dentro de UN plan y devuelve el niño actualizado — helper compartido
+ * con `plan-seguimiento.ts` (checkpoints mensuales) para no duplicar la navegación plan→meta. */
+export function actualizarMeta(nino: Nino, planId: string, metaId: string, cambio: (m: MetaIndividual) => MetaIndividual): Nino {
   return {
     ...nino,
     planesIndividuales: (nino.planesIndividuales ?? []).map((p) => (p.id === planId ? { ...p, metas: p.metas.map((m) => (m.id === metaId ? cambio(m) : m)) } : p)),

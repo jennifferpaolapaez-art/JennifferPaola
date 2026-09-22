@@ -39,6 +39,7 @@ import {
   type ProgramaConfig,
 } from '@/lib/seed-data';
 import { evidenciaNuevaParaMeta, fechaCorta, mesAnio, metasConPlan, periodoTexto } from '@/lib/prioridades';
+import { agruparMetasPorArea } from '@/lib/plan-seguimiento';
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.05 } } };
 const item: Variants = {
@@ -179,30 +180,35 @@ export default function ProgresoNino() {
         {metasActivas.length > 0 && (
           <motion.section variants={item} className="mb-6">
             <h2 className="mb-2 text-[16px] font-semibold text-[var(--text-primary)]">Metas activas</h2>
-            <ul className="flex flex-col gap-2">
-              {metasActivas.map((m) => {
-                const nuevas = evidenciaNuevaParaMeta(nino, m, observaciones, relaciones).length;
-                return (
-                  <li key={m.id}>
-                    <Link
-                      href={`/ninos/${nino.id}/plan-individual?revisar=${m.id}`}
-                      className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[14px] font-medium text-[var(--text-primary)]">{m.descripcion}</p>
-                        <p className="mt-0.5 text-[12px] font-semibold text-[var(--accent)]">{ESTADO_META_LABEL[m.estado]}</p>
-                        {nuevas > 0 && (
-                          <p className="mt-1 text-[12px] font-semibold text-[var(--butter)]">
-                            Esta meta tiene nueva evidencia. ¿Quieres revisar su estado?
-                          </p>
-                        )}
-                      </div>
-                      <ChevronRight size={16} className="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+            {agruparMetasPorArea(metasActivas).map((a) => (
+              <div key={a.areaId} className="mb-3 last:mb-0">
+                <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-[0.04em] text-[var(--text-tertiary)]">{a.area}</p>
+                <ul className="flex flex-col gap-2">
+                  {a.metas.map((m) => {
+                    const nuevas = evidenciaNuevaParaMeta(nino, m, observaciones, relaciones).length;
+                    return (
+                      <li key={m.id}>
+                        <Link
+                          href={`/ninos/${nino.id}/plan-individual?revisar=${m.id}`}
+                          className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-[14px] font-medium text-[var(--text-primary)]">{m.descripcion}</p>
+                            <p className="mt-0.5 text-[12px] font-semibold text-[var(--accent)]">{ESTADO_META_LABEL[m.estado]}</p>
+                            {nuevas > 0 && (
+                              <p className="mt-1 text-[12px] font-semibold text-[var(--butter)]">
+                                Esta meta tiene nueva evidencia. ¿Quieres revisar su estado?
+                              </p>
+                            )}
+                          </div>
+                          <ChevronRight size={16} className="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
           </motion.section>
         )}
 

@@ -104,7 +104,13 @@ export default function NinosFoco() {
                 </div>
 
                 <ul className="mt-3 flex flex-col gap-3">
-                  {metas.map((m) => {
+                  {[...metas]
+                    // Las que tienen evidencia nueva primero — no llenamos la tarjeta con TODAS las
+                    // metas si hay varias (regla del usuario, 6d ampliación): como máximo 2 aquí, el
+                    // resto se ve completo en el Plan Individual.
+                    .sort((a, b) => evidenciaNuevaParaMeta(nino, b, observaciones, relaciones).length - evidenciaNuevaParaMeta(nino, a, observaciones, relaciones).length)
+                    .slice(0, 2)
+                    .map((m) => {
                     const skill = m.skillId ? nino.skills.find((s) => s.id === m.skillId) : undefined;
                     const nombreSkill = nombreDeSkillDeMeta(nino, m.skillId);
                     const aprobadas = m.skillId ? evidenciaDeSkill(nino.id, m.skillId, observaciones, relaciones).length : 0;
@@ -144,6 +150,11 @@ export default function NinosFoco() {
                     );
                   })}
                 </ul>
+                {metas.length > 2 && (
+                  <Link href={`/ninos/${nino.id}/plan-individual`} className="mt-2 flex min-h-11 items-center text-[13px] font-semibold text-[var(--accent)] underline">
+                    y {metas.length - 2} {metas.length - 2 === 1 ? 'meta más' : 'metas más'} en su Plan Individual
+                  </Link>
+                )}
               </motion.li>
             ))}
           </ul>

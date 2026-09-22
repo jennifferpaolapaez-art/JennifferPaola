@@ -14,9 +14,9 @@ import { ChevronRight } from 'lucide-react';
 import type { Nino } from '@/lib/seed-data';
 import {
   calcularPrioridadesDelNino,
+  conclusionPlanDelNino,
   fechaCorta,
   leerDecisionesPrioridad,
-  puedeSugerirPlan,
   registrarDecisionPrioridad,
   ultimaDecision,
   type ContextoDatos,
@@ -163,6 +163,7 @@ export function TarjetaPrioridades({ nino, datos }: { nino: Nino; datos: Context
   const [verAnteriores, setVerAnteriores] = useState(false);
 
   const calculo = useMemo(() => calcularPrioridadesDelNino(nino, datos, decisiones), [nino, datos, decisiones]);
+  const conclusion = useMemo(() => conclusionPlanDelNino(calculo), [calculo]);
 
   // Las que la maestra decidió revisar de nuevo se comportan como sugeridas normales (tope 2 en total).
   const reabiertas: PrioridadSugerida[] = [...calculo.reabrir, ...calculo.silenciadas].filter((r) => revisando.includes(r.skillId));
@@ -194,9 +195,16 @@ export function TarjetaPrioridades({ nino, datos }: { nino: Nino; datos: Context
 
   return (
     <section aria-labelledby="titulo-prioridades" className="mb-6">
-      <h2 id="titulo-prioridades" className="mb-3 text-[17px] font-bold text-[var(--text-primary)] [font-family:var(--font-display)]">
+      <h2 id="titulo-prioridades" className="mb-1.5 text-[17px] font-bold text-[var(--text-primary)] [font-family:var(--font-display)]">
         ¿Qué convendría trabajar ahora?
       </h2>
+      <p className="mb-3 text-[13px] leading-snug text-[var(--text-secondary)]">
+        {conclusion === 'hay_areas'
+          ? 'RAÍZ encontró áreas que podrían beneficiarse de apoyo intencional.'
+          : conclusion === 'seguir_observando'
+            ? 'Conviene seguir observando antes de decidir — todavía no hace falta un Plan Individual.'
+            : `Por ahora ${nino.nombre} no necesita un Plan Individual — lo que está desarrollando va dentro de lo esperado.`}
+      </p>
 
       {aviso && (
         <p role="status" className="mb-3 rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--sage)_16%,transparent)] p-3 text-[13px] font-medium text-[var(--text-primary)]">
@@ -205,33 +213,30 @@ export function TarjetaPrioridades({ nino, datos }: { nino: Nino; datos: Context
       )}
 
       <div className="flex flex-col gap-3">
-        {calculo.aceptadas.map((a) => {
-          const plan = puedeSugerirPlan(a, nino);
-          return (
-            <div key={a.skillId} className="rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--accent)_8%,var(--surface))] p-4 shadow-[var(--shadow-1)]">
-              <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--accent)]">Prioridad aceptada</p>
-              <p className="mt-0.5 text-[16px] font-semibold text-[var(--text-primary)]">
-                {a.area} · {a.nombreSkill}
-              </p>
-              <p className="mt-1 text-[13px] leading-snug text-[var(--text-secondary)]">
-                <span className="font-semibold text-[var(--text-primary)]">Próximo paso: </span>
-                {a.proximoPaso}
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
-                {plan.ok ? (
-                  <Link href={`/ninos/${nino.id}/plan-individual/propuesta?skill=${a.skillId}`} className="flex min-h-11 items-center text-[14px] font-semibold text-[var(--accent)] underline">
-                    Ver propuesta de Plan Individual
-                  </Link>
-                ) : (
-                  <p className="text-[12px] leading-snug text-[var(--text-tertiary)]">{plan.motivo}</p>
-                )}
-                <button type="button" onClick={() => decidir(a, 'retirada')} className="min-h-11 text-[13px] font-semibold text-[var(--text-secondary)] underline">
-                  Quitar prioridad
-                </button>
-              </div>
+        {calculo.aceptadas.map((a) => (
+          <div key={a.skillId} className="rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--accent)_8%,var(--surface))] p-4 shadow-[var(--shadow-1)]">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.06em] text-[var(--accent)]">Prioridad aceptada</p>
+            <p className="mt-0.5 text-[16px] font-semibold text-[var(--text-primary)]">
+              {a.area} · {a.nombreSkill}
+            </p>
+            <p className="mt-1 text-[13px] leading-snug text-[var(--text-secondary)]">
+              <span className="font-semibold text-[var(--text-primary)]">Próximo paso: </span>
+              {a.proximoPaso}
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+              {a.nivel === 'apoyo_intencional' ? (
+                <Link href={`/ninos/${nino.id}/plan-individual/propuesta`} className="flex min-h-11 items-center text-[14px] font-semibold text-[var(--accent)] underline">
+                  Ver propuesta de Plan Individual
+                </Link>
+              ) : (
+                <p className="text-[12px] leading-snug text-[var(--text-tertiary)]">Por ahora conviene seguir observando antes de proponer un plan.</p>
+              )}
+              <button type="button" onClick={() => decidir(a, 'retirada')} className="min-h-11 text-[13px] font-semibold text-[var(--text-secondary)] underline">
+                Quitar prioridad
+              </button>
             </div>
-          );
-        })}
+          </div>
+        ))}
 
         {visibles.map((p, i) => (
           <TarjetaPrioridad key={p.skillId} p={p} rol={i === 0 ? 'principal' : 'secundaria'} nino={nino} alternativas={calculo.alternativas} onDecidir={decidir} onCambiar={cambiar} />
