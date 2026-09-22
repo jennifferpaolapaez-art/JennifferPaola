@@ -1360,6 +1360,37 @@ tocó `raiz_planeaciones`/`raiz_ninos` (siguen `null`) ni `/semana` (Semana 3 in
 mes" funciona sin IA; "Ayúdame a crear mi mes" (probado en Octubre) prellenó 4 subtemas demo con el
 aviso explícito "Propuesta de ejemplo — completa cada subtema con tu contenido real antes de
 aprobar". tsc ✓ · build ✓ (33 rutas) · sin errores de consola nuevos.
+
+### Ampliación de B — Personaje del Mes con tres caminos (CONSTRUIDA Y VALIDADA, 10/10 puntos)
+El campo "Personaje o persona del mes" (ya existía como campo `unico` genérico desde A) se amplió
+con un flujo guiado propio, en vez de un texto suelto: **A. RAÍZ sugiere** (hasta 4 opciones, nunca
+una sola, cada una con razón pedagógica breve — nunca elegida sola por RAÍZ) · **B. la maestra
+escribe el suyo** · **C. este mes no usar personaje**. Vive en `DisenoMensual.personajeDelMes?:
+PersonajeDelMes | 'sin_personaje'` (no en `MesCurricularAnual.campos` — sus sugerencias dependen
+del tema/subtemas/culturas de ESE diseño, no del Currículo Anual); `undefined` = todavía sin
+decidir, `'sin_personaje'` = decisión explícita de no usar ninguno, objeto = elegido (`nombre`,
+`origen:'sugerido_raiz'|'manual'`, `razonPedagogica?`, `relacionTema?`). El campo 'personaje' sigue
+siendo SOLO el interruptor de activación (`camposCurriculoAnual`) — se excluyó del marco genérico
+de texto (`/curriculo/mes/[mes]`) y del `MarcoDelMes` de la vista de Diseño, reemplazado por un
+enlace/sección dedicada.
+- **`PERSONAJES_DEMO` (⚠️ DEMO):** arquetipos/roles genéricos por tema (naturaleza→exploradora,
+  cuidadora de animales, científica ambiental; comunidad→líder local, educador, artista; identidad→
+  alguien cercano al salón; académico→profesión que usa números/letras/formas) — NUNCA nombres de
+  personas reales con biografías inventadas (regla explícita del usuario: "no inventes biografías,
+  hechos ni conexiones pedagógicas no verificadas"). `sugerirPersonajesDelMes(diseno)` empareja por
+  palabras clave contra tema+subtemas+conceptos, agrega una sugerencia por cada cultura en
+  `culturasRelacionadas` (nunca elegida sola, nunca infiere cultura del nombre de un niño), cae a
+  una sugerencia neutra si no hay match, y siempre recorta a máximo 4. Arquitectura lista para que
+  el servicio de IA real reemplace esta función más adelante sin tocar el resto del flujo.
+- **Verificado en navegador (10/10):** desactivado no aparece nada; activo muestra los 3 caminos;
+  pedir sugerencias mostró 2 opciones del tema "identidad" (por "Mi cuerpo") sin ninguna
+  preseleccionada; aceptar una la guardó con `origen:'sugerido_raiz'` y apareció en el Diseño;
+  "Cambiar" → "Escribir mi propio personaje" reemplazó por `origen:'manual'`; "Cambiar" → pedir
+  sugerencias → "Este mes no usar personaje" (dentro de la lista, rechazando todas) guardó
+  `'sin_personaje'`; agregar "Colombia" a culturas relacionadas y volver a pedir sugerencias sumó
+  "Una persona relevante de Colombia, a elegir por el equipo" sin elegirla sola; nada tocó
+  `raiz_planeaciones`/`raiz_ninos` (siguen `null`). tsc ✓ · build ✓ · sin errores de consola nuevos.
+
 **Siguiente:** Parte C — Calendario Pedagógico Real, con las 3 precisiones ya documentadas arriba
 (`/hoy` = fecha real siempre; `DiaCalendario.estado` separado de `eventos[]` y de
 `incluidoEnPlaneacion`/`modoPlaneacion`; semanas que cruzan de mes componen sin duplicar). NO

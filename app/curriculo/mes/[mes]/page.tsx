@@ -130,7 +130,18 @@ export default function EditarMesCurriculoPage() {
             (Color, Letras, Canciones…) — es opcional.
           </motion.p>
         ) : (
-          campos.map((c) => (
+          campos.map((c) =>
+            // Personaje del Mes tiene su propio flujo guiado (sugerencias/manual/ninguno) — vive en
+            // el Diseño del Mes, no como un campo de texto suelto aquí (regla del usuario).
+            c.id === 'personaje' ? (
+              <motion.p key={c.id} variants={item} className="mb-5 text-[13px] leading-snug text-[var(--text-secondary)]">
+                {c.etiqueta} se elige en el{' '}
+                <Link href={`/curriculo/mes/${mes}/diseno`} className="font-semibold text-[var(--accent)] underline">
+                  Diseño del Mes
+                </Link>
+                .
+              </motion.p>
+            ) : (
             <motion.div key={c.id} variants={item} className="mb-5">
               <label htmlFor={`campo-${c.id}`} className="mb-1 block text-[12px] font-medium text-[var(--text-tertiary)]">
                 {c.etiqueta}
@@ -150,7 +161,8 @@ export default function EditarMesCurriculoPage() {
                 />
               )}
             </motion.div>
-          ))
+            )
+          )
         )}
 
         <motion.div variants={item} className="flex flex-col gap-2">

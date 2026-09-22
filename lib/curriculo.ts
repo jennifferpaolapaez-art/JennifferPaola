@@ -244,6 +244,24 @@ export interface CulturaRelacionada {
  * detecta el desfase para avisar, sin tocar nada automáticamente. `version` existe SOLO para que
  * la Parte C pueda detectar más adelante que el diseño cambió después de generar un calendario —
  * no se usa todavía. */
+/** De dónde salió el personaje elegido — igual que `OrigenMeta` en Plan Individual: distingue
+ * "RAÍZ lo sugirió y la maestra lo aceptó" de "la maestra lo escribió ella misma". */
+export type OrigenPersonaje = 'sugerido_raiz' | 'manual';
+
+/** El personaje YA ELEGIDO por la maestra — nunca lo que RAÍZ propuso (eso es
+ * `SugerenciaPersonaje`, más abajo, que no se guarda hasta que se acepta). */
+export interface PersonajeDelMes {
+  nombre: string;
+  origen: OrigenPersonaje;
+  razonPedagogica?: string;
+  relacionTema?: string;
+  notasMaestra?: string;
+}
+
+/** `'sin_personaje'` = la maestra decidió explícitamente NO usar personaje este mes (distinto de
+ * `undefined` = todavía no se decidió nada). */
+export type PersonajeDelMesEstado = PersonajeDelMes | 'sin_personaje';
+
 export interface DisenoMensual {
   id: string;
   anio: number;
@@ -256,6 +274,10 @@ export interface DisenoMensual {
   culturasRelacionadas: CulturaRelacionada[];
   recursosGenerales: RecursoLibroCancion[];
   subtemas: Subtema[];
+  /** Personaje del Mes — SOLO si el programa activó ese campo en `camposCurriculoAnual`. Vive
+   * aquí (no en `MesCurricularAnual.campos`) porque sus sugerencias dependen del tema y las
+   * culturas de ESTE diseño, no del Currículo Anual. */
+  personajeDelMes?: PersonajeDelMesEstado;
   version: number;
   fechaCreacion: string;
   fechaActualizacion: string;
@@ -401,4 +423,117 @@ export function idiomasVocabulario(config: ProgramaConfig = leerProgramaConfig()
 
 export function crearVocabularioVacio(idiomas: string[], orden: number): VocabularioItem {
   return { id: `vocab-${Date.now()}-${Math.round(Math.random() * 1000)}`, terminos: idiomas.map((idioma) => ({ idioma, texto: '' })), orden };
+}
+
+/* ── PERSONAJE DEL MES — tres caminos: RAÍZ sugiere / la maestra escribe el suyo / este mes no se
+   usa (regla del usuario: "el uso de Personaje del Mes sigue siendo completamente opcional por
+   programa y por mes"). RAÍZ NUNCA elige uno sola — solo propone, con una razón pedagógica breve
+   cada vez, y la maestra confirma.
+
+   ⚠️ DEMO — sin IA real: el catálogo de abajo NO nombra personas reales con biografías inventadas
+   (regla del usuario: "no inventes biografías, hechos ni conexiones pedagógicas no verificadas").
+   Son ARQUETIPOS/roles genéricos (una científica, un artista local, alguien de la comunidad...) que
+   la maestra reemplaza por una persona real de su elección — exactamente lo que ya pedían los
+   ejemplos del usuario ("animales; medio ambiente; ciencia" / "educadores; artistas; líderes
+   comunitarios"), nunca una lista de celebridades con hechos no verificados. Cuando exista el
+   servicio de IA real, esta función es el punto que se reemplaza — la arquitectura ya queda lista
+   para eso. ── */
+
+/** Una propuesta de RAÍZ — NO es todavía el personaje elegido (eso es `PersonajeDelMes`, arriba).
+ * Nunca se guarda sola; solo cuando la maestra la acepta se convierte en `PersonajeDelMes`. */
+export interface SugerenciaPersonaje {
+  id: string;
+  nombre: string;
+  razonPedagogica: string;
+  relacionTema: string;
+  edadesSugeridas?: string;
+  relacionCultural?: string;
+}
+
+interface ArquetipoPersonajeDemo {
+  id: string;
+  nombre: string;
+  razonPedagogica: string;
+  relacionTema: string;
+  edadesSugeridas?: string;
+}
+
+interface GrupoPersonajeDemo {
+  palabrasClave: string[];
+  personajes: ArquetipoPersonajeDemo[];
+}
+
+const PERSONAJES_DEMO: GrupoPersonajeDemo[] = [
+  {
+    palabrasClave: ['natural', 'animal', 'planta', 'estacion', 'otoño', 'otono', 'primavera', 'ambiente', 'agua', 'sentidos'],
+    personajes: [
+      { id: 'nat-1', nombre: 'Un explorador o exploradora de la naturaleza', razonPedagogica: 'Ayuda a los niños a imaginar cómo se investiga el mundo natural con curiosidad y cuidado.', relacionTema: 'Conecta directamente con la observación del entorno.', edadesSugeridas: '3-5 años' },
+      { id: 'nat-2', nombre: 'Una persona que cuida animales (veterinaria/o o cuidador de zoológico)', razonPedagogica: 'Modela el valor del cuidado y la responsabilidad hacia otros seres vivos.', relacionTema: 'Relaciona el tema con una profesión concreta y cercana.', edadesSugeridas: '3-6 años' },
+      { id: 'nat-3', nombre: 'Una científica o científico del medio ambiente', razonPedagogica: 'Introduce la idea de que cuidar la naturaleza también es un trabajo real.', relacionTema: 'Apoya conceptos de conservación.', edadesSugeridas: '4-6 años' },
+    ],
+  },
+  {
+    palabrasClave: ['comunidad', 'vecindario', 'ayudante', 'servicio', 'gratitud'],
+    personajes: [
+      { id: 'com-1', nombre: 'Una persona líder de tu comunidad local', razonPedagogica: 'Ayuda a los niños a reconocer que hay personas reales, cercanas a ellos, que cuidan del lugar donde viven.', relacionTema: 'Directamente relacionado con el tema de comunidad.', edadesSugeridas: '3-6 años' },
+      { id: 'com-2', nombre: 'Una educadora o educador que el equipo admire', razonPedagogica: 'Refuerza el valor del aprendizaje y el cuidado dentro de la propia comunidad.', relacionTema: 'Conecta el salón con el mundo real.' },
+      { id: 'com-3', nombre: 'Una persona artista local', razonPedagogica: 'Muestra que la creatividad también construye comunidad.', relacionTema: 'Amplía la idea de comunidad más allá de lo familiar.' },
+    ],
+  },
+  {
+    palabrasClave: ['cuerpo', 'identidad', ' yo ', 'mi cuerpo', 'sentidos', 'familia', 'historia', 'emocion', 'seguridad'],
+    personajes: [
+      { id: 'id-1', nombre: 'Alguien de la propia comunidad del salón, a quien los niños puedan conocer en persona', razonPedagogica: 'Los temas de identidad se trabajan mejor con referentes cercanos y reales, no lejanos.', relacionTema: 'Apoya un mes centrado en "quién soy yo" mostrando que cada persona importa.' },
+      { id: 'id-2', nombre: 'Una persona con una historia de vida que el grupo pueda escuchar y comentar', razonPedagogica: 'Ofrece un ejemplo concreto de historia personal y pertenencia.', relacionTema: 'Conecta con identidad y familia.' },
+    ],
+  },
+  {
+    palabrasClave: ['numero', 'letra', 'forma', 'color', 'matematic', 'contar'],
+    personajes: [
+      { id: 'aca-1', nombre: 'Alguien que use números, formas o letras en su trabajo diario (panadera/o, arquitecta/o, ingeniera/o)', razonPedagogica: 'Muestra que los conceptos del mes existen fuera del salón, en trabajos reales.', relacionTema: 'Conecta el contenido académico con una profesión concreta.', edadesSugeridas: '4-6 años' },
+    ],
+  },
+];
+
+function personajesPorCultura(culturas: string[]): SugerenciaPersonaje[] {
+  return culturas
+    .filter((n) => n.trim())
+    .map((nombre, i) => ({
+      id: `cultura-${i}-${nombre}`,
+      nombre: `Una persona relevante de ${nombre}, a elegir por el equipo`,
+      razonPedagogica: `Representa la cultura de ${nombre}, que forma parte del diseño de este mes.`,
+      relacionTema: 'Está relacionado con una cultura que ya marcaste para este mes.',
+      relacionCultural: nombre,
+    }));
+}
+
+/** Hasta 4 sugerencias — nunca una lista larga, nunca una sola opción elegida por RAÍZ. Usa el
+ * tema, los subtemas y las culturas relacionadas de ESTE diseño; sin ningún match de tema, cae a
+ * una sugerencia neutra que nunca deja a la maestra sin nada que ver. */
+export function sugerirPersonajesDelMes(diseno: DisenoMensual): SugerenciaPersonaje[] {
+  const texto = [diseno.marcoSnapshot.tema, ...diseno.subtemas.flatMap((s) => [s.nombre, s.enfoque ?? '', ...s.conceptos])]
+    .join(' ')
+    .toLowerCase();
+  const deTemas: SugerenciaPersonaje[] = PERSONAJES_DEMO.filter((g) => g.palabrasClave.some((k) => texto.includes(k))).flatMap((g) => g.personajes);
+  const deCulturas = personajesPorCultura(diseno.culturasRelacionadas.map((c) => c.nombre));
+  const combinadas = [...deTemas, ...deCulturas];
+  if (combinadas.length === 0) {
+    return [
+      {
+        id: 'generico-1',
+        nombre: 'Una persona de la comunidad del salón relacionada con el tema del mes',
+        razonPedagogica: 'RAÍZ todavía no reconoce un tema específico para este mes — parte de alguien cercano a tu salón y ajusta desde ahí.',
+        relacionTema: 'Puedes ajustar esta sugerencia a tu tema real.',
+      },
+    ];
+  }
+  return combinadas.slice(0, 4);
+}
+
+export function elegirPersonajeDelMes(diseno: DisenoMensual, personaje: PersonajeDelMes): DisenoMensual {
+  return tocar({ ...diseno, personajeDelMes: personaje });
+}
+
+export function noUsarPersonajeDelMes(diseno: DisenoMensual): DisenoMensual {
+  return tocar({ ...diseno, personajeDelMes: 'sin_personaje' });
 }

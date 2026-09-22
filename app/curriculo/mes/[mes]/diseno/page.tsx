@@ -25,19 +25,23 @@ import {
   crearVocabularioVacio,
   curriculoActivo,
   disenoDeMes,
+  elegirPersonajeDelMes,
   eliminarSubtema,
   guardarDisenosMensuales,
   idiomasVocabulario,
   leerCurriculosAnuales,
   leerDisenosMensuales,
   moverSubtema,
+  noUsarPersonajeDelMes,
   puedeAprobarDiseno,
+  sugerirPersonajesDelMes,
   valorTieneContenido,
   volverABorrador,
   type CulturaRelacionada,
   type DisenoMensual,
   type RecursoLibroCancion,
   type Subtema,
+  type SugerenciaPersonaje,
   type TipoRecurso,
   type ValorCampoCurriculo,
 } from '@/lib/curriculo';
@@ -293,6 +297,140 @@ function EditorCulturas({ culturas, onCambio }: { culturas: CulturaRelacionada[]
   );
 }
 
+/** PERSONAJE DEL MES — tres caminos: RAÍZ sugiere / la maestra escribe el suyo / este mes no se
+ * usa. RAÍZ nunca elige uno sola — cada sugerencia queda como propuesta hasta que la maestra la
+ * toca; solo ESE clic la convierte en `diseno.personajeDelMes` (regla del usuario). */
+function PersonajeDelMesSection({ diseno, onCambio }: { diseno: DisenoMensual; onCambio: (d: DisenoMensual) => void }) {
+  const [sugerencias, setSugerencias] = useState<SugerenciaPersonaje[] | null>(null);
+  const [escribiendo, setEscribiendo] = useState(false);
+  const [nombreManual, setNombreManual] = useState('');
+  const [cambiando, setCambiando] = useState(false);
+
+  const elegido = diseno.personajeDelMes;
+
+  function reiniciar() {
+    setSugerencias(null);
+    setEscribiendo(false);
+    setNombreManual('');
+    setCambiando(false);
+  }
+
+  function aceptarSugerencia(s: SugerenciaPersonaje) {
+    onCambio(elegirPersonajeDelMes(diseno, { nombre: s.nombre, origen: 'sugerido_raiz', razonPedagogica: s.razonPedagogica, relacionTema: s.relacionTema }));
+    reiniciar();
+  }
+
+  function guardarManual() {
+    const n = nombreManual.trim();
+    if (!n) return;
+    onCambio(elegirPersonajeDelMes(diseno, { nombre: n, origen: 'manual' }));
+    reiniciar();
+  }
+
+  function noUsar() {
+    onCambio(noUsarPersonajeDelMes(diseno));
+    reiniciar();
+  }
+
+  const mostrarPicker = !elegido || cambiando;
+
+  return (
+    <div className="rounded-[var(--radius-card)] bg-[var(--surface)] p-4 shadow-[var(--shadow-1)]">
+      <Etiqueta>Personaje del mes</Etiqueta>
+
+      {!mostrarPicker && elegido && elegido !== 'sin_personaje' && (
+        <>
+          <p className="text-[15px] font-semibold text-[var(--text-primary)]">{elegido.nombre}</p>
+          <p className="mt-0.5 text-[12px] text-[var(--text-tertiary)]">{elegido.origen === 'sugerido_raiz' ? 'Sugerido por RAÍZ y aprobado por ti' : 'Elegido por ti'}</p>
+          {elegido.razonPedagogica && <p className="mt-2 text-[13px] leading-snug text-[var(--text-secondary)]">{elegido.razonPedagogica}</p>}
+          <button type="button" onClick={() => setCambiando(true)} className="mt-2 min-h-11 text-[13px] font-semibold text-[var(--accent)] underline">
+            Cambiar
+          </button>
+        </>
+      )}
+
+      {!mostrarPicker && elegido === 'sin_personaje' && (
+        <>
+          <p className="text-[14px] leading-snug text-[var(--text-secondary)]">Decidiste no usar personaje este mes.</p>
+          <button type="button" onClick={() => setCambiando(true)} className="mt-2 min-h-11 text-[13px] font-semibold text-[var(--accent)] underline">
+            Cambiar
+          </button>
+        </>
+      )}
+
+      {mostrarPicker && !sugerencias && !escribiendo && (
+        <div className="flex flex-col gap-2">
+          <button type="button" onClick={() => setSugerencias(sugerirPersonajesDelMes(diseno))} className="flex min-h-11 items-center gap-1.5 rounded-[var(--radius-button)] bg-[var(--surface-2)] px-3 text-[14px] font-semibold text-[var(--accent)]">
+            <Sparkles size={15} aria-hidden="true" />
+            RAÍZ me sugiere personajes
+          </button>
+          <button type="button" onClick={() => setEscribiendo(true)} className="min-h-11 rounded-[var(--radius-button)] bg-[var(--surface-2)] px-3 text-[14px] font-semibold text-[var(--text-primary)]">
+            Escribir mi propio personaje
+          </button>
+          <button type="button" onClick={noUsar} className="min-h-11 text-[13px] font-semibold text-[var(--text-secondary)] underline">
+            Este mes no usar personaje
+          </button>
+          {cambiando && (
+            <button type="button" onClick={reiniciar} className="min-h-11 text-[12px] text-[var(--text-tertiary)] underline">
+              Cancelar
+            </button>
+          )}
+        </div>
+      )}
+
+      {sugerencias && (
+        <div>
+          <p className="mb-2 text-[12px] leading-snug text-[var(--text-tertiary)]">
+            Según el tema de este mes. Son ideas DEMO — tú decides, y puedes ajustar cualquier detalle.
+          </p>
+          <ul className="flex flex-col gap-2">
+            {sugerencias.map((s) => (
+              <li key={s.id}>
+                <button type="button" onClick={() => aceptarSugerencia(s)} className="flex w-full items-start gap-2.5 rounded-[var(--radius-button)] bg-[var(--surface-2)] p-3 text-left">
+                  <span className="mt-1 size-3 shrink-0 rounded-full border-2 border-[var(--text-tertiary)]" aria-hidden="true" />
+                  <span className="min-w-0">
+                    <span className="block text-[14px] font-medium text-[var(--text-primary)]">{s.nombre}</span>
+                    <span className="mt-0.5 block text-[12px] leading-snug text-[var(--text-secondary)]">{s.razonPedagogica}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+            <li>
+              <button type="button" onClick={() => { setSugerencias(null); setEscribiendo(true); }} className="flex min-h-11 w-full items-center gap-2.5 rounded-[var(--radius-button)] bg-[var(--surface-2)] p-3 text-left text-[14px] font-medium text-[var(--text-primary)]">
+                <span className="size-3 shrink-0 rounded-full border-2 border-[var(--text-tertiary)]" aria-hidden="true" />
+                Escribir otro personaje
+              </button>
+            </li>
+            <li>
+              <button type="button" onClick={noUsar} className="flex min-h-11 w-full items-center gap-2.5 rounded-[var(--radius-button)] bg-[var(--surface-2)] p-3 text-left text-[14px] font-medium text-[var(--text-primary)]">
+                <span className="size-3 shrink-0 rounded-full border-2 border-[var(--text-tertiary)]" aria-hidden="true" />
+                Este mes no usar personaje
+              </button>
+            </li>
+          </ul>
+          <button type="button" onClick={reiniciar} className="mt-2 min-h-11 text-[12px] text-[var(--text-tertiary)] underline">
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {escribiendo && (
+        <div>
+          <input value={nombreManual} onChange={(e) => setNombreManual(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), guardarManual())} placeholder="Nombre del personaje" aria-label="Nombre del personaje" className={`${CAMPO_INPUT} mb-2`} />
+          <div className="flex flex-col gap-2">
+            <button type="button" onClick={guardarManual} disabled={!nombreManual.trim()} className="min-h-11 rounded-[var(--radius-button)] bg-[var(--accent)] px-3 text-[14px] font-semibold text-[var(--bg)] disabled:opacity-40">
+              Guardar
+            </button>
+            <button type="button" onClick={reiniciar} className="min-h-11 text-[12px] text-[var(--text-tertiary)] underline">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DisenoDelMesPage() {
   const params = useParams<{ mes: string }>();
   const router = useRouter();
@@ -315,6 +453,8 @@ export default function DisenoDelMesPage() {
   const anio = curriculo.anio;
   const diseno = disenoDeMes(anio, mes, disenos);
   const campos = camposActivos(config);
+  const camposMarcoVisibles = campos.filter((c) => c.id !== 'personaje');
+  const usaPersonaje = campos.some((c) => c.id === 'personaje');
   const idiomas = idiomasVocabulario(config);
 
   function persistir(actualizado: DisenoMensual) {
@@ -352,7 +492,7 @@ export default function DisenoDelMesPage() {
         </motion.header>
 
         <motion.div variants={item}>
-          <MarcoDelMes tema={temaMarco} campos={camposMarco} camposDef={campos} />
+          <MarcoDelMes tema={temaMarco} campos={camposMarco} camposDef={camposMarcoVisibles} />
         </motion.div>
 
         {!diseno ? (
@@ -406,6 +546,12 @@ export default function DisenoDelMesPage() {
             <motion.div variants={item} className="mb-6">
               <EditorRecursos recursos={diseno.recursosGenerales} onCambio={(recursosGenerales) => persistir(actualizarCampoDiseno(diseno, { recursosGenerales }))} etiqueta="Libros y canciones generales del mes" />
             </motion.div>
+
+            {usaPersonaje && (
+              <motion.div variants={item} className="mb-6">
+                <PersonajeDelMesSection diseno={diseno} onCambio={persistir} />
+              </motion.div>
+            )}
 
             <motion.section variants={item} className="mb-6">
               <h2 className="mb-3 text-[16px] font-semibold text-[var(--text-primary)]">Contenido del mes</h2>
