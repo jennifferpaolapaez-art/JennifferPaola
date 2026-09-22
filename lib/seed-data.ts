@@ -2841,6 +2841,16 @@ export const PRACTICA_A_EVITAR_LABEL: Record<PracticaAEvitar, string> = {
   otro: 'Otro',
 };
 
+/** Definición de UN campo del Currículo Anual (Color, Letras, Canciones…) — vive aquí (no en
+ * `lib/curriculo.ts`) porque `ProgramaConfig` la referencia y `seed-data.ts` no puede depender de
+ * `curriculo.ts` (evitar import circular). El programa elige cuáles usa — nunca un set fijo
+ * (Color/Número/Letras/Forma es SOLO el catálogo sugerido de `curriculo.ts`, no una obligación). */
+export interface CampoCurriculoDef {
+  id: string;
+  etiqueta: string;
+  tipo: 'unico' | 'lista';
+}
+
 export interface ProgramaConfig {
   nombrePrograma: string;
   tipoPrograma: TipoPrograma;
@@ -2856,6 +2866,9 @@ export interface ProgramaConfig {
   practicasAEvitar: PracticaAEvitar[];
   preferenciasGeneralesTexto?: string;
   rutinaBloques: BloqueRutina[];
+  /** Currículo Anual (nueva capa sobre Planeación) — qué campos usa este programa además de
+   * `tema`. Vacío por defecto: ningún programa está obligado a Color+Número+Letras+Forma. */
+  camposCurriculoAnual?: CampoCurriculoDef[];
 }
 
 export const PROGRAMA_CONFIG_DEFAULT: ProgramaConfig = {
@@ -2870,6 +2883,7 @@ export const PROGRAMA_CONFIG_DEFAULT: ProgramaConfig = {
   frecuenciaEvaluacion: 'trimestral',
   practicasAEvitar: [],
   rutinaBloques: RUTINA_PROGRAMA,
+  camposCurriculoAnual: [],
 };
 
 const PROGRAMA_CONFIG_STORAGE_KEY = 'raiz_programa_config';

@@ -1269,8 +1269,51 @@ desplazar el subtema del día, y ante días sobrantes propone integración/repas
 un subtema completo) — todo editable día por día después. Sin IA real: currículo/calendario/reparto
 son reglas DEMO explícitas (mismo patrón que Evaluaciones/Prioridades). Con IA real después (fase de
 servicios externos, `30`): redactar subtemas/vocabulario desde el tema, y el Paquete Visual.
-**NO EJECUTAR esta refactorización todavía — el usuario pidió revisar el plan corto antes de
-escribir código.** Cuando se apruebe, documentar aquí la decisión final antes de tocar Planeación.
+**Plan de construcción aprobado — orden A → B → C → D, cada uno con cierre verificable en
+navegador antes de seguir.** 3 precisiones del usuario incorporadas al diseño de C/D (documentadas
+para cuando lleguen, sin código de esas partes todavía):
+1. `/hoy` NUNCA usa el contexto seleccionado — solo la fecha real (`FECHA_HOY`). `/planeacion`,
+   `/semana`, `/planeacion/[id]` y el futuro `/calendario` sí respetan un `ContextoPlaneacion
+   {anio, mes, numeroSemana?}` navegable (una maestra puede preparar octubre estando en septiembre).
+2. `DiaCalendario` (parte C) separa `estado` operativo (abierto/cerrado/feriado/día_admin/
+   cierre_mensual/custom) de `eventos: EventoDia[]` (cumpleaños/fecha_cultural/estación/
+   celebración/personalizado) — nunca un solo campo resolviendo ambos; un día puede tener 0-N
+   eventos sin perder su estado. Además distingue `incluidoEnPlaneacion` (aparece en la
+   semana/rutina) de `modoPlaneacion: 'normal'|'rutina_ligera'|'sin_actividad_dirigida'` (si genera
+   o no una experiencia dirigida nueva) — el cierre de mes es "abierto, incluido, rutina_ligera",
+   nunca "día cerrado".
+3. Semanas que cruzan de mes (parte D, ej. "Sep 28 – Oct 2") componen días de dos
+   `CalendarioMensual` vecinos SIN duplicar `DiaCalendario`; la vista muestra el rango real de
+   fechas, nunca "Semana 1 de octubre".
+
+### Parte A — Currículo Anual (CONSTRUIDA Y VALIDADA, 8/8 puntos del usuario)
+Nuevo `lib/curriculo.ts`, independiente de Planeación/Semana/Hoy (no los toca en absoluto — se
+conecta recién en D). `ValorCampoCurriculo` = `{tipo:'unico', valor}` o `{tipo:'lista', valores[]}`
+— nunca todo forzado a un string. `CampoCurriculoDef` vive en `seed-data.ts` (no en `curriculo.ts`)
+porque `ProgramaConfig.camposCurriculoAnual?` la referencia y `seed-data` no puede depender de
+`curriculo.ts` — evita import circular. `CAMPOS_CURRICULO_SUGERIDOS` (Color/Número/Letras/Forma/
+Valor/Personaje/Enfoque cultural/Concepto matemático/Canciones/Libros/Estación) es solo catálogo
+sugerido — **ninguno activo por defecto**; el programa elige en `/curriculo/campos` (más agregar
+campos propios). `CurriculoAnual`/`MesCurricularAnual` (`tema` fijo + `campos` solo con lo activo),
+un currículo `activo` a la vez (mismo patrón que `PlanIndividual`). Dos caminos: `crearCurriculoVacio`
+("Ya tengo mi currículo") y `crearCurriculoDesdePlantillaDemo` (`TEMAS_PLANTILLA_DEMO`, 12 temas
+genéricos sin sesgo de hemisferio, marcados en pantalla como "Plantilla de ejemplo — revisa y
+edita cada mes; todavía no es tu currículo terminado" — nunca finge ser IA pedagógica real).
+**Pantallas:** `/curriculo` (grid de 12 meses con tema + progreso de campos), `/curriculo/campos`
+(activar sugeridos + agregar propios con tipo único/lista), `/curriculo/mes/[mes]` (tema + cada
+campo activo, único → input, lista → `EtiquetasLibres` reutilizado de Módulo Niños). Entrada desde
+`/configuracion` (tarjeta "Currículo Anual").
+**Verificado en navegador (8/8):** activar Color/Número (único) + Letras/Canciones (lista) en
+`/curriculo/campos`; Septiembre guardado con los 4 campos exactos del ejemplo del usuario (Tema
+"All About Me", Color "Yellow", Número "1", Letras ["A","M"], Canciones con 2 títulos) SIN
+convertir las listas a string; los 12 meses se leen "Sin definir" hasta tocarlos, se puede dejar
+incompletos; editar Octubre no modificó Septiembre (`totalMeses` creció a 2, Septiembre intacto);
+"Ya tengo mi currículo" funciona sin ningún campo de IA; "Ayúdame a crearlo" prellena los 12 temas
+demo con el aviso explícito de plantilla; tras construir A, `raiz_planeaciones` y `raiz_ninos`
+siguen en `null` (nada tocado) y `/semana` renderiza la Semana 3 exactamente igual que antes. tsc ✓
+· build ✓ (32 rutas) · sin errores de consola nuevos.
+**Siguiente:** Parte B — Diseño del Mes (`DisenoMensual`/`Subtema`, sin campo de duración). NO
+avanzar a B sin que el usuario lo confirme explícitamente (mismo patrón de pausa que 6d).
 
 ## Sesión 6, paso 6 — Observaciones como módulo independiente (CERRADO)
 El usuario fue explícito: REUTILIZAR el sistema ya aprobado (`Observacion`/`ObservacionSkill`,

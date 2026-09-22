@@ -11,6 +11,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, useReducedMotion, type Variants } from 'motion/react';
 import { ArrowLeft, ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { BookOpen, ChevronRight } from 'lucide-react';
 import { AppShell, Chip, Colapsable, LeafCheck, SelectorConPersonalizado } from '@/components/app/shell';
 import {
   BLOQUE_LABEL,
@@ -233,6 +235,22 @@ export default function ConfiguracionPrograma() {
             Esto es lo que RAÍZ usa para personalizar todo lo demás. Puedes cambiarlo cuando quieras.
           </p>
         </motion.header>
+
+        <motion.div variants={item} className="mb-3">
+          <Link
+            href="/curriculo"
+            className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-4 transition-opacity active:opacity-90"
+          >
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--accent)_14%,transparent)] text-[var(--accent)]">
+              <BookOpen size={18} aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-semibold text-[var(--text-primary)]">Currículo Anual</p>
+              <p className="text-[12px] text-[var(--text-secondary)]">El mapa de contenido de tu año, mes a mes</p>
+            </div>
+            <ChevronRight size={18} className="shrink-0 text-[var(--text-tertiary)]" aria-hidden="true" />
+          </Link>
+        </motion.div>
 
         <motion.div variants={item} className="flex flex-col gap-3">
           <Colapsable titulo="Mi programa" subtitulo="Nombre y tipo" defaultAbierto>
