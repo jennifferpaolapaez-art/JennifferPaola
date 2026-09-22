@@ -2846,9 +2846,16 @@ export const PRACTICA_A_EVITAR_LABEL: Record<PracticaAEvitar, string> = {
  * `curriculo.ts` (evitar import circular). El programa elige cuáles usa — nunca un set fijo
  * (Color/Número/Letras/Forma es SOLO el catálogo sugerido de `curriculo.ts`, no una obligación). */
 export interface CampoCurriculoDef {
+  /** Estable para siempre — cambiar `etiqueta` NUNCA cambia este id, así que los datos ya
+   * guardados en `MesCurricularAnual.campos[id]` siguen perteneciendo al mismo campo (protección
+   * del usuario, ronda previa a la Parte B). */
   id: string;
   etiqueta: string;
   tipo: 'unico' | 'lista';
+  /** Ausente o `true` = activo. `false` = desactivado por la maestra — el campo y sus datos en
+   * cada mes NUNCA se borran al desactivar, solo dejan de mostrarse hasta reactivarlo (protección
+   * del usuario: "desactivar/archivar, no borrar"). */
+  activo?: boolean;
 }
 
 export interface ProgramaConfig {

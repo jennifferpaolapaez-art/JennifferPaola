@@ -164,6 +164,18 @@ export default function EditarMesCurriculoPage() {
           </motion.button>
           {guardado && <p role="status" className="text-center text-[13px] font-medium text-[var(--sage)]">Guardado — los demás meses no se tocaron.</p>}
         </motion.div>
+
+        <motion.div variants={item} className="mt-6">
+          <Link
+            href={`/curriculo/mes/${mes}/diseno`}
+            className="flex items-center gap-3 rounded-[var(--radius-card)] bg-[var(--surface-2)] p-4"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-semibold text-[var(--text-primary)]">Diseño pedagógico de {MES_NOMBRE[mes]}</p>
+              <p className="text-[12px] text-[var(--text-secondary)]">Subtemas, vocabulario, conceptos y experiencias clave de este mes</p>
+            </div>
+          </Link>
+        </motion.div>
       </motion.div>
     </AppShell>
   );

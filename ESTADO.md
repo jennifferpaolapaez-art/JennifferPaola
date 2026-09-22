@@ -1312,8 +1312,58 @@ incompletos; editar Octubre no modificó Septiembre (`totalMeses` creció a 2, S
 demo con el aviso explícito de plantilla; tras construir A, `raiz_planeaciones` y `raiz_ninos`
 siguen en `null` (nada tocado) y `/semana` renderiza la Semana 3 exactamente igual que antes. tsc ✓
 · build ✓ (32 rutas) · sin errores de consola nuevos.
-**Siguiente:** Parte B — Diseño del Mes (`DisenoMensual`/`Subtema`, sin campo de duración). NO
-avanzar a B sin que el usuario lo confirme explícitamente (mismo patrón de pausa que 6d).
+### Dos protecciones de A (confirmadas/corregidas antes de B)
+1. **Id estable, independiente de la etiqueta** — ya lo cumplía el modelo (`MesCurricularAnual.campos`
+   se indexa por `CampoCurriculoDef.id`, nunca por texto). Se agregó una UI de renombrar en
+   `/curriculo/campos` (lápiz por campo) para poder demostrarlo, sin cambiar el id.
+2. **Desactivar un campo no borra sus datos** — GAP real encontrado: un campo SUGERIDO ya podía
+   reactivarse (el chip lo agregaba de nuevo con el mismo id), pero un campo PERSONALIZADO eliminado
+   de `camposCurriculoAnual` quedaba huérfano para siempre (sus datos seguían en cada mes, pero sin
+   forma de volver a mostrarlos). Corregido: `CampoCurriculoDef.activo?: boolean` — "Desactivar"
+   pone `activo:false` (nunca elimina la entrada del array), "Reactivar" lo vuelve a poner `true`;
+   `camposActivos()`/`camposArchivados()` filtran por ese flag. Uniforme para sugeridos y
+   personalizados. Verificado en navegador: desactivar "Letras" con Septiembre ya guardado (["A","M"])
+   conserva esos datos intactos en `raiz_curriculos_anuales`; reactivar los vuelve a mostrar
+   exactamente igual; renombrar "Color"→"Color del mes" conserva el id `color` y sus valores.
+
+### Parte B — Diseño del Mes (CONSTRUIDA Y VALIDADA, 16/16 puntos del usuario)
+Nuevo en `lib/curriculo.ts`: `TerminoVocabulario{idioma,texto}` + `VocabularioItem{id,terminos[],
+orden}` — nunca un string combinado tipo "Body / Cuerpo"; los idiomas salen de
+`ProgramaConfig.idiomasEnsenanza` (fallback a `idiomaSalidaDefault` si el programa no configuró
+ninguno) — nunca hardcodeados inglés/español. `Subtema{id,nombre,enfoque?,vocabulario,conceptos,
+experienciasClave,recursos,orden}` — **sin ningún campo de semana/duración**, es solo contenido.
+`RecursoLibroCancion{tipo:'libro'|'cancion',titulo}` — tanto generales del mes como por subtema.
+`CulturaRelacionada{nombre,nota?}` — sin fecha (eso es C). `DisenoMensual{anio,mes,
+curriculoAnualId?,marcoSnapshot,estado:'borrador'|'aprobado',version,...}` — `marcoSnapshot` es una
+FOTO del tema+campos del Currículo Anual tomada al crear el diseño; cambiar el Currículo Anual
+después NUNCA sobrescribe el snapshot (verificado: cambié Color a "Blue" en el currículo vivo y el
+diseño aprobado siguió mostrando "Yellow"). `version` reservado para que la Parte C detecte cambios
+futuros — todavía sin usar. Dos caminos: `crearDisenoVacio` / `crearDisenoDesdePropuestaDemo` (4
+subtemas genéricos SIN contenido — "Introducción al tema/Profundizando/Explorando más/Cierre e
+integración" — marcados en pantalla como propuesta editable, nunca IA real). `puedeAprobarDiseno`
+exige solo subtemas con nombre — nada opcional (vocabulario/conceptos/experiencias/recursos pueden
+quedar vacíos incluso aprobado).
+**Pantalla:** `/curriculo/mes/[mes]/diseno` — marco del mes (snapshot o vivo si aún no hay diseño),
+enfoque + culturas relacionadas, recursos generales, subtemas como tarjetas expandibles (nombre,
+enfoque, vocabulario por idioma, conceptos y experiencias con `EtiquetasLibres`, recursos propios,
+reordenar ↑↓, eliminar), Aprobar/Volver a borrador. Entrada desde `/curriculo/mes/[mes]` (enlace
+"Diseño pedagógico de [mes]").
+**Verificado en navegador (16/16):** Septiembre toma el marco de A (Tema/Color/Número/Letras)
+correctamente; creé 4 subtemas con nombre; ningún campo de semana/duración existe en el modelo ni
+en la UI; "Mi cuerpo" con 4 palabras Body/Cuerpo, Head/Cabeza, Hands/Manos, Feet/Pies en 2 idiomas
+reales (no un string); edité SOLO la traducción en Español de una palabra vía UI y las otras 3
+palabras + el English de esa misma quedaron intactos; reordené subtemas (↓ Mi cuerpo bajó una
+posición); agregué/edité conceptos y experiencias clave; dejé "Mi seguridad y quién soy" con solo
+el nombre (0 palabras, 0 conceptos) y el diseño se aprobó igual — la validación no exige lo
+opcional; cambiar Currículo Anual después no tocó el diseño aprobado (snapshot congelado); nada
+tocó `raiz_planeaciones`/`raiz_ninos` (siguen `null`) ni `/semana` (Semana 3 intacta); "Ya tengo mi
+mes" funciona sin IA; "Ayúdame a crear mi mes" (probado en Octubre) prellenó 4 subtemas demo con el
+aviso explícito "Propuesta de ejemplo — completa cada subtema con tu contenido real antes de
+aprobar". tsc ✓ · build ✓ (33 rutas) · sin errores de consola nuevos.
+**Siguiente:** Parte C — Calendario Pedagógico Real, con las 3 precisiones ya documentadas arriba
+(`/hoy` = fecha real siempre; `DiaCalendario.estado` separado de `eventos[]` y de
+`incluidoEnPlaneacion`/`modoPlaneacion`; semanas que cruzan de mes componen sin duplicar). NO
+avanzar a C sin que el usuario lo confirme explícitamente (mismo patrón de pausa que 6d).
 
 ## Sesión 6, paso 6 — Observaciones como módulo independiente (CERRADO)
 El usuario fue explícito: REUTILIZAR el sistema ya aprobado (`Observacion`/`ObservacionSkill`,
