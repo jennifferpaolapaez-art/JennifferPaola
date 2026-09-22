@@ -1223,12 +1223,54 @@ que pidió el usuario:
 - Datos de prueba limpiados de localStorage al terminar.
 
 **Pendiente/decisión del usuario**: ninguna — el usuario dijo "si no requieren rehacer la
-arquitectura aprobada, puedes proceder" y los 4 ajustes eran aditivos. Queda como nota menor no
-bloqueante: `/ninos-foco` sigue sobre `Nino.metaActiva` sin conectar al mecanismo nuevo — se puede
-abordar si el usuario lo pide. Solo la Semana 3 tiene contenido tagueado con `contextos`/
+arquitectura aprobada, puedes proceder" y los 4 ajustes eran aditivos. Nota histórica: `/ninos-foco`
+llegó a depender de `Nino.metaActiva` — eliminado en 6d (ver "Cierre de 6d" más abajo: ahora deriva
+de metas activas del Plan Individual). Solo la Semana 3 tiene contenido tagueado con `contextos`/
 `skillsRelacionados`(Collage del cuerpo, Cuento De pies a cabeza, Centro de matemáticas); el resto
 de actividades sin tags simplemente nunca genera candidatos automáticos — taguear el resto del
 catálogo demo es progresivo, no bloqueante.
+
+### ⚠️ DECISIÓN ARQUITECTÓNICA (2026-09-21, sin código todavía — solo plan aprobado por revisar):
+### Planeación deja de asumir "mes = 4 semanas fijas"
+El usuario detectó que la Planeación (aprobada y funcionando) trataba implícitamente cada mes como
+4 semanas de 5 días — un mes real tiene días cerrados, feriados, cumpleaños, fechas culturales,
+excursiones y un cierre de mes, y su número de días planeables varía. **La corrección NO es
+rehacer Planeación**: `PlaneacionSemanal`/`DiaPlan`/`Actividad` (bloques de rutina, adaptaciones por
+etapa, adaptaciones individuales, niños foco, conexión con Plan Individual, observaciones,
+materiales) se CONSERVAN intactos — `DiaPlan.fecha` ya es una fecha ISO real y `dias[]` ya admite
+cualquier cantidad de días, nunca forzó 5. La dependencia de "4 semanas" está en la UI, no en el
+modelo: `planeacionPorNumero(3)` está HARDCODEADO en `/planeacion`, `/semana`, `/hoy` y
+`/planeacion/[id]` — hoy la app solo puede mostrar la semana sembrada, sin navegación real entre
+semanas ni concepto de mes.
+
+**Jerarquía nueva aprobada por el usuario, como CAPA ARRIBA de la Planeación existente:**
+Currículo Anual (configurable — color/número/letra/forma NO es universal, un programa define sus
+propios campos) → Diseño Pedagógico del Mes (tema, subtemas, vocabulario, valor — contenido sin
+duración fija) → Calendario Pedagógico Real del Mes (días reales del programa: regular/cerrado/
+feriado/evento especial/fecha cultural/cumpleaños/excursión/día admin/cierre de mes — un día puede
+tener planeación normal Y un evento a la vez, nunca se reemplazan) → Paquete Visual del Mes (fase
+posterior, después del contenido, nunca antes) → Planeación semanal/diaria YA EXISTENTE (se
+DERIVA agrupando los días planeables del calendario por semana calendario real — una semana puede
+tener 2, 3 o 5 días, nunca se rellena artificialmente) → Preparar mi mes/semana/imprimibles (fase
+posterior). Dos caminos en cada nivel nuevo, igual que Planeación y Evaluación: "ya tengo mi
+currículo" (cargar/importar) vs. "ayúdame a crearlo" (RAÍZ propone, la maestra aprueba). Cumpleaños
+se detectan desde el DOB ya existente pero la maestra decide integrarlos — nunca se infiere cultura/
+nacionalidad por el nombre del niño; las fechas culturales salen de un catálogo que el programa
+selecciona explícitamente (Colombia/Ecuador/México/US/otros + fechas personalizadas).
+**Plan corto de construcción (aprobado en inspección, código NO empezado):**
+`lib/curriculo.ts` nuevo (no engordar `seed-data.ts`): `CurriculoAnual`/`MesCurricularAnual` (con
+`camposConfigurables` por programa, nunca fijo a color+número+letra+forma), `DisenoMensual`/
+`Subtema`, `CalendarioMensual`/`DiaCalendario` (`tipo` + `eventoEspecial?` coexisten),
+`FechaCultural`/`ProgramaConfig.culturasSeleccionadas`. `generarSemanasDesdeCalendario()` produce
+`PlaneacionSemanal[]` con el MISMO shape de hoy (nunca cambia la interfaz, solo gana
+`calendarioMensualId?`/`diasReales?` opcionales) — compatible con la Semana 3 sembrada sin migración.
+`distribuirMes()` reparte subtemas proporcional a días reales, coloca eventos en su fecha exacta sin
+desplazar el subtema del día, y ante días sobrantes propone integración/repaso/cierre (nunca inventa
+un subtema completo) — todo editable día por día después. Sin IA real: currículo/calendario/reparto
+son reglas DEMO explícitas (mismo patrón que Evaluaciones/Prioridades). Con IA real después (fase de
+servicios externos, `30`): redactar subtemas/vocabulario desde el tema, y el Paquete Visual.
+**NO EJECUTAR esta refactorización todavía — el usuario pidió revisar el plan corto antes de
+escribir código.** Cuando se apruebe, documentar aquí la decisión final antes de tocar Planeación.
 
 ## Sesión 6, paso 6 — Observaciones como módulo independiente (CERRADO)
 El usuario fue explícito: REUTILIZAR el sistema ya aprobado (`Observacion`/`ObservacionSkill`,
