@@ -252,11 +252,24 @@ export function quitarEvento(calendario: CalendarioMensual, fecha: string, event
 }
 
 /* ── SUGERENCIAS PARA EL MES — cumpleaños (DOB real) + fechas de varias fuentes (DEMO) ──
-   ⚠️ DEMO: sin perfiles familiares/de equipo todavía — las fuentes "ubicación/comunidad/equipo/
-   programa" se simulan con un catálogo fijo chico y con las culturas que la maestra ya escribió en
-   el Diseño del Mes (B). Cuando existan perfiles reales de familias y equipo, estas mismas 4
-   categorías se alimentan de ahí — la arquitectura (agrupar por fuente, nunca elegir sola) no
-   cambia. */
+   ⚠️ DEMO: sin perfiles reales de familias/staff todavía. Las 4 fuentes de `FuenteSugerenciaFecha`
+   ya son el mapeo definitivo para cuando existan esos perfiles — no cambia la forma, solo de dónde
+   se leen los datos:
+     - `ubicacion`      → ubicación geográfica del programa (ciudad/país configurado).
+     - `comunidad`      → culturas/comunidades que las FAMILIAS proporcionen explícitamente en su
+                          perfil. HOY se simula filtrando el catálogo DEMO contra
+                          `culturasRelacionadas` (las que la maestra ya escribió en el Diseño del
+                          Mes, B) — nunca inferido del nombre/apellido de un niño ni de ningún otro
+                          dato personal.
+     - `equipo`         → culturas/tradiciones que el STAFF proporcione explícitamente en su
+                          perfil (sin catálogo DEMO todavía — 0 entradas, ver `FECHAS_SUGERIDAS_DEMO`).
+     - `programa`       → preferencias culturales / estacionales / de tradición que el programa
+                          mismo configure (estaciones e "tradiciones del programa" del catálogo DEMO).
+   Un quinto tipo de sugerencia, "evento personalizado" (`TipoEvento: 'personalizado'`), ya existe
+   a nivel de `DiaCalendario.eventos` — lo agrega la maestra a mano, nunca es una sugerencia de
+   RAÍZ. En ningún caso —ni hoy en DEMO ni en producción— una sugerencia sale de inferir cultura,
+   idioma o tradición a partir del nombre o apellido de un niño o familia: siempre de un dato que
+   la familia/staff/programa proporcionó explícitamente. */
 
 export type FuenteSugerenciaFecha = 'ubicacion' | 'comunidad' | 'equipo' | 'programa';
 

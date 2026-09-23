@@ -1819,7 +1819,7 @@ por qué conecta con el tema, valor/idea relacionada, contexto cultural si aplic
 origen de la sugerencia. Nunca inventar biografías, logros ni conexiones no verificadas. La
 maestra conserva siempre la decisión final. **No implementar el catálogo real sin esta regla.**
 
-### Parte C — Calendario Pedagógico Real (CONSTRUIDA, VERIFICADA, CERRADA — no avanzar a D sin OK del usuario)
+### Parte C — Calendario Pedagógico Real (CONSTRUIDA, VERIFICADA, CERRADA OFICIALMENTE tras verificación final de 7 puntos — no avanzar a D sin OK del usuario)
 `lib/calendario.ts` (nuevo) + `app/curriculo/mes/[mes]/calendario/page.tsx` (grid + editor de día)
 + `app/curriculo/mes/[mes]/calendario/sugerencias/page.tsx` (pantalla "Sugerencias para este mes").
 Responde "¿qué pasa cada día real de este mes?" a partir del Diseño (B) ya aprobado — NO crea
@@ -1863,9 +1863,65 @@ Responde "¿qué pasa cada día real de este mes?" a partir del Diseño (B) ya a
   opciones, "Usar como integración/repaso" escribió la nota en los 15 días SIN crear un subtema
   nuevo; un evento agregado sobre un día con nota de integración NO borró esa nota (los eventos
   nunca reemplazan contenido). tsc ✓ · build ✓ (32 rutas) · sin errores de consola.
-- **Siguiente:** Parte D (conectar el Calendario aprobado con la Planeación semanal/diaria
-  existente). **NO construir D sin aprobación explícita del usuario** — instrucción textual: "Cuando
-  C esté construido y validado, paramos otra vez. No avances a D automáticamente."
+- **Verificación final de cierre (7 puntos pedidos explícitamente por el usuario antes de dar C por
+  oficialmente cerrada — todos confirmados en navegador/localStorage, sin escribir funciones
+  nuevas):**
+  1. **Dos eventos simultáneos en un día con subtema+vocabulario normales:** confirmado con
+     Septiembre 16 (`Mi escuela`, vocabulario referenciado) + evento cultural "Independencia de
+     México" + evento "Cumpleaños de Sofía" agregado a mano — los dos eventos coexisten en
+     `eventos[]`, ninguno reemplazó al otro, `subtemaId` y `vocabularioDelDia` intactos, `estado`
+     siguió `abierto`/`modoPlaneacion` `normal`.
+  2. **Referencia real al vocabulario de B (sin copia):** se editó en vivo el término "maestra" →
+     "profesora" del subtema Mi escuela en el Diseño del Mes; el mismo `VocabularioItem.id`
+     (`vocab-...-958`) se mantuvo sin cambiar, y el Calendario mostró "profesora" de inmediato sin
+     ninguna acción sobre C — confirma que `vocabularioDelDia` es puntero puro
+     `{subtemaId, vocabularioId}`, nunca una copia de texto. **No hay snapshot en esta relación**
+     (a diferencia de `DisenoMensual.marcoSnapshot`, que sí congela Currículo Anual→Diseño porque
+     ahí el usuario pidió explícitamente que un cambio posterior en A nunca pise un B ya aprobado;
+     aquí, B→C, el usuario pidió lo contrario: que C siempre refleje el B vigente).
+  3. **Frontera manual entre subtemas protegida:** se reasignó a mano el subtema del 7 de
+     septiembre (de "Mi cuerpo" a "Mi familia") vía el selector del día; quedó `editadoManualmente:
+     true`; tras "Regenerar propuesta" el día conservó "Mi familia" — el algoritmo NO lo devolvió a
+     la distribución original. **Hallazgo NO bloqueante, sin corregir (fuera del alcance de esta
+     verificación — no se escribió código nuevo):** al cambiar el subtema de un día por el selector,
+     `vocabularioDelDia` no se reasigna ni se limpia — queda apuntando a la palabra del subtema
+     ANTERIOR, que ya no existe en el subtema nuevo, así que el resumen "Vocabulario del día" queda
+     vacío hasta que la maestra regenere la propuesta o pique una palabra a mano. Vale la pena
+     resolverlo (limpiar o reasignar `vocabularioDelDia` en ese `onChange`) en una próxima pasada,
+     no es parte de la Parte C tal como se pidió.
+  4. **Modelo del cierre mensual (no solo el checklist):** el día persistido es
+     `{estado:'abierto', incluidoEnPlaneacion:true, modoPlaneacion:'rutina_ligera',
+     esCierreMensual:true}` — técnicamente sigue siendo un día abierto y planeable (centros, juego
+     libre, outdoor, rutina siguen aplicando); "cierre mensual" nunca se convirtió en un estado
+     "cerrado".
+  5. **Semana que cruza dos meses, lista para D:** Septiembre (30 días) y Octubre (31 días) no
+     comparten NINGUNA fecha; 28/29/30-sep viven solo en el `CalendarioMensual` de septiembre y
+     1/2-oct solo en el de octubre — cada `DiaCalendario` pertenece a su mes real, sin duplicar ni
+     mover fechas. La vista semanal del grid (`calcularSemanas`) solo rellena con celdas vacías
+     (`null`) los huecos de la primera/última fila, nunca inventa ni trae días del mes vecino — la
+     composición real de una semana cruzada queda, como estaba previsto, para D.
+  6. **Planeación antigua intacta:** `raiz_planeaciones` no existe en localStorage (sigue cayendo al
+     demo fijo de Semana 3, igual que antes de tocar C); `/planeacion` y `/hoy` se recorrieron en el
+     navegador y muestran exactamente el mismo contenido de siempre (Semana 3, "Collage del cuerpo",
+     adaptaciones de Sofía/Mateo, niños foco Luca/Zayne). Por código: ningún archivo bajo
+     `/planeacion`, `/semana`, `/hoy`, `/ninos*`, `/observar` importa `lib/calendario.ts` — las
+     únicas dos rutas que lo hacen son las propias páginas de Calendario. Cero conexión automática
+     Calendario→Planeación todavía.
+  7. **Documentación de fuentes culturales para producción:** reforzada en `lib/calendario.ts`
+     (comentario sobre `FuenteSugerenciaFecha`) para que quede explícito el mapeo a producción:
+     `ubicacion`=ubicación del programa; `comunidad`=culturas/comunidades que las FAMILIAS
+     proporcionen explícitamente (hoy simulado con el catálogo DEMO filtrado por
+     `culturasRelacionadas`); `equipo`=culturas/tradiciones que el STAFF proporcione explícitamente
+     (sin catálogo DEMO, 0 entradas); `programa`=preferencias culturales/estacionales que el
+     programa configure; y el quinto tipo, evento personalizado, ya existe a nivel de día
+     (`TipoEvento: 'personalizado'`, siempre agregado a mano por la maestra). Declarado
+     explícitamente: ninguna sugerencia —ni hoy ni en producción— sale de inferir cultura/idioma
+     por nombre o apellido de un niño o familia.
+- **Parte C queda oficialmente CERRADA.** **Siguiente:** Parte D (conectar el Calendario aprobado
+  con la Planeación semanal/diaria existente). **NO construir D sin aprobación explícita del
+  usuario** — instrucción textual: "Cuando C esté construido y validado, paramos otra vez. No
+  avances a D automáticamente." El agente presentará primero un plan corto de D para aprobación,
+  antes de escribir código.
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).
