@@ -3,13 +3,16 @@
 > Memoria viva del proyecto. Se actualiza en cada hito.
 
 ## Fase actual
-**Sesión 6 en curso — capa Currículo→Diseño→Calendario→Planeación→Actividad.** Parte A (Currículo
-Anual), Parte B (Diseño del Mes + Personaje del Mes), Parte C (Calendario Pedagógico Real), Parte D
-(Calendario → Planeación) y Parte E (completar/editar Actividad — reutilizando `/planeacion/[id]`,
-sin segunda arquitectura) CONSTRUIDAS, VERIFICADAS Y CERRADAS — ver "Decisión arquitectónica: mes
-≠ 4 semanas fijas" y las secciones A/B/C/D/E más abajo (después de "Sesión 6, paso 7 / 6d —
-AMPLIACIÓN"). **Antes de conectar IA real, el usuario pidió parar** — próximo paso pendiente de su
-aprobación explícita.
+**AMPLIACIÓN ESTRUCTURAL DE PLANEACIÓN (A–E) — COMPLETA Y CERRADA, aprobada explícitamente por el
+usuario.** Currículo Anual → Diseño del Mes → Calendario Pedagógico Real → Planeación Semanal →
+Bloques → Actividades → Personalización: las 5 partes (A/B/C/D/E) están construidas, verificadas y
+cerradas — ver "Decisión arquitectónica: mes ≠ 4 semanas fijas" y las secciones A/B/C/D/E más abajo
+(después de "Sesión 6, paso 7 / 6d — AMPLIACIÓN"). Conectar IA real queda **explícitamente
+pendiente** hasta que el usuario lo pida.
+
+**Sesión 6 retoma ahora 6e-1 — Registro Mensual de Observaciones** (ver esa sección, después de
+Parte E) — CONSTRUIDO, VERIFICADO Y CERRADO. Siguiente en la fila, sin empezar: 6e-2 (Informe
+Mensual de Observaciones) y 6f (evaluación periódica + Reporte de Resultados).
 
 Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRADA** (detalle abajo).
 Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
@@ -2131,6 +2134,74 @@ consola en toda la sesión de pruebas.
 **Explícitamente NO construido en E (fuera de alcance, instrucción del usuario):** conexión con IA
 real — el catálogo "Ayúdame a crearla" sigue siendo DEMO/controlado. **El usuario pidió parar aquí
 antes de conectar IA real** — no avanzar a esa fase sin su aprobación explícita.
+
+## Sesión 6, paso 7 / 6e-1 — Registro Mensual de Observaciones (CONSTRUIDO, VERIFICADO CON LAS 18 PRUEBAS DEL USUARIO, CERRADO)
+Responde "¿qué observamos exactamente de este niño durante este mes?" — vista INTERNA **derivada**
+de Observaciones, nunca un documento que la maestra vuelva a escribir. **Distinto de 6e-2 (Informe
+Mensual)**, que es un producto aparte, aprobado/versionado, con síntesis — 6e-1 es solo el registro
+crudo de lo ya documentado, sin interpretación. Reutiliza el modelo `Observacion`/`ObservacionSkill`
+tal cual existía (Sesión 6, paso 6/6c) — ningún campo nuevo, ninguna arquitectura paralela.
+
+**Archivos:** `lib/registro-mensual.ts` (nuevo — solo funciones de LECTURA, cero `guardar*`;
+confirmado por grep antes de cerrar) y `app/ninos/[id]/registro/page.tsx` (nuevo). Accesos nuevos
+desde Perfil (`app/ninos/[id]/page.tsx`, dentro del Colapsable "Observaciones") y Progreso
+(`app/ninos/[id]/progreso/page.tsx`, debajo del resumen).
+
+**Tres categorías, estrictamente separadas (regla del usuario, ya vigente desde Sesión 6 paso 6,
+reafirmada explícita para esta pantalla):**
+- **Registro principal** — SOLO `estadoRegistroObservacion(o) === 'profesional_aprobada'`. Orden
+  cronológico ascendente, nunca síntesis. Cada entrada muestra la redacción profesional, fecha,
+  origen, idioma (`ES`/`EN`... honesto, nunca traducido), contexto/actividad si existe (resuelto
+  con `actividadPorIdGlobal`, el mismo helper de la Parte E — ninguna observación queda "sin
+  encontrar su actividad" aunque venga de una Planeación materializada distinta a la Semana 3),
+  habilidades ACEPTADAS (nunca las sugeridas-sin-revisar) y un indicador de evidencia SOLO cuando
+  `evidencias` tiene contenido real — nunca inventado.
+- **Pendientes de redacción (N)** — fecha + contexto + "Organizar observación" → mismo
+  `/observaciones/[id]` de siempre, donde ya vivía el flujo de aprobar redacción. **Nunca muestra
+  `notaOriginal`.**
+- **Momentos pendientes de observar** — las `oportunidadSinEvidencia`, con su propio texto ("hubo
+  oportunidad de observar, sin evidencia todavía"), nunca contadas como observación ni evidencia.
+
+**Resumen superior:** solo conteos ("N observaciones aprobadas en N días" + "N pendientes de
+redacción") — sin porcentajes, sin comparación con el mes anterior, sin interpretación (eso es
+6e-2). **Filtros:** por área/dominio y por habilidad, ambos derivados SOLO de las habilidades
+aceptadas del mes visible (nunca una lista fija) — `prettyDominio()` convierte el slug interno
+("motricidad_fina") a texto legible, puramente de presentación.
+
+**Navegación por mes:** `?anio=&mes=` en la URL (bookmarkable), con `mesAnterior`/`mesSiguiente`
+manejando el cruce de año. Abre por defecto en el mes de `FECHA_HOY` — que sigue siendo la
+constante DEMO documentada en `seed-data.ts`; el código dice explícitamente que es DEMO en el punto
+donde se usa, para que quede claro cuándo se reemplace por la fecha real en la zona horaria del
+programa (`ProgramaConfig.timezone`, reservado en la Parte D).
+
+**Verificado en navegador — las 18 pruebas pedidas, todas confirmadas:** solo aprobadas en el
+Registro principal (Mateo/Zayne con pendiente/oportunidad correctamente excluidos) ✓ · una
+observación aprobada SIN ninguna skill relacionada también aparece (se probó aprobando en vivo la
+redacción pendiente de Mateo, que no tiene ninguna fila en `ObservacionSkill`) ✓ · orden
+cronológico correcto con 3 fechas insertadas fuera de orden (3→8→20 sept, sin importar el orden de
+inserción) ✓ · cambiar de mes funciona, incluido cruce de año (enero 2026 → diciembre 2025) ✓ ·
+mes sin observaciones con estado vacío digno ✓ · una pendiente NUNCA aparece como aprobada ✓ ·
+aparece solo en su sección ✓ · la nota cruda de Mateo nunca se mostró en ningún punto del Registro
+(verificado leyendo la pantalla completa) ✓ · "No observado" de Zayne nunca contó como evidencia ni
+observación, viviendo solo en su sección aparte ✓ · filtro por área/habilidad aplicado y
+verificado (Sofía: solo "Vocabulario de 2 palabras" — aceptada — aparece, nunca "Interacción con
+pares" que estaba `sugerido`) ✓ · el total y los días mostrados coincidieron con los datos reales
+en cada prueba ✓ · "Ver observación"/"Organizar observación" abrieron siempre la observación
+correcta ✓ · aprobar en vivo la redacción pendiente de Mateo la hizo aparecer automáticamente en el
+Registro sin volver a ingresarla ✓ · evidencias se indicaron SOLO cuando se inyectaron de verdad
+("2 evidencias"), ausentes en el resto ✓ · navegación funcionando desde Perfil y desde Progreso ✓ ·
+idioma mostrado honesto (`ES`) sin ninguna traducción fingida ✓ · nada de esto escribe en
+localStorage — confirmado por grep (`lib/registro-mensual.ts` no tiene ninguna función `guardar*`)
+✓. tsc ✓ · build ✓ (37 rutas) · sin errores de consola. Todos los datos de prueba inyectados a mano
+(evidencias, orden cronológico) se revirtieron antes de cerrar — la semilla queda como estaba.
+
+**Explícitamente NO construido en 6e-1 (instrucción del usuario, es 6e-2 y fases posteriores):**
+síntesis por áreas, comparación entre meses, narrativa mensual, progreso, recomendaciones, "Focus
+for Continued Observation", aprobación/versionado, PDF, informe para familias, `child_reports`
+(reservado para 6e-2 en adelante — 6e-1 nunca necesita snapshot, siempre responde en vivo "qué
+observaciones aprobadas existen"). **Siguiente, sin empezar:** 6e-2 Informe Mensual de
+Observaciones, luego 6f (evaluación periódica + Reporte de Resultados + cierre/nuevo Plan
+Individual) — no avanzar sin aprobación explícita del usuario.
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).

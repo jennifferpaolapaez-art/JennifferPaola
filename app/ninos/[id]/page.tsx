@@ -242,6 +242,9 @@ export default function Perfil() {
               <Plus size={16} aria-hidden="true" />
               Nueva observación
             </Link>
+            <Link href={`/ninos/${nino.id}/registro`} className="mt-2 flex h-11 w-full items-center justify-center text-[13px] font-semibold text-[var(--accent)] underline">
+              Ver registro mensual
+            </Link>
           </Colapsable>
 
           <Colapsable
