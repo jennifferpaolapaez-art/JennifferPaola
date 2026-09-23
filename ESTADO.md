@@ -3,13 +3,13 @@
 > Memoria viva del proyecto. Se actualiza en cada hito.
 
 ## Fase actual
-**Sesión 6 en curso — capa Currículo→Diseño→Calendario→Planeación.** Parte A (Currículo Anual),
-Parte B (Diseño del Mes + Personaje del Mes), Parte C (Calendario Pedagógico Real) y Parte D
-(Calendario → Planeación) CONSTRUIDAS, VERIFICADAS Y CERRADAS — ver "Decisión arquitectónica: mes
-≠ 4 semanas fijas" y las secciones A/B/C/D más abajo (después de "Sesión 6, paso 7 / 6d —
-AMPLIACIÓN"). Pendiente sin empezar (fuera de alcance de D a propósito): pantalla para completar
-el contenido pedagógico de los bloques materializados por D — hoy quedan "Pendiente", nadie los
-edita todavía.
+**Sesión 6 en curso — capa Currículo→Diseño→Calendario→Planeación→Actividad.** Parte A (Currículo
+Anual), Parte B (Diseño del Mes + Personaje del Mes), Parte C (Calendario Pedagógico Real), Parte D
+(Calendario → Planeación) y Parte E (completar/editar Actividad — reutilizando `/planeacion/[id]`,
+sin segunda arquitectura) CONSTRUIDAS, VERIFICADAS Y CERRADAS — ver "Decisión arquitectónica: mes
+≠ 4 semanas fijas" y las secciones A/B/C/D/E más abajo (después de "Sesión 6, paso 7 / 6d —
+AMPLIACIÓN"). **Antes de conectar IA real, el usuario pidió parar** — próximo paso pendiente de su
+aprobación explícita.
 
 Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRADA** (detalle abajo).
 Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
@@ -2038,12 +2038,99 @@ tsc ✓ · build ✓ (34 rutas) · sin errores de consola en toda la sesión de 
 
 **Explícitamente NO construido en D (fuera de alcance, por instrucción del usuario):** generación
 de contenido pedagógico real (título/objetivo/materiales/pasos) para los bloques materializados,
-integración de IA, página de detalle para editar una actividad de una semana materializada (los
-bloques de `/planeacion/semana/[id]` son informativos, sin enlace — no hay a dónde llevar el clic
-todavía; ver "Pendiente" abajo). **Siguiente paso, sin empezar:** decidir si/cuándo se construye
-esa pantalla de edición de contenido, y si D necesita una acción "Materializar" visible también
-desde algún punto de `/semana`/`/planeacion` (hoy solo se llega desde el editor de día del
-Calendario).
+ni integración de IA. **Completado en la Parte E (ver abajo):** la pantalla para completar/editar
+esos bloques — se construyó reutilizando `/planeacion/[id]`, nunca una arquitectura aparte.
+
+### Parte E — Completar/editar Actividad (CONSTRUIDA, VERIFICADA CON LAS 20 PRUEBAS DEL USUARIO, CERRADA — parar antes de IA real)
+Responde "ya tengo mis días y mis bloques, ¿qué voy a hacer realmente en cada uno?" — **reutilizando
+por completo** el sistema de Actividad que ya existía (Sesión 5): mismo modelo, misma pantalla de
+detalle (`/planeacion/[id]`), mismas guías por tipo de bloque, mismas 3 capas de personalización.
+Ninguna arquitectura nueva — el usuario lo pidió explícito ("no quiero una segunda arquitectura de
+Planeación, quiero completar la que ya tenemos") y quedó así.
+
+**Hallazgo previo a construir (inspección, sin código):** `/planeacion/[id]` era 100% de solo
+lectura — ningún input, ningún botón "Editar", ningún guardado. El contenido rico de la Semana 3
+demo se escribió a mano como datos, nunca a través de una interfaz. Por eso la pieza que faltaba de
+verdad no era el modelo (`Actividad` ya tenía TODOS los campos: materiales, preparación, qué hace
+la maestra, qué hacen los niños, preguntas, diferenciación, adaptaciones, niño foco, qué observar,
+evidencia, guías por bloque) sino un editor.
+
+**Modelo — 3 adiciones, ninguna reemplaza lo que había:**
+- `Actividad.estadoContenido?: 'pendiente' | 'borrador' | 'lista'` — reemplaza el booleano plano
+  `contenidoPendiente` (que se conserva, LEGADO, sincronizado en cada guardado) por un ciclo con 3
+  pasos reales. Sin este campo (dato antiguo), se lee como `lista` por compatibilidad. Única fuente
+  de verdad: `estadoContenidoDeActividad()` — nunca leer los campos crudos fuera de ahí.
+- `Actividad.personalizacionDesactualizada?: boolean` — se activa sola cuando `actualizarActividadEnPlan()`
+  detecta que título/objetivo/contextos/skills cambiaron Y la actividad ya tenía diferenciación/
+  adaptaciones/foco. Nunca borra esas capas — solo avisa; se limpia con "Revisar ahora" (reusa
+  `calcularPersonalizacionSemana`, el mismo botón que ya existía en `/semana`) o "Mantener por ahora".
+- `actividadPorIdGlobal(id, {planId?})` en `seed-data.ts` — busca en TODAS las Planeaciones, no solo
+  la Semana 3. Con `planId` (que `/planeacion/semana/[id]` ahora pasa como `?plan=` en cada enlace)
+  busca SOLO ahí — combinación segura, nunca puede abrir la actividad equivocada aunque dos ids
+  coincidieran (hoy no coinciden: Semana 3 usa `lun-circle`, Parte D usa `AAAA-MM-DD-bloque-N`).
+  Sin `planId` (enlaces antiguos, ej. los de `/hoy`), busca en todas — mismo comportamiento de
+  siempre para lo que ya apuntaba a la Semana 3. `/planeacion/[id]` **no cambió de significado** —
+  sigue siendo el detalle de UNA actividad; solo amplió a qué Planeaciones puede buscar.
+
+**Contexto para "Ayúdame a crearla" — se RESUELVE en vivo, nunca se copia (regla del usuario, punto
+4):** `resolverContextoParaPropuesta()` en `lib/planeacion-calendario.ts` junta, en el momento,
+tema mensual + campos curriculares activos + personaje del mes + enfoque cultural (desde Currículo
+Anual/Diseño del Mes), subtema/vocabulario/foco/eventos del día (desde `origenCalendario`), y
+metodología/idiomas/etapas/duración del bloque (desde `ProgramaConfig`). Nada de esto se guarda
+como texto nuevo dentro de `Actividad` — se muestra como chips "contexto disponible, no
+obligatorio" y el catálogo DEMO lo usa solo si tiene sentido (un cumpleaños no fuerza que la
+actividad sea sobre el cumpleaños).
+
+**Catálogo DEMO por tipo de bloque** (`lib/propuesta-actividad.ts`, `generarPropuestaDemoParaBloque`):
+una estructura DISTINTA por bloque, reutilizando los campos que ya existían (Circle llena
+`guiaCircle`, Outdoor `guiaOutdoor`, Centros `guiaCentros`, Cierre `guiaCierre`, el resto los
+campos genéricos). Siempre rotulado "Propuesta de ejemplo — DEMO" con el aviso explícito de que
+RAÍZ todavía no genera con IA real. `variante` (botón "Probar otra") cambia la idea central sin
+tocar la estructura — un bug encontrado en la propia verificación (la tarjeta compacta no mostraba
+la diferencia para varios tipos de bloque porque solo variaba un campo profundo, no el resumen) se
+corrigió con `lineaDestacadaDePropuesta()`.
+
+**Pantalla (`app/planeacion/[id]/page.tsx`, reescrita):** un bloque `pendiente` abre directo en
+"¿Cómo quieres completarla?" (Escribirla yo / Ayúdame a crearla) en vez del detalle vacío. Una
+actividad con contenido (`borrador` o `lista`) sigue abriendo en modo lectura de siempre, con un
+botón nuevo "Editar actividad" que abre el MISMO formulario. Vista simple primero (título/qué
+haremos/materiales/qué observar) + "Ver guía completa" desplegable que varía según el bloque —
+nunca campos nuevos duplicados. Guardar ofrece "Guardar borrador" o "Marcar como lista" — nunca se
+degrada sola, nunca se auto-completa. Las 3 capas de personalización NO se editan aquí — siguen
+siendo exactamente la misma sección de solo lectura que ya existía, sin tocar.
+
+**`app/planeacion/semana/[id]/page.tsx`:** las filas de bloque volvieron a ser enlaces reales
+(`/planeacion/${id}?plan=${plan.id}`) con una insignia de 3 estados (antes solo "Pendiente" plano).
+
+**Verificado en navegador — las 20 pruebas pedidas, todas confirmadas:** bloque pendiente abre el
+editor correcto ✓ · "Escribirla yo" completo sin IA (Circle Time escrito a mano, guardado y
+verificado) ✓ · guardar borrador sin marcar lista ✓ · volver después y seguir el borrador (recarga
+completa de página, contenido persistido) ✓ · marcar como lista explícitamente ✓ · "Ayúdame a
+crearla" rotulada claramente DEMO con el aviso de que no hay IA real ✓ · la propuesta NO se guardó
+en localStorage hasta aceptarla (verificado antes/después) ✓ · Circle recibió su guía propia
+(duración/qué mostrar/preguntas/cierre) ✓ · Outdoor la suya (invitación de movimiento/juego
+libre/qué priorizar) ✓ · STEAM otra distinta (preparación/qué haces tú/qué hacen los
+niños/preguntas) — las 3 estructuralmente diferentes, confirmado en pantalla ✓ · una actividad de
+la Semana 3 demo (`mar-principal`) abrió exactamente igual que siempre ✓ · esa misma actividad
+entró a modo Editar ✓ · editar y CANCELAR nunca reemplazó el título guardado (verificado en
+localStorage) ✓ · eventos del Calendario (cumpleaños + fecha cultural del mismo día) aparecieron
+como chips "no obligatorio", la propuesta STEAM generada no los usó ✓ · personaje/valor/cultura
+mensual disponibles por el mismo mecanismo de chips (arquitectura confirmada; sin dato de
+personaje/valor configurado en el mes de prueba para verlo poblado) ✓ · las 3 capas de
+`mar-principal` (diferenciación/adaptaciones/foco) siguieron intactas tras editar ✓ · cambiar
+sustancialmente título+objetivo de `mar-principal` (que ya tenía las 3 capas) disparó el aviso
+"la actividad cambió después de personalizarla", SIN borrar nada, y "Revisar ahora" lo limpió
+reusando `calcularPersonalizacionSemana` ✓ · `actividadPorIdGlobal` sin `?plan=` (simulando un
+enlace antiguo) encontró la actividad correcta entre varias Planeaciones sin confundirla ✓ ·
+"Registrar observación" desde niño foco de `mar-principal` siguió enlazando a
+`/observar?ninoId=luca&actividadId=mar-principal&skillId=tijeras` sin cambios ✓ · el catálogo DEMO
+no puede mezclar datos de niños/roster — `generarPropuestaDemoParaBloque` no recibe `Nino` ni
+`leerNinos()` en su firma, confirmado por código ✓. tsc ✓ · build ✓ (36 rutas) · sin errores de
+consola en toda la sesión de pruebas.
+
+**Explícitamente NO construido en E (fuera de alcance, instrucción del usuario):** conexión con IA
+real — el catálogo "Ayúdame a crearla" sigue siendo DEMO/controlado. **El usuario pidió parar aquí
+antes de conectar IA real** — no avanzar a esa fase sin su aprobación explícita.
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).

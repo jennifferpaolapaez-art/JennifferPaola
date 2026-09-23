@@ -3,16 +3,18 @@
 // PLANEACIÓN DE LA SEMANA (Parte D) — muestra una `PlaneacionSemanal` materializada desde el
 // Calendario Pedagógico (Parte C): el esqueleto de bloques configurados por día, con su contexto
 // (subtema/vocabulario/eventos) referenciado en vivo, nunca copiado. NO genera contenido
-// pedagógico — cada bloque queda "Pendiente" hasta que la maestra o una IA posterior lo complete.
-// Ruta NUEVA e inequívoca — `/planeacion/[id]` (que hoy abre una ACTIVIDAD puntual de la Semana 3
-// demo) se queda exactamente como está, sin cambiar de significado.
+// pedagógico solo — cada bloque enlaza al detalle de actividad (Parte E, `/planeacion/[id]`) para
+// completarlo, con `?plan=` para que esa búsqueda sea inequívoca. Ruta NUEVA — `/planeacion/[id]`
+// (que también abre actividades de la Semana 3 demo) se queda exactamente como estaba, sin cambiar
+// de significado — solo amplió a qué Planeaciones puede buscar.
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { motion, type Variants } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
 import { AppShell, Chip } from '@/components/app/shell';
-import { BLOQUE_LABEL, guardarUnaPlaneacion, leerPlaneaciones, planeacionPorId, type PlaneacionSemanal } from '@/lib/seed-data';
+import { BLOQUE_LABEL, ESTADO_CONTENIDO_LABEL, estadoContenidoDeActividad, guardarUnaPlaneacion, leerPlaneaciones, planeacionPorId, type PlaneacionSemanal } from '@/lib/seed-data';
 import { MODO_PLANEACION_LABEL, TIPO_EVENTO_LABEL, leerCalendariosMensuales } from '@/lib/calendario';
 import { disenoDeMes, leerDisenosMensuales } from '@/lib/curriculo';
 import { detectarConflictos, resolverConflictoDia, type AccionConflictoDia, type ConflictoDia } from '@/lib/planeacion-calendario';
@@ -204,18 +206,24 @@ export default function PlaneacionSemanaPage() {
                 )}
 
                 <ul className="mt-3 flex flex-col gap-1.5">
-                  {dia.actividades.map((a) => (
-                    // Sin página de detalle todavía para el contenido de una semana materializada
-                    // (completar título/objetivo/materiales es trabajo posterior a la Parte D — ver
-                    // punto Q) — fila informativa, nunca un enlace que no lleva a ningún lado.
-                    <li key={a.id} className="flex items-center justify-between gap-2 rounded-[var(--radius-button)] bg-[var(--surface-2)] px-3 py-2">
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-tertiary)]">{BLOQUE_LABEL[a.bloque]}</span>
-                        <span className="block truncate text-[14px] font-medium text-[var(--text-primary)]">{a.titulo}</span>
-                      </span>
-                      {a.contenidoPendiente && <span className="shrink-0 rounded-[var(--radius-button)] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-semibold text-[var(--text-tertiary)]">Pendiente</span>}
-                    </li>
-                  ))}
+                  {dia.actividades.map((a) => {
+                    const estado = estadoContenidoDeActividad(a);
+                    return (
+                      <li key={a.id}>
+                        <Link href={`/planeacion/${a.id}?plan=${plan.id}`} className="flex items-center justify-between gap-2 rounded-[var(--radius-button)] bg-[var(--surface-2)] px-3 py-2">
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-[11px] font-semibold uppercase tracking-[0.04em] text-[var(--text-tertiary)]">{BLOQUE_LABEL[a.bloque]}</span>
+                            <span className="block truncate text-[14px] font-medium text-[var(--text-primary)]">{a.titulo}</span>
+                          </span>
+                          {estado !== 'lista' && (
+                            <span className={`shrink-0 rounded-[var(--radius-button)] px-2 py-0.5 text-[11px] font-semibold ${estado === 'pendiente' ? 'bg-[var(--surface)] text-[var(--text-tertiary)]' : 'bg-[color-mix(in_oklab,var(--butter)_18%,transparent)] text-[var(--butter)]'}`}>
+                              {ESTADO_CONTENIDO_LABEL[estado]}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    );
+                  })}
                   {dia.actividades.length === 0 && <li className="text-[12px] text-[var(--text-tertiary)]">Sin bloques de rutina configurados para este modo.</li>}
                 </ul>
               </div>

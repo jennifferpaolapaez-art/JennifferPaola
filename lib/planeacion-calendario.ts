@@ -21,11 +21,13 @@ import {
   FECHA_HOY,
   bloquesPermitidosEnModo,
   BLOQUE_LABEL,
+  estadoContenidoDeActividad,
   guardarUnaPlaneacion,
   leerPlaneaciones,
   leerProgramaConfig,
   planeacionPorWeekKey,
   type Actividad,
+  type Bloque,
   type DiaPlan,
   type DiaSemana,
   type FingerprintDia,
@@ -43,7 +45,7 @@ import {
   type CalendarioMensual,
   type DiaCalendario,
 } from './calendario';
-import { disenoDeMes, leerDisenosMensuales, type DisenoMensual } from './curriculo';
+import { camposActivos, curriculoActivo, disenoDeMes, leerCurriculosAnuales, leerDisenosMensuales, valorTieneContenido, type CurriculoAnual, type DisenoMensual } from './curriculo';
 
 /* ── FECHAS — mismos patrones de `lib/calendario.ts` (componentes locales, nunca `toISOString`,
    para no desfasar por huso horario). ── */
@@ -104,6 +106,7 @@ function construirActividadesEsqueleto(fecha: string, diaSemana: DiaSemana, modo
     dominio: '',
     materiales: [],
     contenidoPendiente: true,
+    estadoContenido: 'pendiente',
   }));
 }
 
@@ -223,10 +226,11 @@ export interface ConflictoDia {
 }
 
 /** Un bloque con contenido más allá del esqueleto — regla del usuario, punto 4: "Calendario nunca
- * destruye trabajo humano existente". */
+ * destruye trabajo humano existente". Un borrador YA cuenta como trabajo real (la maestra empezó,
+ * aunque no lo haya marcado "lista" todavía) — solo `pendiente` (esqueleto intacto) no cuenta. */
 export function hayTrabajoReal(dia: DiaPlan): boolean {
   return dia.actividades.some(
-    (a) => a.contenidoPendiente !== true || !!a.notas?.trim() || (a.adaptacionesIndividuales?.length ?? 0) > 0 || (a.ninosFoco?.length ?? 0) > 0
+    (a) => estadoContenidoDeActividad(a) !== 'pendiente' || !!a.notas?.trim() || (a.adaptacionesIndividuales?.length ?? 0) > 0 || (a.ninosFoco?.length ?? 0) > 0
   );
 }
 
@@ -320,5 +324,70 @@ export function resolverConflictoDia(
         origenCalendario: construirOrigenDia(cal, diaCalActual),
       };
     }),
+  };
+}
+
+/* ── CONTEXTO PARA "AYÚDAME A CREARLA" (Parte E) — se RESUELVE en vivo desde sus fuentes reales
+   cada vez que hace falta, nunca se copia como texto nuevo dentro de `Actividad` (regla del
+   usuario, punto 4). Todo aquí es CONTEXTO OPCIONAL: que exista un personaje del mes o un evento
+   no significa que la propuesta deba usarlo — eso lo decide el catálogo DEMO de
+   `lib/propuesta-actividad.ts`, nunca esta función. Los niños NO entran aquí — la personalización
+   (capas B/C) sigue siendo un paso posterior a tener el contenido base (regla del usuario, punto
+   8: "primero QUÉ vamos a hacer, después CÓMO se adapta"). */
+
+export interface ContextoPropuestaActividad {
+  mes: {
+    temaMensual?: string;
+    camposActivos: { etiqueta: string; valor: string }[];
+    personajeDelMes?: string;
+    enfoqueCultural?: string;
+  };
+  dia: {
+    fecha: string;
+    subtemaNombre?: string;
+    vocabulario: string[];
+    focoDia?: string;
+    eventos: { tipo: string; nombre: string }[];
+  };
+  programa: {
+    metodologias: string[];
+    idiomas: string[];
+    etapasAtendidas: string[];
+    bloque: Bloque;
+    duracionMin?: number;
+  };
+}
+
+export function resolverContextoParaPropuesta(
+  dia: DiaPlan,
+  bloque: Bloque,
+  opciones?: { config?: ProgramaConfig; disenos?: DisenoMensual[]; curriculos?: CurriculoAnual[] }
+): ContextoPropuestaActividad {
+  const config = opciones?.config ?? leerProgramaConfig();
+  const curriculo = curriculoActivo(opciones?.curriculos ?? leerCurriculosAnuales());
+  const anio = Number(dia.fecha.slice(0, 4));
+  const mes = Number(dia.fecha.slice(5, 7));
+  const mesCurricular = curriculo?.meses.find((m) => m.mes === mes);
+
+  const camposConValor = camposActivos(config)
+    .map((c) => ({ etiqueta: c.etiqueta, valor: mesCurricular?.campos[c.id] }))
+    .filter((x): x is { etiqueta: string; valor: NonNullable<typeof x.valor> } => valorTieneContenido(x.valor))
+    .map((x) => ({ etiqueta: x.etiqueta, valor: x.valor.tipo === 'unico' ? x.valor.valor : x.valor.valores.join(', ') }));
+
+  const disenos = opciones?.disenos ?? leerDisenosMensuales();
+  const diseno = disenoDeMes(anio, mes, disenos);
+  const subtema = dia.origenCalendario?.subtemaId ? diseno?.subtemas.find((s) => s.id === dia.origenCalendario!.subtemaId) : undefined;
+  const vocabulario = (dia.origenCalendario?.vocabularioIds ?? [])
+    .map((id) => subtema?.vocabulario.find((v) => v.id === id))
+    .filter((v): v is NonNullable<typeof v> => !!v)
+    .flatMap((v) => v.terminos.map((t) => t.texto).filter(Boolean));
+  const personajeDelMes = diseno?.personajeDelMes && diseno.personajeDelMes !== 'sin_personaje' ? diseno.personajeDelMes.nombre : undefined;
+
+  const bloqueCfg = config.rutinaBloques.find((b) => b.bloque === bloque);
+
+  return {
+    mes: { temaMensual: mesCurricular?.tema, camposActivos: camposConValor, personajeDelMes, enfoqueCultural: diseno?.enfoqueCultural },
+    dia: { fecha: dia.fecha, subtemaNombre: subtema?.nombre, vocabulario, focoDia: dia.focoDia || subtema?.enfoque, eventos: dia.origenCalendario?.eventos ?? [] },
+    programa: { metodologias: config.metodologias, idiomas: config.idiomasEnsenanza, etapasAtendidas: config.etapasAtendidas, bloque, duracionMin: bloqueCfg?.duracionMin },
   };
 }

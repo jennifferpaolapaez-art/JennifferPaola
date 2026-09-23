@@ -1522,17 +1522,35 @@ export interface Printable {
   tipo: 'ficha_individual' | 'ficha_grupal' | 'guia_para_casa';
 }
 
+/** Ciclo de vida del CONTENIDO de una actividad (distinto del ciclo de la meta/checkpoint de Plan
+ * Individual — no confundir). `pendiente` = esqueleto materializado por la Parte D, nadie lo tocó
+ * todavía. `borrador` = la maestra empezó pero no la considera lista. `lista` = confirmada. Un dato
+ * antiguo sin este campo (Semana 3 demo, cualquier actividad de antes de esto) se lee como `lista`
+ * por compatibilidad — ver `estadoContenidoDeActividad()`. */
+export type EstadoContenidoActividad = 'pendiente' | 'borrador' | 'lista';
+
+export const ESTADO_CONTENIDO_LABEL: Record<EstadoContenidoActividad, string> = {
+  pendiente: 'Pendiente',
+  borrador: 'Borrador',
+  lista: 'Lista',
+};
+
 export interface Actividad {
   id: string;
   bloque: Bloque;
   hora: string; // "9:50"
   titulo: string;
-  /** Parte D — este bloque se materializó desde el Calendario Pedagógico como ESQUELETO de rutina
-   * (el bloque configurado existe y el día lo incluye), pero nadie le puso contenido pedagógico
-   * real todavía. RAÍZ nunca genera título/objetivo/materiales solo — eso sigue siendo trabajo de
-   * la maestra o de una IA posterior; esta bandera solo distingue "vacío a propósito, esperando
-   * contenido" de una actividad ya escrita con un título corto. */
+  /** LEGADO — ver `estadoContenido`. Se conserva por compatibilidad (código que ya lo leía sigue
+   * funcionando) pero ya no es la fuente de verdad; úsese siempre `estadoContenidoDeActividad()`. */
   contenidoPendiente?: boolean;
+  /** Parte E — pendiente/borrador/lista. Ausente = dato antiguo, se trata como `lista`. */
+  estadoContenido?: EstadoContenidoActividad;
+  /** Parte E — esta actividad ya tenía diferenciación/adaptaciones/niño foco cuando su contenido
+   * BASE (título/objetivo/contextos/skills) cambió sustancialmente. RAÍZ nunca borra esas capas
+   * solo, pero tampoco finge que siguen siendo apropiadas — este aviso se limpia cuando la maestra
+   * elige "Revisar ahora" (vuelve a correr `calcularPersonalizacionSemana`) o "Mantener por ahora"
+   * (lo reconoce sin recalcular). */
+  personalizacionDesactualizada?: boolean;
   /** Objetivo DE LA ACTIVIDAD (nivel 2 de 3) — qué skill o propósito tiene esta experiencia. */
   objetivo: string;
   dominio: string;
@@ -1564,6 +1582,14 @@ export interface Actividad {
   guiaOutdoor?: GuiaOutdoor;
   guiaCentros?: CentroDisponible[];
   guiaCierre?: GuiaCierre;
+}
+
+/** Única fuente de verdad para leer el estado de contenido — nunca leer `contenidoPendiente` ni
+ * `estadoContenido` directamente fuera de aquí (regla del usuario: compatibilidad con datos
+ * antiguos sin fingir que ya están completos ni perder lo que sí marcaron como pendiente). */
+export function estadoContenidoDeActividad(a: Actividad): EstadoContenidoActividad {
+  if (a.estadoContenido) return a.estadoContenido;
+  return a.contenidoPendiente ? 'pendiente' : 'lista';
 }
 
 /* ── PARTE D — CALENDARIO → PLANEACIÓN (bridge de solo tipos; la lógica vive en
@@ -2295,6 +2321,54 @@ export function actividadPorId(id: string, plan: PlaneacionSemanal = PLANEACION_
   return undefined;
 }
 
+/** Parte E — busca una actividad entre TODAS las Planeaciones guardadas, no solo la Semana 3 demo
+ * (regla del usuario: reutilizar `/planeacion/[id]`, no crear una segunda pantalla). Con `planId`
+ * busca SOLO en esa Planeación — combinación segura que nunca puede confundir dos actividades de
+ * semanas distintas aunque sus ids coincidieran (hoy no coinciden: la Semana 3 usa ids cortos tipo
+ * `lun-circle`, la Parte D usa `AAAA-MM-DD-bloque-N`, pero esta función nunca depende de esa
+ * distinción para ser segura). Sin `planId` (enlaces antiguos que no lo pasan), busca en todas —
+ * mismo comportamiento de siempre para lo que ya apuntaba solo a la Semana 3. */
+export function actividadPorIdGlobal(
+  id: string,
+  opciones?: { planId?: string; planes?: PlaneacionSemanal[] }
+): { actividad: Actividad; dia: DiaPlan; plan: PlaneacionSemanal } | undefined {
+  const planes = opciones?.planes ?? leerPlaneaciones();
+  if (opciones?.planId) {
+    const plan = planes.find((p) => p.id === opciones.planId);
+    return plan ? actividadPorId(id, plan) : undefined;
+  }
+  for (const plan of planes) {
+    const encontrado = actividadPorId(id, plan);
+    if (encontrado) return encontrado;
+  }
+  return undefined;
+}
+
+/** Parte E — reemplaza UNA actividad dentro de su día/semana y persiste. Compara el contenido BASE
+ * antes/después (título/objetivo/contextos/skills — lo que de verdad mueve Capas B/C, no
+ * materiales/preparación) y marca `personalizacionDesactualizada` si cambió sustancialmente Y la
+ * actividad ya tenía diferenciación/adaptaciones/foco (regla del usuario: nunca borrar esas capas
+ * solo, pero tampoco fingir que un cambio de fondo no las afecta). */
+export function actualizarActividadEnPlan(plan: PlaneacionSemanal, fecha: string, actividadActualizada: Actividad): PlaneacionSemanal {
+  const dias = plan.dias.map((dia) => {
+    if (dia.fecha !== fecha) return dia;
+    const actividades = dia.actividades.map((a) => {
+      if (a.id !== actividadActualizada.id) return a;
+      const teniaPersonalizacion = !!(a.diferenciacion || (a.adaptacionesIndividuales?.length ?? 0) > 0 || (a.ninosFoco?.length ?? 0) > 0);
+      const cambioSustancial =
+        a.titulo !== actividadActualizada.titulo ||
+        a.objetivo !== actividadActualizada.objetivo ||
+        JSON.stringify(a.contextos ?? []) !== JSON.stringify(actividadActualizada.contextos ?? []) ||
+        JSON.stringify(a.skillsRelacionados ?? []) !== JSON.stringify(actividadActualizada.skillsRelacionados ?? []);
+      return { ...actividadActualizada, personalizacionDesactualizada: teniaPersonalizacion && cambioSustancial ? true : actividadActualizada.personalizacionDesactualizada };
+    });
+    return { ...dia, actividades };
+  });
+  const actualizado = { ...plan, dias };
+  guardarUnaPlaneacion(actualizado);
+  return actualizado;
+}
+
 /** La actividad "actual" de hoy — para el mockup fijo, mediodía-mañana del martes (fecha
  * de referencia de esta demo: 2026-09-15). En producción esto se calcula con la hora real. */
 export function actividadActualHoy(plan: PlaneacionSemanal = PLANEACION_SEMANA_3): { actividad: Actividad; dia: DiaPlan; plan: PlaneacionSemanal } | undefined {
@@ -2481,7 +2555,21 @@ export function guardarUnaPlaneacion(planActualizado: PlaneacionSemanal): void {
   guardarPlaneaciones(actualizados);
 }
 
-/** Fecha de referencia de esta demo — en producción se calcula con la fecha real. */
+/** ⚠️ CONSTANTE DEMO — NO es la fecha real, es un valor fijo para que toda la app (Sesión 5, `/hoy`
+ * incluida) trabaje sobre un mismo día estable mientras se construye, sin que "hoy" cambie solo
+ * cada vez que se abre la app en una sesión de desarrollo distinta.
+ *
+ * En producción `/hoy` (y cualquier otro lugar que necesite "la fecha de hoy") NUNCA debe:
+ *   - usar esta constante;
+ *   - calcularse con UTC crudo (`new Date().toISOString()` corre el día en la mitad del mundo);
+ *   - usar la zona horaria del navegador/servidor donde corre el código (eso es la zona horaria
+ *     de quien programó o del datacenter, no la del salón real).
+ * Debe calcularse con la fecha/hora REAL en la ZONA HORARIA DEL PROGRAMA — ver
+ * `ProgramaConfig.timezone` abajo (reservado, sin lógica todavía: RAÍZ es un producto global,
+ * cada programa vive en su propia zona horaria, nunca una fija para todos). Cuando se conecte
+ * Supabase (Sesión 6, paso 8 de la secuencia), esta constante se reemplaza por un cálculo real
+ * (`Intl.DateTimeFormat` con el timezone del programa, o su equivalente en el servidor) — no antes,
+ * para no emprender esa refactorización de fechas sin necesitarla todavía. */
 export const FECHA_HOY = '2026-09-15';
 
 /* ── ASISTENCIA — dos conceptos separados (regla del usuario, Sesión 5 ronda 3): la asistencia
@@ -3007,6 +3095,12 @@ export interface ProgramaConfig {
    * `PlaneacionSemanal.weekKey` de forma estable (regla del usuario: "no hardcodear una
    * convención mundial" — lunes no es universal). Sin configurar, se asume `'lunes'`. */
   inicioSemana?: InicioSemana;
+  /** RESERVADO — sin lógica todavía (regla del usuario: no refactorizar fechas sin necesitarlo).
+   * Zona horaria IANA del programa/organización (ej. `'America/Bogota'`, `'Europe/Madrid'`,
+   * `'Africa/Johannesburg'`) — RAÍZ es un producto global, "hoy" y "ahora" se calculan con la hora
+   * real EN ESTA ZONA, nunca con la del navegador/servidor donde corre el código ni con UTC crudo.
+   * Cuando se conecte la fecha real (ver `FECHA_HOY`), este es el campo que la resuelve. */
+  timezone?: string;
 }
 
 /** Los 7 días de la semana — SOLO para `diasAperturaPrograma`/Calendario (Parte C). Vive aquí, no
