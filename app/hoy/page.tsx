@@ -25,6 +25,7 @@ import {
   type Etapa,
   type Nino,
 } from '@/lib/seed-data';
+import { ESTADO_OPERATIVO_LABEL, TIPO_EVENTO_LABEL, calendarioDeMes, diaDeCalendario, leerCalendariosMensuales } from '@/lib/calendario';
 
 /** Mayúscula solo en la primera letra — "capitalize" de Tailwind mayusculiza CADA palabra,
  * incluida la preposición "de" en fechas en español ("15 De Septiembre"), fix revisor-visual. */
@@ -51,13 +52,51 @@ export default function Hoy() {
 
   if (!cargado) return null;
 
-  const plan = planeacionPorNumero(3);
-  const dia = diaPorFecha(FECHA_HOY, plan);
-  const actual = actividadActualHoy(plan);
   const hoyDate = new Date(`${FECHA_HOY}T09:00:00`);
   const fecha = primeraMayuscula(
     new Intl.DateTimeFormat('es', { weekday: 'long', day: 'numeric', month: 'long' }).format(hoyDate)
   );
+
+  // Parte D — antes de buscar Planeación, RAÍZ pregunta al Calendario si hoy el programa abre.
+  // `/hoy` SIGUE usando siempre la fecha real (nunca un contexto navegado); esto solo decide qué
+  // mostrar cuando esa fecha real cae en un día que la maestra marcó cerrado/feriado/administrativo
+  // en su Calendario. Sin Calendario para este mes (la maestra nunca lo usó), se sigue el camino
+  // de siempre — nunca se exige Calendario retroactivamente.
+  const [anioHoyStr, mesHoyStr] = FECHA_HOY.split('-');
+  const calendarioHoy = calendarioDeMes(Number(anioHoyStr), Number(mesHoyStr), leerCalendariosMensuales());
+  const diaCalendarioHoy = calendarioHoy ? diaDeCalendario(calendarioHoy, FECHA_HOY) : undefined;
+
+  if (diaCalendarioHoy && diaCalendarioHoy.estado !== 'abierto') {
+    return (
+      <AppShell>
+        <motion.div variants={lista} initial="hidden" animate="visible">
+          <motion.header variants={item} className="mb-5">
+            <p className="text-[13px] font-medium text-[var(--text-tertiary)]">{fecha}</p>
+            <h1 className="mt-1 text-balance text-[24px] font-bold leading-[1.15] text-[var(--text-primary)] [font-family:var(--font-display)]">
+              Tu día completo
+            </h1>
+          </motion.header>
+          <motion.div variants={item} className="rounded-[var(--radius-card)] bg-[var(--surface)] p-6 text-center shadow-[var(--shadow-1)]">
+            <p className="text-[16px] font-semibold text-[var(--text-primary)]">Hoy el programa está cerrado</p>
+            <p className="mt-1 text-[13px] text-[var(--text-secondary)]">{ESTADO_OPERATIVO_LABEL[diaCalendarioHoy.estado]}</p>
+            {diaCalendarioHoy.eventos.length > 0 && (
+              <ul className="mt-4 flex flex-col gap-1.5">
+                {diaCalendarioHoy.eventos.map((e) => (
+                  <li key={e.id} className="text-[13px] text-[var(--text-secondary)]">
+                    <span className="font-semibold text-[var(--text-primary)]">{TIPO_EVENTO_LABEL[e.tipo]}</span> · {e.nombre}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </motion.div>
+        </motion.div>
+      </AppShell>
+    );
+  }
+
+  const plan = planeacionPorNumero(3);
+  const dia = diaPorFecha(FECHA_HOY, plan);
+  const actual = actividadActualHoy(plan);
 
   if (!dia || !actual) return null;
   const { actividad } = actual;

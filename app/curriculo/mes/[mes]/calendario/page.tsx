@@ -2,9 +2,10 @@
 
 // CALENDARIO PEDAGÓGICO REAL — Parte C de la nueva capa sobre Planeación. Responde "¿qué ocurre
 // realmente cada día de este mes?" a partir del Diseño del Mes (B) ya aprobado. NO crea
-// actividades detalladas (eso sigue siendo `Actividad`) y NO toca Planeación/Semana/Hoy todavía —
-// la conexión real llega en la Parte D. El contexto de mes navegado aquí NUNCA afecta `/hoy`, que
-// siempre usa la fecha real.
+// actividades detalladas directamente (eso sigue siendo `Actividad`) — la Parte D
+// (`lib/planeacion-calendario.ts`) es quien materializa el esqueleto de una semana a partir de
+// aquí, nunca esta pantalla. El contexto de mes navegado aquí NUNCA afecta `/hoy`, que siempre
+// usa la fecha real.
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -36,6 +37,7 @@ import {
   type ModoPlaneacion,
   type TipoEvento,
 } from '@/lib/calendario';
+import { buscarOMaterializarSemana } from '@/lib/planeacion-calendario';
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.03 } } };
 const item: Variants = { hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] } } };
@@ -117,6 +119,7 @@ function EditorDia({
   diseno: DisenoMensual;
   onCambiar: (cambios: Partial<DiaCalendario>, manual?: boolean) => void;
 }) {
+  const router = useRouter();
   const [nuevoEventoTipo, setNuevoEventoTipo] = useState<TipoEvento>('personalizado');
   const [nuevoEventoNombre, setNuevoEventoNombre] = useState('');
 
@@ -242,6 +245,19 @@ function EditorDia({
           Agregar evento
         </button>
       </div>
+
+      {dia.estado === 'abierto' && (
+        <button
+          type="button"
+          onClick={() => {
+            const { plan } = buscarOMaterializarSemana(dia.fecha);
+            router.push(`/planeacion/semana/${plan.id}`);
+          }}
+          className="mt-4 flex min-h-11 w-full items-center justify-center rounded-[var(--radius-button)] bg-[var(--accent)] text-[14px] font-semibold text-[var(--bg)]"
+        >
+          Ir a la Planeación de esta semana
+        </button>
+      )}
     </div>
   );
 }

@@ -3,12 +3,13 @@
 > Memoria viva del proyecto. Se actualiza en cada hito.
 
 ## Fase actual
-**Sesión 6 en curso — capa Currículo→Diseño→Calendario sobre Planeación.** Parte A (Currículo
-Anual), Parte B (Diseño del Mes + Personaje del Mes) y Parte C (Calendario Pedagógico Real)
-CONSTRUIDAS, VERIFICADAS Y CERRADAS — ver "Decisión arquitectónica: mes ≠ 4 semanas fijas" y las
-secciones A/B/C más abajo (después de "Sesión 6, paso 7 / 6d — AMPLIACIÓN"). Parte D (conectar el
-Calendario con la Planeación existente) **NO construida — requiere aprobación explícita del
-usuario antes de empezar.**
+**Sesión 6 en curso — capa Currículo→Diseño→Calendario→Planeación.** Parte A (Currículo Anual),
+Parte B (Diseño del Mes + Personaje del Mes), Parte C (Calendario Pedagógico Real) y Parte D
+(Calendario → Planeación) CONSTRUIDAS, VERIFICADAS Y CERRADAS — ver "Decisión arquitectónica: mes
+≠ 4 semanas fijas" y las secciones A/B/C/D más abajo (después de "Sesión 6, paso 7 / 6d —
+AMPLIACIÓN"). Pendiente sin empezar (fuera de alcance de D a propósito): pantalla para completar
+el contenido pedagógico de los bloques materializados por D — hoy quedan "Pendiente", nadie los
+edita todavía.
 
 Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRADA** (detalle abajo).
 Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
@@ -1925,11 +1926,124 @@ Responde "¿qué pasa cada día real de este mes?" a partir del Diseño (B) ya a
      (`TipoEvento: 'personalizado'`, siempre agregado a mano por la maestra). Declarado
      explícitamente: ninguna sugerencia —ni hoy ni en producción— sale de inferir cultura/idioma
      por nombre o apellido de un niño o familia.
-- **Parte C queda oficialmente CERRADA.** **Siguiente:** Parte D (conectar el Calendario aprobado
-  con la Planeación semanal/diaria existente). **NO construir D sin aprobación explícita del
-  usuario** — instrucción textual: "Cuando C esté construido y validado, paramos otra vez. No
-  avances a D automáticamente." El agente presentará primero un plan corto de D para aprobación,
-  antes de escribir código.
+- **Parte C queda oficialmente CERRADA.**
+
+### Parte D — Calendario → Planeación (CONSTRUIDA, VERIFICADA CON LAS 19 PRUEBAS DEL USUARIO, CERRADA)
+Conecta el Calendario Pedagógico (C) con la Planeación semanal que ya existía (Sesión 5) — **sin
+reconstruirla**. Plan aprobado por el usuario tras responder A–R + 7 ajustes de diseño antes de
+escribir código (ver más abajo "Ajustes aprobados"). El usuario pidió expresamente que D solo
+conectara ESTRUCTURA, nunca contenido pedagógico ni IA — cumplido: cada bloque materializado queda
+`contenidoPendiente: true` con título genérico del bloque, nunca texto inventado.
+
+**Archivos:** `lib/planeacion-calendario.ts` (nuevo — toda la lógica de materialización/
+sincronización), cambios de modelo en `lib/seed-data.ts` (`PlaneacionSemanal`/`DiaPlan`/
+`Actividad`/`BloqueRutina`/`ProgramaConfig`, ver abajo), `app/planeacion/semana/[id]/page.tsx`
+(nuevo — pantalla de la semana materializada), botón nuevo en el editor de día de
+`app/curriculo/mes/[mes]/calendario/page.tsx` ("Ir a la Planeación de esta semana"), y un ajuste
+en `app/hoy/page.tsx` (consulta el Calendario de HOY antes de buscar Planeación).
+
+**Modelo (decisiones tomadas ANTES de escribir código, por instrucción explícita del usuario):**
+- `PlaneacionSemanal` gana `id` (clave lógica real, siempre estable), `numero?` (legado, solo para
+  Semana 3 demo y planes antiguos — `planeacionPorNumero` sigue intacta), `weekKey`/`rangoInicio`/
+  `rangoFin` (identidad = primer día de la SEMANA CALENDARIO configurada, nunca "primer día
+  abierto" — dos programas con distinta apertura para la misma semana comparten `weekKey`),
+  `origenCalendario?` (metadata de dónde salió, nunca contenido).
+- `DiaPlan` gana `origenCalendario?: OrigenCalendarioDia` (referencia viva a `subtemaId`/
+  `vocabularioIds`, snapshot de `modoPlaneacion`/`eventos`/`esCierreMensual`/`fingerprint` — un día
+  sin este campo es un día escrito a mano de siempre, compatibilidad total).
+- `Actividad` gana `contenidoPendiente?: boolean` — nunca un título inventado; distingue "bloque
+  vacío a propósito, esperando contenido" de una actividad ya escrita corta.
+- `BloqueRutina` gana `modosPermitidos?: ModoPlaneacion[]` (ausente = `['normal']`) — en qué modos
+  de planeación del día aparece cada bloque configurado; DEMO: circle/centros/lectura/outdoor/
+  cierre en `normal`+`rutina_ligera`, principal/steam/prek solo en `normal`. Configurable por
+  programa, nunca hardcodeado universalmente (regla del usuario).
+- `ProgramaConfig` gana `inicioSemana?: 'lunes' | 'domingo'` (default `'lunes'`) — de qué día
+  arranca la semana calendario de ESE programa, nunca una convención mundial fija.
+- `ModoPlaneacion`/`MODO_PLANEACION_LABEL` se movieron de `lib/calendario.ts` a `lib/seed-data.ts`
+  (re-exportados igual desde `calendario.ts`, nada que ya los importara se rompió) — `BloqueRutina`
+  los necesita y `seed-data.ts` no puede depender de `calendario.ts` sin ciclo.
+- **Límite conocido y documentado a propósito, NO oculto:** `DiaPlan.dia` sigue siendo `DiaSemana`
+  (Lun–Vie, 5 valores) — ampliarlo a los 7 días tocaría `Nino.diasAsistencia` y toda la
+  personalización de Sesión 6. Un programa que abre sábado/domingo puede tener esos días `abierto`
+  en Calendario; D los deja fuera de la Planeación materializada y los reporta en
+  `origenCalendario.diasFueraDeAlcance` en vez de forzarlos o fallar en silencio. Ampliar esto es
+  decisión de modelo aparte, fuera de esta Parte D.
+
+**Materialización** (`materializarSemanaDesdeCalendario`/`buscarOMaterializarSemana`): arma el
+esqueleto de UNA semana calendario a partir de los `DiaCalendario` reales — solo días
+`abierto`+`incluidoEnPlaneacion`; por cada día, los bloques de `ProgramaConfig.rutinaBloques`
+filtrados por `modosPermitidos` contra el `modoPlaneacion` de ESE día, todos `contenidoPendiente:
+true`. Nunca duplica: busca primero por `weekKey` (`planeacionPorWeekKey`) antes de crear.
+
+**Sincronización** (`detectarConflictos`/`resolverConflictoDia`): compara cada `DiaPlan` contra su
+`DiaCalendario` actual por `fingerprint` (firma determinística de estado/incluido/modo/subtema/
+vocabulario/eventos/cierre — sin hash criptográfico, "solo firma suficiente" per el usuario).
+Nunca sincroniza sola — solo detecta y ofrece 3-4 acciones explícitas por día: `mantener` (no
+toca nada), `actualizar` (refresca `temaDia`/`focoDia`/`origenCalendario`, `actividades[]` INTACTO
+siempre), `quitar_dia` (con doble confirmación en la UI si `hayTrabajoReal`), `agregar_dia` (para
+un día que el Calendario abrió después y la Planeación no conocía). `hayTrabajoReal()` distingue
+un bloque con contenido real (`contenidoPendiente !== true`, o notas/adaptaciones/foco) de un
+esqueleto vacío — Calendario nunca borra trabajo humano solo.
+
+**Bug real encontrado y corregido durante la verificación:** `detectarConflictos` marcaba
+"ahora cerrado" en CADA carga de la pantalla, incluso después de que la maestra ya lo reconoció
+con "Marcar como cerrado y conservar el trabajo" — el aviso nunca se apagaba. Corregido: antes de
+clasificar un conflicto, compara el fingerprint actual contra el ya guardado; si coinciden (ya
+reconocido), no lo vuelve a mostrar.
+
+**Ajustes aprobados por el usuario antes de construir (5 + 2 adicionales, sobre el plan A–R):**
+1. `/planeacion/[id]` (hoy: detalle de UNA actividad de la Semana 3 demo) se dejó exactamente
+   igual — la Planeación materializada vive en la ruta nueva `/planeacion/semana/[id]`, nunca
+   reutilizando el significado de una ruta existente.
+2. Identidad de semana = semana calendario real (`weekKey` + `inicioSemana` configurable), nunca
+   "primer/último día abierto".
+3. El fingerprint compara TODO el estado relevante del día (estado/incluido/modo/subtema/
+   vocabulario/eventos/cierre), no solo subtema+vocabulario+modo.
+4. Calendario nunca borra trabajo humano al detectar un día cerrado — siempre ofrece resolución
+   explícita con el trabajo visible.
+5. D materializa el ESQUELETO de bloques de rutina configurados (no un `actividades: []` vacío) —
+   cada bloque "Pendiente", nunca inventado.
+6. `modosPermitidos` en vez de un booleano `disponibleEnRutinaLigera` — extensible a los 3 modos
+   (y a futuros), configurable por programa.
+7. `/hoy` consulta el Calendario de la fecha real ANTES de buscar Planeación — si hoy está
+   cerrado, muestra el cierre con su motivo/eventos, nunca cae en la Semana 3 demo ni en un "no
+   encontrado" confuso.
+
+**Verificado en navegador — las 19 pruebas pedidas, todas confirmadas, con datos reales de
+Septiembre/Octubre 2026 ya usados en el cierre de C:**
+1. Semana normal de 5 días (14–18 sept) ✓ · 2. Semana parcial de 4 días, miércoles cerrado
+excluido sin lunes/martes fantasma (7–11 sept) ✓ · 3. Semana que cruza dos meses (28 sept–2 oct)
+en UNA sola Planeación, cada día referenciando el `CalendarioMensual` real de su propio mes,
+verificado en localStorage ✓ · 4. Día cerrado nunca genera bloques/actividad/adaptación/foco ✓ ·
+5. Día con dos eventos simultáneos (cultural + cumpleaños) — ambos como contexto, ninguno
+genera actividad ✓ · 6. Cierre mensual (30 sept) con `rutina_ligera`, día abierto y planeable ✓ ·
+7. Vocabulario referenciado ("profesora", "cuerpo", "familia", "amigo") resuelto en vivo desde B ✓
+· 8. Contenido ya escrito por la maestra nunca se sobrescribió en ningún ciclo de prueba ✓ ·
+9. Cambio posterior en Calendario (día cerrado) generó aviso explícito, nunca reemplazo
+silencioso ✓ · 10. `/hoy` siguió usando siempre `FECHA_HOY` real ✓ · 11. Preparar semanas de
+octubre no afectó `/hoy` (sigue en septiembre) ✓ · 12. Niños foco/personalización de la Semana 3
+demo (`/semana`) siguen funcionando sin tocar ✓ · 13. `/observar` sigue funcionando sin tocar ✓ ·
+14. Crear la misma semana dos veces (desde dos días distintos) no duplicó — mismo `id` ✓ ·
+15. `/planeacion`, `/semana`, `/planeacion/[id]` (Semana 3 demo) siguen funcionando exactamente
+igual ✓ · 16. Día normal materializado con EXACTAMENTE los bloques configurados para ese día de la
+semana, todos "Pendiente" ✓ · 17. Día en `rutina_ligera` con solo los bloques permitidos en ese
+modo (verificado comparando el mismo día de semana en modo normal vs. ligero) ✓ · 18. Día con
+trabajo real que cambió a cerrado: la sincronización mostró el conflicto con el trabajo intacto,
+"Marcar como cerrado y conservar el trabajo" lo resolvió sin borrar nada — y el bug de aviso
+permanente se encontró y corrigió en el camino ✓ · 19. `FECHA_HOY` marcada feriado con un evento
+→ `/hoy` mostró "Hoy el programa está cerrado" + "Feriado" + el evento, nunca la Semana 3 demo
+(capturado en `docs/revisiones/` pendiente de exportar como archivo — visto y confirmado en el
+navegador interactivo) ✓.
+tsc ✓ · build ✓ (34 rutas) · sin errores de consola en toda la sesión de pruebas.
+
+**Explícitamente NO construido en D (fuera de alcance, por instrucción del usuario):** generación
+de contenido pedagógico real (título/objetivo/materiales/pasos) para los bloques materializados,
+integración de IA, página de detalle para editar una actividad de una semana materializada (los
+bloques de `/planeacion/semana/[id]` son informativos, sin enlace — no hay a dónde llevar el clic
+todavía; ver "Pendiente" abajo). **Siguiente paso, sin empezar:** decidir si/cuándo se construye
+esa pantalla de edición de contenido, y si D necesita una acción "Materializar" visible también
+desde algún punto de `/semana`/`/planeacion` (hoy solo se llega desde el editor de día del
+Calendario).
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).

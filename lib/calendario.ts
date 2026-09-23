@@ -15,12 +15,21 @@ import {
   FECHA_HOY,
   leerNinos,
   leerProgramaConfig,
+  MODO_PLANEACION_LABEL,
   type ConfigCierreMensualPrograma,
   type DiaSemanaCompleto,
+  type ModoPlaneacion,
   type Nino,
   type ProgramaConfig,
 } from './seed-data';
 import { type DisenoMensual, type Subtema, type VocabularioItem } from './curriculo';
+
+// `ModoPlaneacion`/`MODO_PLANEACION_LABEL` nacieron aquí en la Parte C pero se movieron a
+// `seed-data.ts` en la Parte D (BloqueRutina.modosPermitidos los necesita, y calendario.ts ya
+// importa de seed-data.ts — moverlos evita un import circular). Re-exportados tal cual para no
+// romper nada que ya los importaba desde `@/lib/calendario`.
+export type { ModoPlaneacion };
+export { MODO_PLANEACION_LABEL };
 
 /* ── ESTADO OPERATIVO vs EVENTOS (regla del usuario: nunca un solo campo resolviendo ambos) ── */
 
@@ -32,17 +41,6 @@ export const ESTADO_OPERATIVO_LABEL: Record<EstadoOperativoDia, string> = {
   feriado: 'Feriado',
   dia_administrativo: 'Día administrativo',
   custom: 'Personalizado',
-};
-
-/** Si el día pertenece a la rutina/planeación Y si genera o no una experiencia dirigida NUEVA —
- * dos preguntas distintas (regla del usuario). El cierre de mes es `abierto` + `rutina_ligera`,
- * NUNCA un estado operativo aparte ("cerrado"). */
-export type ModoPlaneacion = 'normal' | 'rutina_ligera' | 'sin_actividad_dirigida';
-
-export const MODO_PLANEACION_LABEL: Record<ModoPlaneacion, string> = {
-  normal: 'Actividad dirigida normal',
-  rutina_ligera: 'Rutina ligera — sin actividad dirigida nueva',
-  sin_actividad_dirigida: 'Sin actividad dirigida',
 };
 
 /** Categorías de evento — CULTURAL / ESTACIONAL / CELEBRACIÓN / CUMPLEAÑOS / EVENTO DEL PROGRAMA /

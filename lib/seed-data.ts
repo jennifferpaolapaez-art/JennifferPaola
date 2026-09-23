@@ -1301,6 +1301,19 @@ export function rosterEsDemo(): boolean {
 
 export type DiaSemana = 'Lun' | 'Mar' | 'Mié' | 'Jue' | 'Vie';
 
+/** Si el día pertenece a la rutina/planeación Y si genera o no una experiencia dirigida NUEVA —
+ * vive aquí (no en `lib/calendario.ts`, aunque nació ahí en la Parte C) porque `BloqueRutina`
+ * necesita clasificar en qué modos aparece cada bloque, y `calendario.ts` ya importa de este
+ * archivo — moverlo evita un import circular. `calendario.ts` lo re-exporta tal cual, así que
+ * nada que ya lo importaba desde ahí se rompe. */
+export type ModoPlaneacion = 'normal' | 'rutina_ligera' | 'sin_actividad_dirigida';
+
+export const MODO_PLANEACION_LABEL: Record<ModoPlaneacion, string> = {
+  normal: 'Actividad dirigida normal',
+  rutina_ligera: 'Rutina ligera — sin actividad dirigida nueva',
+  sin_actividad_dirigida: 'Sin actividad dirigida',
+};
+
 /* ── RUTINA DIARIA — los bloques que la maestra configura para su salón (regla del usuario:
    "estos bloques deben ser configurables, porque no todas las maestras tienen la misma rutina").
    Este catálogo es la CONFIGURACIÓN; qué bloques aparecen cada día y con qué actividad vive en
@@ -1347,20 +1360,34 @@ export interface BloqueRutina {
   orden: number;
   dias: DiaSemana[];
   activo: boolean;
+  /** En qué modos de planeación del día (Parte C) aparece este bloque — extensible a futuros
+   * modos, nunca un solo booleano "es actividad dirigida" (regla del usuario: no hardcodear
+   * universalmente qué bloque es "dirigido", eso lo decide cada programa). Ausente = `['normal']`
+   * (el default más conservador: si no se configuró, el bloque solo aparece en un día normal). */
+  modosPermitidos?: ModoPlaneacion[];
 }
 
+// DEMO — clasificación razonable por defecto (outdoor/centros/lectura/cierre siguen aplicando en
+// rutina ligera porque son rutina, no actividad dirigida nueva; principal/steam/prek no, porque SÍ
+// son actividad dirigida nueva). La maestra la ajusta editando `ProgramaConfig.rutinaBloques`.
 export const RUTINA_PROGRAMA: BloqueRutina[] = [
-  { bloque: 'circle', horaAproximada: '9:30', duracionMin: 15, orden: 1, dias: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], activo: true },
-  { bloque: 'principal', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Lun', 'Mar', 'Jue'], activo: true },
-  { bloque: 'steam', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Mié'], activo: true },
-  { bloque: 'centros', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Vie'], activo: true },
-  { bloque: 'outdoor', horaAproximada: '10:30', duracionMin: 30, orden: 3, dias: ['Lun', 'Mar', 'Jue'], activo: true },
-  { bloque: 'lectura', horaAproximada: '11:00', duracionMin: 20, orden: 3, dias: ['Mié'], activo: true },
-  { bloque: 'steam', horaAproximada: '11:30', duracionMin: 30, orden: 4, dias: ['Mar'], activo: true },
-  { bloque: 'prek', horaAproximada: '13:30', duracionMin: 30, orden: 4, dias: ['Mié'], activo: true },
-  { bloque: 'centros', horaAproximada: '15:30', duracionMin: 45, orden: 5, dias: ['Lun', 'Mar'], activo: true },
-  { bloque: 'cierre', horaAproximada: '15:00', duracionMin: 15, orden: 6, dias: ['Vie'], activo: true },
+  { bloque: 'circle', horaAproximada: '9:30', duracionMin: 15, orden: 1, dias: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'], activo: true, modosPermitidos: ['normal', 'rutina_ligera'] },
+  { bloque: 'principal', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Lun', 'Mar', 'Jue'], activo: true, modosPermitidos: ['normal'] },
+  { bloque: 'steam', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Mié'], activo: true, modosPermitidos: ['normal'] },
+  { bloque: 'centros', horaAproximada: '9:50', duracionMin: 40, orden: 2, dias: ['Vie'], activo: true, modosPermitidos: ['normal', 'rutina_ligera'] },
+  { bloque: 'outdoor', horaAproximada: '10:30', duracionMin: 30, orden: 3, dias: ['Lun', 'Mar', 'Jue'], activo: true, modosPermitidos: ['normal', 'rutina_ligera'] },
+  { bloque: 'lectura', horaAproximada: '11:00', duracionMin: 20, orden: 3, dias: ['Mié'], activo: true, modosPermitidos: ['normal', 'rutina_ligera'] },
+  { bloque: 'steam', horaAproximada: '11:30', duracionMin: 30, orden: 4, dias: ['Mar'], activo: true, modosPermitidos: ['normal'] },
+  { bloque: 'prek', horaAproximada: '13:30', duracionMin: 30, orden: 4, dias: ['Mié'], activo: true, modosPermitidos: ['normal'] },
+  { bloque: 'centros', horaAproximada: '15:30', duracionMin: 45, orden: 5, dias: ['Lun', 'Mar'], activo: true, modosPermitidos: ['normal', 'rutina_ligera'] },
+  { bloque: 'cierre', horaAproximada: '15:00', duracionMin: 15, orden: 6, dias: ['Vie'], activo: true, modosPermitidos: ['normal', 'rutina_ligera'] },
 ];
+
+/** Los bloques de `rutina` que aplican en un `modo` dado — ausencia de `modosPermitidos` en un
+ * bloque se trata como `['normal']` (default conservador, ver doc de `BloqueRutina`). */
+export function bloquesPermitidosEnModo(rutina: BloqueRutina[], modo: ModoPlaneacion): BloqueRutina[] {
+  return rutina.filter((b) => (b.modosPermitidos ?? ['normal']).includes(modo));
+}
 
 /** Los bloques activos que le tocan a un día de la semana según la rutina configurada, en orden. */
 export function bloquesConfiguradosParaDia(dia: DiaSemana, rutina: BloqueRutina[] = RUTINA_PROGRAMA): BloqueRutina[] {
@@ -1500,6 +1527,12 @@ export interface Actividad {
   bloque: Bloque;
   hora: string; // "9:50"
   titulo: string;
+  /** Parte D — este bloque se materializó desde el Calendario Pedagógico como ESQUELETO de rutina
+   * (el bloque configurado existe y el día lo incluye), pero nadie le puso contenido pedagógico
+   * real todavía. RAÍZ nunca genera título/objetivo/materiales solo — eso sigue siendo trabajo de
+   * la maestra o de una IA posterior; esta bandera solo distingue "vacío a propósito, esperando
+   * contenido" de una actividad ya escrita con un título corto. */
+  contenidoPendiente?: boolean;
   /** Objetivo DE LA ACTIVIDAD (nivel 2 de 3) — qué skill o propósito tiene esta experiencia. */
   objetivo: string;
   dominio: string;
@@ -1533,6 +1566,47 @@ export interface Actividad {
   guiaCierre?: GuiaCierre;
 }
 
+/* ── PARTE D — CALENDARIO → PLANEACIÓN (bridge de solo tipos; la lógica vive en
+   `lib/planeacion-calendario.ts`, que importa de aquí y de `lib/calendario.ts`). Viven aquí, no en
+   el bridge, porque `DiaPlan`/`PlaneacionSemanal` los referencian y este archivo no puede depender
+   del bridge (mismo motivo que `DiaSemanaCompleto`/`ModoPlaneacion` arriba). ── */
+
+/** Firma determinística de UN `DiaCalendario` en el momento de materializar/sincronizar — permite
+ * detectar qué cambió sin guardar el día completo ni usar un hash criptográfico (regla del
+ * usuario: "no hace falta hash criptográfico, solo firma determinística suficiente"). Construida
+ * en `lib/planeacion-calendario.ts` con `fingerprintDiaCalendario()`. */
+export type FingerprintDia = string;
+
+/** De dónde salió UN `DiaPlan` cuando se materializó desde el Calendario Pedagógico (Parte C) —
+ * referencia viva a subtema/vocabulario (nunca copia el texto, mismo principio que ya rige C),
+ * snapshot del resto (estado/modo/eventos) para poder comparar contra el Calendario actual y
+ * detectar cambios (regla del usuario: nunca sincronizar en silencio). */
+export interface OrigenCalendarioDia {
+  calendarioMensualId: string;
+  subtemaId?: string;
+  vocabularioIds: string[];
+  modoPlaneacion: ModoPlaneacion;
+  esCierreMensual: boolean;
+  /** Eventos del día en el momento de materializar — snapshot informativo (nombre/tipo), NUNCA
+   * genera `Actividad`/objetivo/evaluación por sí mismo (regla del usuario). */
+  eventos: { tipo: string; nombre: string }[];
+  fingerprint: FingerprintDia;
+}
+
+/** De dónde salió TODA la semana — permite ubicarla sin duplicar (`weekKey`) y saber si el
+ * Calendario cambió después de crearla (comparando fingerprints día por día contra el Calendario
+ * actual, nunca recalculando ni sobrescribiendo solo). */
+export interface OrigenCalendarioSemana {
+  weekKey: string; // ISO — mismo valor que `PlaneacionSemanal.rangoInicio`
+  materializadaEn: string;
+  ultimaSincronizacionEn?: string;
+  /** Fechas que el Calendario marca `abierto` pero que Planeación todavía no puede representar
+   * (hoy: sábado/domingo — `DiaPlan.dia` es `DiaSemana`, de 5 valores; ampliarlo es una decisión
+   * de modelo aparte, fuera del alcance de esta Parte D). Se documentan en vez de ignorarse en
+   * silencio o forzar un valor inválido. */
+  diasFueraDeAlcance?: string[];
+}
+
 export interface DiaPlan {
   dia: DiaSemana;
   fecha: string; // ISO
@@ -1542,10 +1616,31 @@ export interface DiaPlan {
   temaDia: string;
   focoDia: string;
   actividades: Actividad[];
+  /** Ausente = día escrito a mano, sin Calendario detrás (compatibilidad total con Semana 3 demo
+   * y cualquier semana antigua). Presente = este día se materializó desde un `DiaCalendario` de la
+   * Parte C — ver `OrigenCalendarioDia`. */
+  origenCalendario?: OrigenCalendarioDia;
 }
 
 export interface PlaneacionSemanal {
-  numero: number;
+  /** Estable para siempre, generado al crear — la clave lógica real del sistema nuevo (ver
+   * `numero` abajo para compatibilidad). */
+  id: string;
+  /** LEGADO — antes era la única identidad de una semana (`planeacionPorNumero`). Se conserva
+   * SOLO para que la Semana 3 demo y cualquier plan antiguo sigan funcionando exactamente igual;
+   * una `PlaneacionSemanal` nueva creada desde Calendario (Parte D) no la usa. */
+  numero?: number;
+  /** Identidad real de una semana nueva: la fecha ISO del primer día de la SEMANA CALENDARIO
+   * configurada (`ProgramaConfig.inicioSemana`), no "primer día abierto" — así dos programas con
+   * distintos días de apertura para la misma semana calendario comparten la misma identidad, y
+   * "crear la misma semana dos veces" se detecta por este valor, nunca por rango de días abiertos. */
+  weekKey?: string;
+  /** = `weekKey`, en formato explícito por claridad de lectura en el resto del código/UI. */
+  rangoInicio?: string;
+  /** `rangoInicio` + 6 días — el último día de la semana calendario, aunque el programa no abra
+   * ese día. */
+  rangoFin?: string;
+  origenCalendario?: OrigenCalendarioSemana;
   /** Objetivo DE LA SEMANA (nivel 1 de 3) — qué se desarrolla con el grupo esta semana. */
   temaMensual: string;
   subtemaSemanal: string;
@@ -1564,6 +1659,7 @@ export interface PlaneacionSemanal {
 }
 
 export const PLANEACION_SEMANA_3: PlaneacionSemanal = {
+  id: 'semana-3-demo',
   numero: 3,
   personalizacionActiva: true,
   personalizacionActualizadaEn: '2026-09-10',
@@ -2326,6 +2422,15 @@ export function calcularPersonalizacionSemana(plan: PlaneacionSemanal, ninos: Ni
 
 const PLANEACION_STORAGE_KEY = 'raiz_planeaciones';
 
+/** Compatibilidad de lectura (mismo patrón que `normalizarNino`): una `PlaneacionSemanal` guardada
+ * ANTES de la Parte D no tiene `id` — se le deriva uno estable a partir de `numero` (nunca al azar,
+ * para que releer el mismo plan produzca siempre el mismo id y `guardarUnaPlaneacion` seguirlo
+ * encontrando). Un plan ya creado por Parte D siempre trae su `id` real, esto no lo toca. */
+function normalizarPlaneacion(p: PlaneacionSemanal): PlaneacionSemanal {
+  if (p.id) return p;
+  return { ...p, id: `semana-numero-${p.numero ?? 'sin-numero'}` };
+}
+
 /** Roster de semanas — hoy solo existe la Semana 3, pero se guarda como lista para no rehacer
  * esto cuando haya más. Mismo patrón de `leerNinos()`/`leerProgramaConfig()`: localStorage con
  * semilla de respaldo, nunca lanza en SSR/modo privado. */
@@ -2335,7 +2440,7 @@ export function leerPlaneaciones(): PlaneacionSemanal[] {
     const guardado = window.localStorage.getItem(PLANEACION_STORAGE_KEY);
     if (!guardado) return [PLANEACION_SEMANA_3];
     const parseado = JSON.parse(guardado) as PlaneacionSemanal[];
-    return Array.isArray(parseado) && parseado.length > 0 ? parseado : [PLANEACION_SEMANA_3];
+    return Array.isArray(parseado) && parseado.length > 0 ? parseado.map(normalizarPlaneacion) : [PLANEACION_SEMANA_3];
   } catch {
     return [PLANEACION_SEMANA_3];
   }
@@ -2354,10 +2459,24 @@ export function planeacionPorNumero(numero: number, planes: PlaneacionSemanal[] 
   return planes.find((p) => p.numero === numero) ?? PLANEACION_SEMANA_3;
 }
 
+/** Parte D — identidad real de una semana nueva. `undefined` si no existe todavía (nunca cae al
+ * demo: a diferencia de `planeacionPorNumero`, aquí "no existe" es una respuesta válida que quien
+ * llama debe poder distinguir, por ejemplo para decidir "crear" vs. "abrir"). */
+export function planeacionPorId(id: string, planes: PlaneacionSemanal[] = leerPlaneaciones()): PlaneacionSemanal | undefined {
+  return planes.find((p) => p.id === id);
+}
+
+/** Evita duplicar la misma semana calendario (regla del usuario, punto O) — busca por `weekKey`,
+ * nunca por rango de días abiertos (dos programas con distinta apertura pueden compartir semana
+ * calendario). */
+export function planeacionPorWeekKey(weekKey: string, planes: PlaneacionSemanal[] = leerPlaneaciones()): PlaneacionSemanal | undefined {
+  return planes.find((p) => p.weekKey === weekKey);
+}
+
 export function guardarUnaPlaneacion(planActualizado: PlaneacionSemanal): void {
   const planes = leerPlaneaciones();
-  const actualizados = planes.some((p) => p.numero === planActualizado.numero)
-    ? planes.map((p) => (p.numero === planActualizado.numero ? planActualizado : p))
+  const actualizados = planes.some((p) => p.id === planActualizado.id)
+    ? planes.map((p) => (p.id === planActualizado.id ? planActualizado : p))
     : [...planes, planActualizado];
   guardarPlaneaciones(actualizados);
 }
@@ -2884,11 +3003,18 @@ export interface ProgramaConfig {
   /** Configuración del cierre de mes — reservado para el checklist administrativo (Parte C); el
    * día en sí sigue siendo "abierto", nunca un estado de cierre aparte. */
   cierreMensualConfig?: ConfigCierreMensualPrograma;
+  /** Parte D — con qué día empieza la SEMANA CALENDARIO de este programa, para calcular
+   * `PlaneacionSemanal.weekKey` de forma estable (regla del usuario: "no hardcodear una
+   * convención mundial" — lunes no es universal). Sin configurar, se asume `'lunes'`. */
+  inicioSemana?: InicioSemana;
 }
 
 /** Los 7 días de la semana — SOLO para `diasAperturaPrograma`/Calendario (Parte C). Vive aquí, no
  * en `lib/calendario.ts`, por la misma razón que `CampoCurriculoDef`: evitar un import circular. */
 export type DiaSemanaCompleto = 'Dom' | 'Lun' | 'Mar' | 'Mié' | 'Jue' | 'Vie' | 'Sáb';
+
+/** Con qué día empieza la semana para este programa — ver `ProgramaConfig.inicioSemana`. */
+export type InicioSemana = 'lunes' | 'domingo';
 
 export interface ConfigCierreMensualPrograma {
   activo: boolean;
