@@ -1882,13 +1882,21 @@ Responde "¿qué pasa cada día real de este mes?" a partir del Diseño (B) ya a
   3. **Frontera manual entre subtemas protegida:** se reasignó a mano el subtema del 7 de
      septiembre (de "Mi cuerpo" a "Mi familia") vía el selector del día; quedó `editadoManualmente:
      true`; tras "Regenerar propuesta" el día conservó "Mi familia" — el algoritmo NO lo devolvió a
-     la distribución original. **Hallazgo NO bloqueante, sin corregir (fuera del alcance de esta
-     verificación — no se escribió código nuevo):** al cambiar el subtema de un día por el selector,
-     `vocabularioDelDia` no se reasigna ni se limpia — queda apuntando a la palabra del subtema
-     ANTERIOR, que ya no existe en el subtema nuevo, así que el resumen "Vocabulario del día" queda
-     vacío hasta que la maestra regenere la propuesta o pique una palabra a mano. Vale la pena
-     resolverlo (limpiar o reasignar `vocabularioDelDia` en ese `onChange`) en una próxima pasada,
-     no es parte de la Parte C tal como se pidió.
+     la distribución original.
+     **Bug del vocabulario huérfano — ENCONTRADO Y CORREGIDO (pedido explícito del usuario, sesión
+     siguiente a la verificación de los 7 puntos):** al cambiar el subtema de un día por el
+     selector, `vocabularioDelDia` no se reasignaba ni se limpiaba — quedaba apuntando a la palabra
+     del subtema ANTERIOR (que ya no pertenecía al nuevo), mostrando un resumen roto/vacío.
+     Corregido en el propio `onChange` del selector: al cambiar de subtema, se conserva cada
+     entrada de `vocabularioDelDia` SOLO si su `vocabularioId` sigue existiendo en el vocabulario
+     del subtema nuevo (nunca se toca el `VocabularioItem` original en B, solo la referencia de
+     ESE día); si no queda ninguna válida, el resumen muestra "Sin vocabulario asignado a este
+     día." — sin inventar una palabra ni prometer que se completará sola (un día
+     `editadoManualmente` queda EXCLUIDO de "Regenerar propuesta" por diseño, así que un mensaje
+     que prometiera "se completa al regenerar" habría sido falso — se descartó esa primera
+     redacción). Reprobado en navegador: día reasignado a mano → mensaje correcto → "Regenerar
+     propuesta" no tocó ni el subtema ni el vocabulario vacío del día editado, y el evento doble
+     del punto 1 (día 16) siguió intacto. tsc ✓ · build ✓.
   4. **Modelo del cierre mensual (no solo el checklist):** el día persistido es
      `{estado:'abierto', incluidoEnPlaneacion:true, modoPlaneacion:'rutina_ligera',
      esCierreMensual:true}` — técnicamente sigue siendo un día abierto y planeable (centros, juego

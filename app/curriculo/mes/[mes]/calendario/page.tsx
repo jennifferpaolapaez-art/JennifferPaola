@@ -164,7 +164,16 @@ function EditorDia({
           <Etiqueta>Subtema del día</Etiqueta>
           <select
             value={dia.subtemaId ?? ''}
-            onChange={(e) => onCambiar({ subtemaId: e.target.value || undefined, vocabularioDelDia: e.target.value ? dia.vocabularioDelDia : [] })}
+            onChange={(e) => {
+              const nuevoId = e.target.value || undefined;
+              const nuevoSubtema = subtemas.find((s) => s.id === nuevoId);
+              // Al cambiar el subtema de un día a mano, una palabra de vocabulario que pertenecía al
+              // subtema ANTERIOR deja de tener sentido ahí — se quita la referencia de ESTE día (nunca
+              // se borra el VocabularioItem original en B). Si la palabra sí sigue existiendo en el
+              // subtema nuevo (mismo id compartido entre subtemas), se conserva tal cual.
+              const vocabularioValido = nuevoSubtema ? dia.vocabularioDelDia.filter((v) => nuevoSubtema.vocabulario.some((vi) => vi.id === v.vocabularioId)) : [];
+              onCambiar({ subtemaId: nuevoId, vocabularioDelDia: vocabularioValido });
+            }}
             className={CAMPO_INPUT}
             aria-label="Subtema del día"
           >
@@ -175,14 +184,15 @@ function EditorDia({
               </option>
             ))}
           </select>
-          {subtemaActual && dia.vocabularioDelDia.length > 0 && (
+          {subtemaActual && (
             <p className="mt-1.5 text-[12px] leading-snug text-[var(--text-secondary)]">
-              Vocabulario del día:{' '}
-              {dia.vocabularioDelDia
-                .map((v) => subtemaActual.vocabulario.find((vi) => vi.id === v.vocabularioId))
-                .filter((v): v is NonNullable<typeof v> => !!v)
-                .map((v) => v.terminos.map((t) => t.texto).filter(Boolean).join(' / '))
-                .join(', ')}
+              {dia.vocabularioDelDia.length > 0
+                ? `Vocabulario del día: ${dia.vocabularioDelDia
+                    .map((v) => subtemaActual.vocabulario.find((vi) => vi.id === v.vocabularioId))
+                    .filter((v): v is NonNullable<typeof v> => !!v)
+                    .map((v) => v.terminos.map((t) => t.texto).filter(Boolean).join(' / '))
+                    .join(', ')}`
+                : 'Sin vocabulario asignado a este día.'}
             </p>
           )}
         </div>
