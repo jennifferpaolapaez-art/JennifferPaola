@@ -593,9 +593,17 @@ export default function DisenoDelMesPage() {
                   {!aprobacion.ok && aprobacion.motivo && <p className="text-center text-[12px] text-[var(--text-tertiary)]">{aprobacion.motivo}</p>}
                 </>
               ) : (
-                <button type="button" onClick={() => persistir(volverABorrador(diseno))} className="min-h-11 rounded-[var(--radius-button)] bg-[var(--surface-2)] px-3 text-[14px] font-semibold text-[var(--text-primary)]">
-                  Volver a borrador
-                </button>
+                <>
+                  <Link
+                    href={`/curriculo/mes/${mes}/calendario`}
+                    className="flex h-[52px] w-full items-center justify-center rounded-[var(--radius-button)] bg-[var(--accent)] text-[16px] font-semibold text-[var(--bg)] shadow-[0_8px_30px_color-mix(in_oklab,var(--accent)_25%,transparent)]"
+                  >
+                    Ir al Calendario del mes
+                  </Link>
+                  <button type="button" onClick={() => persistir(volverABorrador(diseno))} className="min-h-11 rounded-[var(--radius-button)] bg-[var(--surface-2)] px-3 text-[14px] font-semibold text-[var(--text-primary)]">
+                    Volver a borrador
+                  </button>
+                </>
               )}
             </motion.div>
           </>

@@ -3,6 +3,13 @@
 > Memoria viva del proyecto. Se actualiza en cada hito.
 
 ## Fase actual
+**Sesión 6 en curso — capa Currículo→Diseño→Calendario sobre Planeación.** Parte A (Currículo
+Anual), Parte B (Diseño del Mes + Personaje del Mes) y Parte C (Calendario Pedagógico Real)
+CONSTRUIDAS, VERIFICADAS Y CERRADAS — ver "Decisión arquitectónica: mes ≠ 4 semanas fijas" y las
+secciones A/B/C más abajo (después de "Sesión 6, paso 7 / 6d — AMPLIACIÓN"). Parte D (conectar el
+Calendario con la Planeación existente) **NO construida — requiere aprobación explícita del
+usuario antes de empezar.**
+
 Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRADA** (detalle abajo).
 Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
 revisor-visual, defectos reales corregidos, gate binario aceptado como techo estructural
@@ -1750,7 +1757,115 @@ nunca confundido con "sin revisar").
   habilidades, Planeación solo selecciona la pertinente por actividad (`individualGoalId` correcto);
   `/ninos-foco` resume "N metas activas" sin listar todas. tsc ✓ · build ✓ (29 rutas) · sin errores de consola
   nuevos.
-- **Siguiente:** 6e-1 Registro Mensual (plan corto pendiente de aprobación). **NO avanzar a 6e sin OK.**
+- **Siguiente (SUPERADO por la decisión de abajo):** se había anotado "6e-1 Registro Mensual" como
+  siguiente paso, pero antes de llegar ahí el usuario detectó que Planeación asumía "mes = 4 semanas
+  fijas" — ver "Decisión arquitectónica: mes ≠ 4 semanas fijas" abajo. 6e-1 sigue pendiente, pero
+  después de cerrar la nueva capa A→B→C→D.
+
+### Decisión arquitectónica: Planeación deja de asumir "mes = 4 semanas fijas" (documentada, aprobada por el usuario)
+Planeación (`PlaneacionSemanal`/`DiaPlan`/`Actividad`, Sesión 5) **se preserva intacta** — nunca se
+reconstruye. Se le agrega ENCIMA una capa nueva que primero define el contenido y el calendario real
+del mes, y luego alimenta la Planeación existente:
+```
+MAPA CURRICULAR ANUAL (Parte A) → DISEÑO PEDAGÓGICO DEL MES (Parte B) →
+CALENDARIO PEDAGÓGICO REAL DEL MES (Parte C) → PAQUETE VISUAL DEL MES (futuro) →
+PLANEACIÓN SEMANAL/DIARIA (YA EXISTE, sin cambios) → Preparar mi mes/semana/imprimibles (futuro)
+```
+Orden de construcción aprobado, con parada y aprobación explícita del usuario entre cada parte:
+**A → B → C → D** (D = conectar el Calendario ya aprobado con la Planeación existente — NO
+construida todavía, requiere aprobación expresa antes de empezar).
+
+**Tres precisiones fijadas ANTES de A** (para que C/D no las redecidan a mitad de camino):
+1. `/hoy` NUNCA usa el mes/año navegado — siempre `FECHA_HOY` real. `/planeacion`, `/semana`,
+   `/planeacion/[id]`, el nuevo `/calendario` SÍ navegan un `ContextoPlaneacion` independiente.
+2. Un día del calendario separa TRES ejes que nunca se pisan entre sí: `estado` operativo
+   (abierto/cerrado/feriado/día_admin/custom — "cierre mensual" NUNCA es un estado, es
+   `abierto`+`rutina_ligera`), `eventos[]` (cumpleaños/cultural/estación/celebración/programa/
+   personalizado, nunca mezclados entre tipos), y `modoPlaneacion` (si genera actividad dirigida
+   nueva o no).
+3. Una semana que cruza de mes (ej. "28 sep–2 oct") compone días de dos `CalendarioMensual`
+   vecinos SIN duplicarlos — cada día pertenece a su mes real; la vista semanal cruzada es trabajo
+   de la Parte D, no de C.
+
+### Parte A — Currículo Anual (CONSTRUIDA, VERIFICADA 8/8, CERRADA Y APROBADA por el usuario)
+`lib/curriculo.ts`, `app/curriculo/page.tsx`, `app/curriculo/mes/[mes]/page.tsx`,
+`app/curriculo/campos/page.tsx`. El mapa de TODO el año: campos configurables (nunca fijos a
+Color+Número+Letras+Forma — cada campo acepta único valor o lista), un tema por mes. Dos caminos
+("Ya tengo mi currículo" vacío / "Ayúdame a crearlo" con plantilla DEMO de 12 meses, disclaimer
+explícito de que no es currículo real). **Dos protecciones pedidas y verificadas antes de B:**
+(1) el id de un campo es estable, independiente de su etiqueta; (2) desactivar un campo NUNCA borra
+los datos ya guardados de meses anteriores — se agregó `CampoCurriculoDef.activo?: boolean`
+(nunca se elimina del arreglo, se apaga/prende la bandera, igual para campos sugeridos y propios).
+
+### Parte B — Diseño del Mes (CONSTRUIDA, VERIFICADA 16/16, CERRADA Y APROBADA por el usuario)
+`app/curriculo/mes/[mes]/diseno/page.tsx` + tipos en `lib/curriculo.ts`. Desarrolla UN mes:
+subtemas (contenido puro, nunca llevan semana/duración — eso lo decide C), vocabulario
+multi-idioma (`VocabularioItem.terminos` por los idiomas de `ProgramaConfig.idiomasEnsenanza`,
+nunca hardcodeado es/en), conceptos, experiencias clave, recursos (general + por subtema), culturas
+relacionadas (solo nombres, sin fechas — las fechas son de C), `marcoSnapshot` (copia congelada del
+Currículo Anual al crear el Diseño — un cambio posterior en el Currículo NUNCA pisa en silencio un
+Diseño ya aprobado). `estado: borrador|aprobado`; aprobar solo exige que cada subtema tenga nombre.
+
+**Personaje del Mes (extensión de B, VERIFICADA 10/10, CERRADA):** tres caminos — RAÍZ sugiere
+(hasta 4 opciones con motivo pedagógico, nunca auto-elegido), la maestra escribe el suyo, o "este
+mes no usar personaje". Vive en `DisenoMensual.personajeDelMes` (no es un campo genérico más).
+Catálogo DEMO usa arquetipos genéricos ("una científica del medio ambiente"), **nunca nombra
+personas reales con biografías inventadas** — regla de seguridad explícita del usuario.
+**⚠️ REGLA PARA PRODUCCIÓN (pendiente de implementar, documentar aquí evita que se pierda):**
+cuando exista el sistema real de sugerencias, RAÍZ podrá ofrecer PERSONAS CONCRETAS, pero
+ÚNICAMENTE desde (a) un catálogo pedagógico controlado/verificado, o (b) un servicio de IA/
+conocimiento con información verificable. Cada propuesta real debe incluir como mínimo: nombre,
+por qué conecta con el tema, valor/idea relacionada, contexto cultural si aplica, y la fuente/
+origen de la sugerencia. Nunca inventar biografías, logros ni conexiones no verificadas. La
+maestra conserva siempre la decisión final. **No implementar el catálogo real sin esta regla.**
+
+### Parte C — Calendario Pedagógico Real (CONSTRUIDA, VERIFICADA, CERRADA — no avanzar a D sin OK del usuario)
+`lib/calendario.ts` (nuevo) + `app/curriculo/mes/[mes]/calendario/page.tsx` (grid + editor de día)
++ `app/curriculo/mes/[mes]/calendario/sugerencias/page.tsx` (pantalla "Sugerencias para este mes").
+Responde "¿qué pasa cada día real de este mes?" a partir del Diseño (B) ya aprobado — NO crea
+`Actividad` detallada, NO toca Planeación/Semana/Hoy todavía (eso es D, no construido).
+- `crearCalendarioBase`: genera los días reales del mes; `abierto` los días de apertura del
+  programa (`ProgramaConfig.diasAperturaPrograma`, tipo propio de 7 días — el `DiaSemana` de 5 días
+  de Planeación no se toca); si el cierre mensual está activo, marca el ÚLTIMO día abierto como
+  `esCierreMensual` (`abierto`+`rutina_ligera`, nunca un estado "cerrado" aparte).
+- `distribuirMesConSubtemas`: propuesta editable, nunca asume "N subtemas = N semanas"; reparte
+  proporcional a los días reales asignables (abierto+incluido+modo normal+NO editado a mano), con
+  tope DEMO de 6 días/subtema; el resto queda como "días sobrantes" para que la maestra decida
+  (extender el último / usar como integración-repaso / decidirlo día a día / crear un subtema
+  nuevo — este último manda de vuelta a B, un subtema nuevo es contenido, no una decisión de
+  calendario). Vocabulario del día referencia `VocabularioItem.id`, nunca copia el texto.
+- `sugerenciasDelMes`: cumpleaños reales (DOB de `leerNinos()`, filtrado por mes) + fechas DEMO de
+  4 fuentes (ubicación/comunidad/equipo/programa — sin perfiles reales de familias/equipo todavía,
+  documentado como pendiente; comunidad se filtra contra `culturasRelacionadas` del Diseño, nunca
+  inferido del nombre de un niño); la pantalla de Sugerencias agrupa por fuente y ofrece 4 acciones
+  por ítem (Incluir/Solo mencionar/Mostrar en calendario/No incluir) — "No incluir" nunca crea nada.
+- **Dos bugs reales encontrados y corregidos durante la verificación en navegador:**
+  1. La abreviatura del subtema en la celda del día tomaba las primeras 3 letras del nombre
+     completo — con nombres del dominio ("Mi cuerpo"/"Mi familia"/"Mi escuela") las 3 primeras
+     letras coincidían ("MI") y un día no se distinguía de otro. Corregido con
+     `abreviaturasSubtemas()`: ignora artículos/posesivos, y si aun así colisiona, alarga la
+     abreviatura o agrega sufijo numérico hasta que todas sean únicas.
+  2. `agregarEvento`/`quitarEvento` marcaban el día como `editadoManualmente=true` — aceptar una
+     sugerencia (ej. un cumpleaños) sacaba en silencio ese día del reparto de subtemas la próxima
+     vez que se regeneraba la propuesta, mezclando dos ejes que la Parte C definió como
+     independientes (punto 8 del pedido original). Corregido: agregar/quitar un evento (desde
+     Sugerencias o a mano en el editor del día) NUNCA marca `editadoManualmente` — solo cambiar
+     estado/modo/subtema del día lo hace.
+- **Verificado en navegador con un mes compuesto real (Septiembre 2026, 4 subtemas con vocabulario
+  bilingüe, Octubre 2026 con 1 subtema para forzar sobrantes):** grid Dom–Sáb correcto con fines de
+  semana cerrados y el último día hábil marcado CIERRE con su checklist (reservado, no conectado a
+  reportes todavía); distribución pareja verificada por conteo (21 días/4 subtemas → 6/5/5/5, sin
+  sobrantes); cerrar un día a mano lo excluyó del reparto Y sobrevivió intacto a "Regenerar
+  propuesta"; Sugerencias mostró correctamente "Por tu comunidad" (México, filtrado por la cultura
+  escrita en B), "Estacional" (otoño), "Por tus niños" (cumpleaños real de Mateo) y "Tradiciones del
+  programa", y las 4 acciones aplicaron el evento correcto (`nivel`/`tipo`/`origen` verificados en
+  localStorage); con 1 subtema y ~20 días abiertos apareció el aviso de 15 días sobrantes con sus 4
+  opciones, "Usar como integración/repaso" escribió la nota en los 15 días SIN crear un subtema
+  nuevo; un evento agregado sobre un día con nota de integración NO borró esa nota (los eventos
+  nunca reemplazan contenido). tsc ✓ · build ✓ (32 rutas) · sin errores de consola.
+- **Siguiente:** Parte D (conectar el Calendario aprobado con la Planeación semanal/diaria
+  existente). **NO construir D sin aprobación explícita del usuario** — instrucción textual: "Cuando
+  C esté construido y validado, paramos otra vez. No avances a D automáticamente."
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).

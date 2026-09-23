@@ -2876,6 +2876,23 @@ export interface ProgramaConfig {
   /** Currículo Anual (nueva capa sobre Planeación) — qué campos usa este programa además de
    * `tema`. Vacío por defecto: ningún programa está obligado a Color+Número+Letras+Forma. */
   camposCurriculoAnual?: CampoCurriculoDef[];
+  /** Calendario Pedagógico Real (Parte C) — qué días de la semana abre normalmente el programa.
+   * Tipo PROPIO de 7 días (`DiaSemanaCompleto`, no el `DiaSemana` de 5 días que ya usa la rutina de
+   * Planeación) — ampliar ese tipo compartido rompería lo que ya funciona; la reconciliación real
+   * llega en la Parte D. Sin configurar, se asume Lun–Vie. */
+  diasAperturaPrograma?: DiaSemanaCompleto[];
+  /** Configuración del cierre de mes — reservado para el checklist administrativo (Parte C); el
+   * día en sí sigue siendo "abierto", nunca un estado de cierre aparte. */
+  cierreMensualConfig?: ConfigCierreMensualPrograma;
+}
+
+/** Los 7 días de la semana — SOLO para `diasAperturaPrograma`/Calendario (Parte C). Vive aquí, no
+ * en `lib/calendario.ts`, por la misma razón que `CampoCurriculoDef`: evitar un import circular. */
+export type DiaSemanaCompleto = 'Dom' | 'Lun' | 'Mar' | 'Mié' | 'Jue' | 'Vie' | 'Sáb';
+
+export interface ConfigCierreMensualPrograma {
+  activo: boolean;
+  checklist: string[];
 }
 
 export const PROGRAMA_CONFIG_DEFAULT: ProgramaConfig = {
