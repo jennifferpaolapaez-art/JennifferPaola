@@ -11,7 +11,7 @@
 
 import { SKILLS_CATALOG, estadoRegistroObservacion, type Observacion, type ObservacionSkill } from './seed-data';
 
-function enMes(fecha: string, anio: number, mes: number): boolean {
+export function enMes(fecha: string, anio: number, mes: number): boolean {
   return fecha.startsWith(`${anio}-${String(mes).padStart(2, '0')}`);
 }
 

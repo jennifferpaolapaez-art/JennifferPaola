@@ -153,9 +153,12 @@ export default function ProgresoNino() {
         <motion.p variants={item} className="mb-2 text-[15px] leading-relaxed text-[var(--text-primary)]">
           {resumenProgresoTexto(nino.nombre, conteo, conNuevaEvidencia.length)}
         </motion.p>
-        <motion.div variants={item} className="mb-6">
+        <motion.div variants={item} className="mb-6 flex flex-wrap gap-x-4 gap-y-1">
           <Link href={`/ninos/${nino.id}/registro`} className="text-[13px] font-semibold text-[var(--accent)] underline">
             Ver registro mensual
+          </Link>
+          <Link href={`/ninos/${nino.id}/informe-mensual`} className="text-[13px] font-semibold text-[var(--accent)] underline">
+            Ver informe mensual
           </Link>
         </motion.div>
 

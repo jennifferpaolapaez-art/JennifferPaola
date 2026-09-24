@@ -10,9 +10,10 @@ cerradas — ver "Decisión arquitectónica: mes ≠ 4 semanas fijas" y las secc
 (después de "Sesión 6, paso 7 / 6d — AMPLIACIÓN"). Conectar IA real queda **explícitamente
 pendiente** hasta que el usuario lo pida.
 
-**Sesión 6 retoma ahora 6e-1 — Registro Mensual de Observaciones** (ver esa sección, después de
-Parte E) — CONSTRUIDO, VERIFICADO Y CERRADO. Siguiente en la fila, sin empezar: 6e-2 (Informe
-Mensual de Observaciones) y 6f (evaluación periódica + Reporte de Resultados).
+**Sesión 6 — 6e-1 (Registro Mensual de Observaciones) y 6e-2 (Informe Mensual de Observaciones)**
+(ver esas secciones, después de Parte E) — AMBAS CONSTRUIDAS, VERIFICADAS Y CERRADAS. Siguiente en
+la fila, sin empezar: 6f (evaluación periódica + Reporte de Resultados) — no avanzar sin
+aprobación explícita del usuario.
 
 Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRADA** (detalle abajo).
 Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
@@ -2199,9 +2200,96 @@ localStorage — confirmado por grep (`lib/registro-mensual.ts` no tiene ninguna
 síntesis por áreas, comparación entre meses, narrativa mensual, progreso, recomendaciones, "Focus
 for Continued Observation", aprobación/versionado, PDF, informe para familias, `child_reports`
 (reservado para 6e-2 en adelante — 6e-1 nunca necesita snapshot, siempre responde en vivo "qué
-observaciones aprobadas existen"). **Siguiente, sin empezar:** 6e-2 Informe Mensual de
-Observaciones, luego 6f (evaluación periódica + Reporte de Resultados + cierre/nuevo Plan
-Individual) — no avanzar sin aprobación explícita del usuario.
+observaciones aprobadas existen").
+
+## Sesión 6, paso 7 / 6e-2 — Informe Mensual de Observaciones (CONSTRUIDO, VERIFICADO CON LAS 10 VALIDACIONES DEL USUARIO, CERRADO)
+Responde "¿qué nos dice, en conjunto, la evidencia de este niño durante este mes?" — a diferencia
+de 6e-1 (cronológico, nunca sintetiza, siempre vivo), el Informe SÍ sintetiza por área, compara con
+el mes anterior y sugiere foco — por eso pasa por Borrador → edición docente → Aprobación →
+snapshot congelado y versionado. Interno del programa en esta fase (`audiencia: 'internal'`), no
+reporte para familias todavía. Sin IA real: las afirmaciones automáticas son plantillas
+estructurales conservadoras, siempre citando su evidencia — nunca prosa interpretativa fingida
+(aprobado explícitamente por el usuario como intención, no como techo permanente).
+
+**Archivos:** `lib/informe-mensual.ts` (nuevo) y `app/ninos/[id]/informe-mensual/page.tsx` (nuevo).
+Reutiliza sin tocar: `Observacion`/`ObservacionSkill`/`EventoSkill`/`MetaIndividual` de
+`seed-data.ts`, y `enMes`/`mesAnterior`/`mesSiguiente` de `lib/registro-mensual.ts` (exportado para
+esto). Accesos nuevos desde Perfil (`app/ninos/[id]/page.tsx`), Progreso
+(`app/ninos/[id]/progreso/page.tsx`) y el propio Registro Mensual (link contextual "Preparar/Ver
+Informe Mensual" que ya lleva el `?anio=&mes=` del mes que se está viendo).
+
+**Modelo:** `ChildReport` (genérico, pensado para reutilizarse en 6f y reportes futuros —
+`tipo:'monthly_observation_report'`, `audiencia`, `estado: borrador|aprobado`, `version`,
+`reemplazaReportId?`, `fingerprintEvidencia`, `contenidoSnapshot`). `ContenidoInformeMensual`:
+secciones por dominio (`SeccionInforme[]`), `comparacionMesAnterior?`, `resumenMensual`,
+`focoParaContinuar[]` — todos compuestos de `InformeAssertion` con `texto`, `observationIds[]`,
+`skillIds?`, `childSkillEventIds?`, `goalIds?`, `origen: 'raiz_demo'|'maestra'`,
+`editadoManualmente?`. Las observaciones sin ninguna habilidad aceptada van SIEMPRE a "Otras
+observaciones" — nunca se les inventa un dominio.
+
+**Los 4 ajustes exigidos por el usuario antes de construir, implementados:**
+1. **Cantidad de observaciones NUNCA es señal de progreso.** `generarComparacion()` solo cita un
+   cambio real si existe un `EventoSkill` confirmado (`e.anterior` set) ese mes para una skill
+   vigente del niño; si hay evidencia aprobada en ambos meses pero SIN ese evento, usa la frase
+   neutra fija exacta que pidió el usuario ("Hay evidencia aprobada en ambos meses, pero esta
+   versión DEMO no interpreta cambios de desempeño automáticamente."), nunca "continúa similar".
+2. **Trazabilidad extendida a resumen y foco, no solo a las secciones** — todo `InformeAssertion`
+   (incluido `resumenMensual` y cada item de `focoParaContinuar`) carga sus propios
+   `observationIds/skillIds/childSkillEventIds/goalIds` reales, nunca inventados.
+3. **El foco nunca nace de "skill esperada por edad + sin estado".** `generarFoco()` solo propone:
+   (A) hasta 3 dominios de baja cobertura tomados de `nino.skills` (las skills que YA sigue ese
+   niño — decisión humana previa, nunca una lista genérica por edad) con frase de área, nunca
+   inventando una skill específica; (B) metas activas de `PlanIndividual` con evidencia real ese
+   mes; (C) redacciones pendientes de aprobar. El ejemplo que el usuario marcó como INCORRECTO
+   ("Observar si puede abotonarse solo" sin que nadie la hubiera definido como relevante) no puede
+   ocurrir con esta lógica.
+4. **El fingerprint** (`fingerprintObservacionParaInforme`/`fingerprintEvidenciaDelMes`) incluye
+   `estadoRegistroObservacion`, texto, skills ACEPTADOS (ordenados) y evidencias — no solo el
+   `observationId` y el texto — así que una skill que pasa de `sugerido` a `aceptado` después de
+   aprobado el informe (cambiando de sección) se detecta como evidencia nueva.
+
+**Ciclo de vida:** `prepararInformeBorrador` (v1, no se auto-guarda) → edición docente
+(`guardarEdicionBorrador`, nunca toca estado/versión) → `aprobarInforme` (congela
+`fingerprintEvidencia` en ese momento) → `hayEvidenciaNuevaTrasAprobar` compara el fingerprint
+vigente contra el congelado y muestra un aviso NO silencioso (nunca automático) con dos opciones:
+"Crear nueva versión" (`crearNuevaVersionInforme`, siempre `borrador`, nunca auto-aprobada) o
+"Mantener versión actual" (solo oculta el aviso EN ESTA VISTA — no se persiste como "resuelto",
+mismo patrón que Calendario→Planeación de la Parte D). Un informe aprobado NUNCA se edita en sitio.
+
+**Agregar nota manual** (Foco para continuar observando, en modo edición): input + botón que crea
+un `InformeAssertion{origen:'maestra', observationIds:[]}` sin fingir fuentes automáticas —
+construido en esta sesión para cerrar el hueco que dejaba la validación 9 sin poder probarse.
+
+**Verificado en navegador — las 10 validaciones pedidas, todas confirmadas** (con datos reales de
+Luca/Sofía/Mateo y observaciones de prueba de un mes anterior inyectadas y luego revertidas): más
+observaciones en un mes no se tradujo en ningún lenguaje de progreso ✓ · comparación con
+`EventoSkill` confirmado citó el cambio real de estado con su evidencia (Luca, tijeras: "de 'En
+desarrollo · con poca evidencia' a 'En desarrollo · con evidencia suficiente'") ✓ · comparación SIN
+evento usó la frase neutra exacta, nunca "sigue igual" ✓ · resumen y foco cargan `observationIds`
+reales, verificado leyendo `localStorage` directamente ✓ · foco nunca propuso una skill inventada
+por edad, solo dominios de baja cobertura de las skills que el niño ya sigue + metas activas +
+pendientes ✓ · aceptar una skill `sugerido→aceptado` después de generado el informe movió la
+observación de "Otras observaciones" a su dominio real y el aviso de evidencia nueva apareció ✓ ·
+un informe aprobado nunca se modificó en sitio — todo cambio posterior creó versión nueva
+(`v1→v2`) con `reemplazaReportId` ✓ · evidencia limitada/cero mostró la frase honesta sin inventar
+contenido ✓ · **nota manual agregada por la maestra quedó identificada `origen:'maestra'` con
+`observationIds:[]`, visible como "Escrito por la maestra" y sin ninguna fuente fingida** ✓ ·
+idioma guardado honesto, sin traducción fingida ✓. tsc ✓ · build ✓ (40 rutas). **Incidente de
+sesión:** una inyección de datos de prueba mal hecha (lectura cruda de `localStorage` sin pasar por
+`leerObservacionSkills()`) borró por accidente las 3 relaciones semilla reales de
+`ObservacionSkill` — detectado porque una observación de Luca cayó en "Otras observaciones" cuando
+debía caer en "Motricidad fina", corregido restaurando las 3 filas originales. Todos los datos de
+prueba (observaciones de agosto, relaciones y `ChildReport` de prueba) se revirtieron antes de
+cerrar — la semilla queda exactamente como estaba (`raiz_informes_mensuales` vacío, sin ningún
+Informe "real" precargado).
+
+**Explícitamente NO construido en 6e-2 (fases posteriores):** síntesis pedagógica real (IA
+auténtica — las afirmaciones son plantillas conservadoras a propósito, spec D.2 aprobada por el
+usuario), reporte para familias (`audiencia:'family'`), PDF, evaluación periódica, cierre/creación
+de Plan Individual, actualización de estados de skill, porcentajes. **Siguiente, sin empezar:** 6f
+(evaluación periódica + Reporte de Resultados + cierre/nuevo Plan Individual) — no avanzar sin
+aprobación explícita del usuario (instrucción textual: "Al terminar valida todo y detente antes de
+6f").
 
 ### Auth
 - Supabase Auth: email/password + Google OAuth (la maestra ya tiene cuenta Google típicamente).

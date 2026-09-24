@@ -245,6 +245,9 @@ export default function Perfil() {
             <Link href={`/ninos/${nino.id}/registro`} className="mt-2 flex h-11 w-full items-center justify-center text-[13px] font-semibold text-[var(--accent)] underline">
               Ver registro mensual
             </Link>
+            <Link href={`/ninos/${nino.id}/informe-mensual`} className="mt-1 flex h-11 w-full items-center justify-center text-[13px] font-semibold text-[var(--accent)] underline">
+              Ver informe mensual
+            </Link>
           </Colapsable>
 
           <Colapsable

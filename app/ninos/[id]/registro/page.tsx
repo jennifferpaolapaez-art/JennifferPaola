@@ -27,6 +27,7 @@ import {
   type ObservacionSkill,
 } from '@/lib/seed-data';
 import { MES_NOMBRE } from '@/lib/curriculo';
+import { informeVigente } from '@/lib/informe-mensual';
 import {
   areasDelMes,
   habilidadesAceptadasDeObservacion,
@@ -130,6 +131,7 @@ export default function RegistroMensual() {
   const resumen = resumenRegistroMes(aprobadas, pendientes);
   const areas = areasDelMes(aprobadas, relaciones);
   const habilidadesOpciones = habilidadesDelMes(aprobadas, relaciones);
+  const informeExistente = !!informeVigente(nino.id, anio, mes);
 
   const aprobadasFiltradas = aprobadas.filter((o) => {
     if (filtroArea === 'todas' && filtroHabilidad === 'todas') return true;
@@ -166,12 +168,18 @@ export default function RegistroMensual() {
           </div>
         </motion.header>
 
-        <motion.p variants={item} className="mb-5 text-[14px] text-[var(--text-secondary)]">
+        <motion.p variants={item} className="mb-2 text-[14px] text-[var(--text-secondary)]">
           {resumen.totalAprobadas === 0
             ? 'Sin observaciones aprobadas este mes.'
             : `${resumen.totalAprobadas} ${resumen.totalAprobadas === 1 ? 'observación aprobada' : 'observaciones aprobadas'} en ${resumen.diasDistintos} ${resumen.diasDistintos === 1 ? 'día' : 'días'}.`}
           {resumen.totalPendientes > 0 && ` ${resumen.totalPendientes} ${resumen.totalPendientes === 1 ? 'pendiente' : 'pendientes'} de redacción.`}
         </motion.p>
+
+        <motion.div variants={item} className="mb-5">
+          <Link href={`/ninos/${nino.id}/informe-mensual?anio=${anio}&mes=${mes}`} className="text-[13px] font-semibold text-[var(--accent)] underline">
+            {informeExistente ? 'Ver Informe Mensual' : 'Preparar Informe Mensual'}
+          </Link>
+        </motion.div>
 
         {(areas.length > 0 || habilidadesOpciones.length > 0) && (
           <motion.div variants={item} className="mb-5 flex flex-col gap-2">
