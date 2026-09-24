@@ -15,7 +15,6 @@ import { AppShell, AvatarInicial, Colapsable, FilaObservacion, SkillBadge } from
 import {
   ESTADO_META_LABEL,
   calcularEdadTexto,
-  calcularFechaProximaEvaluacion,
   evidenciaNuevaParaRevisar,
   grupoProgreso,
   leerEventosSkill,
@@ -37,6 +36,8 @@ import {
   type Nino,
 } from '@/lib/seed-data';
 import { agruparMetasPorArea } from '@/lib/plan-seguimiento';
+import { calcularProximaRevisionFormal, cicloEnProgresoDeNino } from '@/lib/ciclo-revision';
+import { fechaCorta } from '@/lib/prioridades';
 
 const ESTADO_EVAL_LABEL: Record<string, string> = { borrador: 'Borrador', aprobada: 'Aprobada' };
 
@@ -254,7 +255,7 @@ export default function Perfil() {
             titulo="Evaluaciones"
             subtitulo={
               nino.evaluaciones.length > 0
-                ? `${nino.evaluaciones.length} en el historial · próxima ${calcularFechaProximaEvaluacion(nino, programaConfig.frecuenciaEvaluacion, programaConfig.frecuenciaEvaluacionMesesPersonalizada)}`
+                ? `${nino.evaluaciones.length} en el historial · revisión prevista desde ${fechaCorta(calcularProximaRevisionFormal(nino, programaConfig))}`
                 : 'Todavía no tiene evaluación inicial'
             }
           >
@@ -282,13 +283,30 @@ export default function Perfil() {
                 La evaluación inicial se prellena con lo que ya sabes — puedes dejarla en borrador y completarla poco a poco.
               </p>
             )}
-            <Link
-              href={`/ninos/${nino.id}/evaluacion/nueva?tipo=${nino.evaluaciones.length > 0 ? 'periodica' : 'ingreso'}`}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-button)] border-2 border-dashed border-[color-mix(in_oklab,var(--accent)_45%,transparent)] text-[14px] font-semibold text-[var(--accent)]"
-            >
-              <Plus size={16} aria-hidden="true" />
-              {nino.evaluaciones.length > 0 ? 'Generar evaluación periódica' : 'Generar evaluación inicial'}
-            </Link>
+            {nino.evaluaciones.length > 0 ? (
+              <Link
+                href={`/ninos/${nino.id}/revision-periodica`}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-button)] bg-[var(--accent)] text-[14px] font-semibold text-[var(--bg)]"
+              >
+                {cicloEnProgresoDeNino(nino.id) ? 'Continuar revisión periódica' : 'Empezar revisión periódica'}
+              </Link>
+            ) : (
+              <Link
+                href={`/ninos/${nino.id}/evaluacion/nueva?tipo=ingreso`}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-[var(--radius-button)] border-2 border-dashed border-[color-mix(in_oklab,var(--accent)_45%,transparent)] text-[14px] font-semibold text-[var(--accent)]"
+              >
+                <Plus size={16} aria-hidden="true" />
+                Generar evaluación inicial
+              </Link>
+            )}
+            {nino.evaluaciones.length > 0 && (
+              <Link
+                href={`/ninos/${nino.id}/evaluacion/nueva?tipo=periodica`}
+                className="mt-2 flex min-h-11 items-center justify-center text-[12px] font-semibold text-[var(--text-secondary)] underline"
+              >
+                Generar una evaluación fuera de ciclo
+              </Link>
+            )}
           </Colapsable>
 
           <Colapsable

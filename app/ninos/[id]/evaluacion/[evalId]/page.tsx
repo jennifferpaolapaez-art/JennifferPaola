@@ -18,6 +18,7 @@ import { motion, type Variants } from 'motion/react';
 import { ArrowLeft, Pencil } from 'lucide-react';
 import { AppShell, Chip, LeafCheck } from '@/components/app/shell';
 import {
+  FECHA_HOY,
   SKILLS_CATALOG,
   agregarEventosSkill,
   aprobarEvaluacion,
@@ -26,6 +27,8 @@ import {
   generarBorradorEvaluacion,
   guardarNinos,
   leerNinos,
+  leerObservacionSkills,
+  leerObservaciones,
   leerProgramaConfig,
   ninoPorId,
   preguntaObservablePorSkill,
@@ -38,6 +41,7 @@ import {
   type ResultadoEvaluacion,
   type TipoEvaluacion,
 } from '@/lib/seed-data';
+import { cicloPorId, generarBorradorEvaluacionPeriodica, marcarEvaluacionActual, marcarPeriodoFin } from '@/lib/ciclo-revision';
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.04 } } };
 const item: Variants = { hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] } } };
@@ -212,6 +216,7 @@ function EvaluacionContenido() {
   const params = useParams<{ id: string; evalId: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const cicloId = searchParams.get('ciclo');
   const [ninos, setNinos] = useState<Nino[]>([]);
   const [evaluacion, setEvaluacion] = useState<EvaluacionNino | null>(null);
   const [cargado, setCargado] = useState(false);
@@ -228,12 +233,20 @@ function EvaluacionContenido() {
     if (params.evalId === 'nueva') {
       const tipo = (searchParams.get('tipo') as TipoEvaluacion) ?? 'ingreso';
       const config = leerProgramaConfig();
-      setEvaluacion(generarBorradorEvaluacion(nino, tipo, config.tracksActivos));
+      // Dentro del flujo de Revisión Periódica (6f): solo entran los skills que corresponde
+      // revisar (`skillsParaRevisionPeriodica`), nunca todo el catálogo — eso queda reservado para
+      // la evaluación de ingreso, donde sí tiene sentido verlo todo por primera vez.
+      const ciclo = cicloId ? cicloPorId(cicloId) : undefined;
+      if (ciclo) {
+        setEvaluacion(generarBorradorEvaluacionPeriodica(nino, config.tracksActivos, ciclo.id, ciclo.periodoInicio, leerObservaciones(), leerObservacionSkills()));
+      } else {
+        setEvaluacion(generarBorradorEvaluacion(nino, tipo, config.tracksActivos));
+      }
     } else {
       setEvaluacion(nino.evaluaciones.find((e) => e.id === params.evalId) ?? null);
     }
     setCargado(true);
-  }, [params.id, params.evalId, searchParams]);
+  }, [params.id, params.evalId, searchParams, cicloId]);
 
   const nino = ninoPorId(params.id, ninos);
 
@@ -250,7 +263,12 @@ function EvaluacionContenido() {
       : [...nino.evaluaciones, evaluacion];
     const ninoActualizado = { ...nino, evaluaciones: evaluacionesActualizadas };
     guardarNinos(ninos.map((n) => (n.id === nino.id ? ninoActualizado : n)));
-    router.push(`/ninos/${nino.id}`);
+    if (cicloId) {
+      marcarEvaluacionActual(cicloPorId(cicloId)!, evaluacion.id);
+      router.push(`/ninos/${nino.id}/revision-periodica?ciclo=${cicloId}`);
+    } else {
+      router.push(`/ninos/${nino.id}`);
+    }
   }
 
   function aprobar() {
@@ -262,7 +280,14 @@ function EvaluacionContenido() {
     agregarEventosSkill(eventosDeAprobacion(nino, { ...evaluacion, estado: 'aprobada' }));
     const ninoActualizado = aprobarEvaluacion(nino, evaluacion, 'maestra');
     guardarNinos(ninos.map((n) => (n.id === nino.id ? ninoActualizado : n)));
-    router.push(`/ninos/${nino.id}`);
+    if (cicloId) {
+      const evaluacionAprobada = ninoActualizado.evaluaciones.find((e) => e.id === evaluacion.id);
+      const ciclo = marcarEvaluacionActual(cicloPorId(cicloId)!, evaluacion.id);
+      marcarPeriodoFin(ciclo, evaluacionAprobada?.aprobadaEn ?? FECHA_HOY);
+      router.push(`/ninos/${nino.id}/revision-periodica?ciclo=${cicloId}`);
+    } else {
+      router.push(`/ninos/${nino.id}`);
+    }
   }
 
   if (!cargado) return null;

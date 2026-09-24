@@ -884,7 +884,7 @@ export function cambiarEstadoMeta(
   planId: string,
   metaId: string,
   nuevo: EstadoMetaIndividual,
-  opciones: { nota?: string; observacionIds?: string[]; motivoCierre?: string } = {}
+  opciones: { nota?: string; observacionIds?: string[]; motivoCierre?: string; cicloRevisionId?: string } = {}
 ): Nino {
   const observacionIds = opciones.observacionIds ?? [];
   return actualizarMeta(nino, planId, metaId, (m) => {
@@ -892,7 +892,10 @@ export function cambiarEstadoMeta(
       ...m,
       estado: nuevo,
       fechaActualizacion: FECHA_HOY,
-      historial: [...(m.historial ?? []), { fecha: FECHA_HOY, de: m.estado, a: nuevo, nota: opciones.nota?.trim() || undefined, observacionIds: observacionIds.length ? observacionIds : undefined }],
+      historial: [
+        ...(m.historial ?? []),
+        { fecha: FECHA_HOY, de: m.estado, a: nuevo, nota: opciones.nota?.trim() || undefined, observacionIds: observacionIds.length ? observacionIds : undefined, cicloRevisionId: opciones.cicloRevisionId },
+      ],
       evidenciaVistaIds: Array.from(new Set([...(m.evidenciaVistaIds ?? []), ...observacionIds])),
     };
     if (nuevo === 'alcanzado') return { ...base, fechaCumplimiento: FECHA_HOY, evidenciaCumplimientoIds: observacionIds, motivoCierre: undefined, fechaCierre: undefined };
@@ -902,10 +905,13 @@ export function cambiarEstadoMeta(
 }
 
 /** "La revisé y la dejo como está": queda en el historial (de === a) y la evidencia vista deja de avisar. */
-export function mantenerMetaComoEsta(nino: Nino, planId: string, metaId: string, observacionIds: string[], nota?: string): Nino {
+export function mantenerMetaComoEsta(nino: Nino, planId: string, metaId: string, observacionIds: string[], nota?: string, cicloRevisionId?: string): Nino {
   return actualizarMeta(nino, planId, metaId, (m) => ({
     ...m,
-    historial: [...(m.historial ?? []), { fecha: FECHA_HOY, de: m.estado, a: m.estado, nota: nota?.trim() || 'Revisada — se deja como está.', observacionIds: observacionIds.length ? observacionIds : undefined }],
+    historial: [
+      ...(m.historial ?? []),
+      { fecha: FECHA_HOY, de: m.estado, a: m.estado, nota: nota?.trim() || 'Revisada — se deja como está.', observacionIds: observacionIds.length ? observacionIds : undefined, cicloRevisionId },
+    ],
     evidenciaVistaIds: Array.from(new Set([...(m.evidenciaVistaIds ?? []), ...observacionIds])),
   }));
 }

@@ -27,7 +27,7 @@ import {
   type ObservacionSkill,
 } from '@/lib/seed-data';
 import { MES_NOMBRE } from '@/lib/curriculo';
-import { informeVigente } from '@/lib/informe-mensual';
+import { informeMensualVigente } from '@/lib/informe-mensual';
 import {
   areasDelMes,
   habilidadesAceptadasDeObservacion,
@@ -131,7 +131,7 @@ export default function RegistroMensual() {
   const resumen = resumenRegistroMes(aprobadas, pendientes);
   const areas = areasDelMes(aprobadas, relaciones);
   const habilidadesOpciones = habilidadesDelMes(aprobadas, relaciones);
-  const informeExistente = !!informeVigente(nino.id, anio, mes);
+  const informeExistente = !!informeMensualVigente(nino.id, anio, mes);
 
   const aprobadasFiltradas = aprobadas.filter((o) => {
     if (filtroArea === 'todas' && filtroHabilidad === 'todas') return true;

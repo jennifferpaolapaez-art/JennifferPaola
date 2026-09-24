@@ -44,6 +44,12 @@ export interface InformeAssertion {
   skillIds?: string[];
   childSkillEventIds?: string[];
   goalIds?: string[];
+  /** Reservado para el Reporte de Resultados (6f) — una evaluación periódica que sostiene la
+   * afirmación (ej. "se confirmó la adquisición de X"). El Informe Mensual nunca los usa. */
+  assessmentIds?: string[];
+  /** Reservado para el Reporte de Resultados (6f) — checkpoints mensuales confirmados que sostienen
+   * una comparación inicio→final de una meta. El Informe Mensual nunca los usa. */
+  checkpointIds?: string[];
   origen: OrigenAssertion;
   /** La maestra reescribió el texto que RAÍZ propuso — ya no se regenera solo si se prepara otra
    * versión (se conserva su edición). */
@@ -70,73 +76,84 @@ export interface ContenidoInformeMensual {
   focoParaContinuar: InformeAssertion[];
 }
 
-export type TipoReporte = 'monthly_observation_report';
+export type TipoReporte = 'monthly_observation_report' | 'period_results_report';
 export type AudienciaReporte = 'internal' | 'family';
 export type EstadoReporte = 'borrador' | 'aprobado';
 
-/** Genérico a propósito — mismo tipo servirá para el Reporte de Resultados (6f) y otros documentos
- * congelados/versionados futuros; hoy solo existe `tipo: 'monthly_observation_report'`. */
-export interface ChildReport {
+/** Genérico a propósito (parámetro `C` = forma del contenido) — mismo tipo sirve para el Informe
+ * Mensual (`ContenidoInformeMensual`, default) y el Reporte de Resultados del periodo (6f,
+ * `ContenidoReporteResultados`, ver `lib/ciclo-revision.ts`) y otros documentos congelados/
+ * versionados futuros. El default mantiene sin cambios todo el código de 6e-2 que usa `ChildReport`
+ * sin especificar `C`. */
+export interface ChildReport<C = ContenidoInformeMensual> {
   id: string;
   ninoId: string;
   tipo: TipoReporte;
   audiencia: AudienciaReporte;
-  periodoInicio: string; // ISO, primer día del mes
-  periodoFin: string; // ISO, último día del mes
+  periodoInicio: string; // ISO
+  periodoFin: string; // ISO
   idioma: string;
   estado: EstadoReporte;
   version: number;
   reemplazaReportId?: string;
   creadoEn: string;
   aprobadoEn?: string;
+  /** Presente SOLO en `tipo: 'period_results_report'` — liga el reporte inequívocamente al
+   * `CicloRevisionPeriodica` que lo generó (Sesión 6, paso 7 / 6f). */
+  cicloRevisionId?: string;
   /** Firma determinística de la evidencia usada — ver `fingerprintEvidenciaDelMes`. Se recalcula al
    * reabrir un informe aprobado; si difiere, hay evidencia nueva y se avisa (nunca se aplica sola). */
   fingerprintEvidencia: string;
-  contenidoSnapshot: ContenidoInformeMensual;
+  contenidoSnapshot: C;
 }
 
-/* ── PERSISTENCIA ── */
+/* ── PERSISTENCIA (compartida entre TODOS los tipos de `ChildReport` — un solo storage, filtrado
+   por `tipo` al consultar) ── */
 
-const INFORMES_STORAGE_KEY = 'raiz_informes_mensuales';
+const CHILD_REPORTS_STORAGE_KEY = 'raiz_informes_mensuales';
 
-export function leerInformesMensuales(): ChildReport[] {
+export function leerChildReports(): ChildReport<unknown>[] {
   if (typeof window === 'undefined') return [];
   try {
-    const guardado = window.localStorage.getItem(INFORMES_STORAGE_KEY);
+    const guardado = window.localStorage.getItem(CHILD_REPORTS_STORAGE_KEY);
     if (!guardado) return [];
-    const parseado = JSON.parse(guardado) as ChildReport[];
+    const parseado = JSON.parse(guardado) as ChildReport<unknown>[];
     return Array.isArray(parseado) ? parseado : [];
   } catch {
     return [];
   }
 }
 
-export function guardarInformesMensuales(informes: ChildReport[]): void {
+export function guardarChildReports(reportes: ChildReport<unknown>[]): void {
   if (typeof window === 'undefined') return;
   try {
-    window.localStorage.setItem(INFORMES_STORAGE_KEY, JSON.stringify(informes));
+    window.localStorage.setItem(CHILD_REPORTS_STORAGE_KEY, JSON.stringify(reportes));
   } catch {
     // Almacenamiento no disponible — la sesión sigue funcionando en memoria.
   }
 }
 
-export function guardarUnInforme(informe: ChildReport): void {
-  const informes = leerInformesMensuales();
-  const actualizados = informes.some((i) => i.id === informe.id) ? informes.map((i) => (i.id === informe.id ? informe : i)) : [...informes, informe];
-  guardarInformesMensuales(actualizados);
+export function guardarUnChildReport<C>(reporte: ChildReport<C>): void {
+  const reportes = leerChildReports();
+  const actualizados = reportes.some((i) => i.id === reporte.id) ? reportes.map((i) => (i.id === reporte.id ? (reporte as ChildReport<unknown>) : i)) : [...reportes, reporte as ChildReport<unknown>];
+  guardarChildReports(actualizados);
 }
 
-/** El informe VIGENTE (mayor `version`) de un niño para un periodo — nunca hay que adivinar cuál es
- * el "actual" entre varias versiones archivadas. */
-export function informeVigente(ninoId: string, anio: number, mes: number, informes: ChildReport[] = leerInformesMensuales()): ChildReport | undefined {
+function leerInformesMensuales(): ChildReport<ContenidoInformeMensual>[] {
+  return leerChildReports().filter((r): r is ChildReport<ContenidoInformeMensual> => r.tipo === 'monthly_observation_report');
+}
+
+/** El informe VIGENTE (mayor `version`) de un niño para un mes — nunca hay que adivinar cuál es el
+ * "actual" entre varias versiones archivadas. */
+export function informeMensualVigente(ninoId: string, anio: number, mes: number, informes: ChildReport<ContenidoInformeMensual>[] = leerInformesMensuales()): ChildReport<ContenidoInformeMensual> | undefined {
   const delPeriodo = informes.filter((i) => i.ninoId === ninoId && enMes(i.periodoInicio, anio, mes));
   if (delPeriodo.length === 0) return undefined;
   return delPeriodo.reduce((a, b) => (b.version > a.version ? b : a));
 }
 
-/** Historial completo (todas las versiones) de un periodo, más reciente primero — para cuando la
+/** Historial completo (todas las versiones) de un mes, más reciente primero — para cuando la
  * maestra quiera ver qué cambió entre versiones (no hay UI todavía, pero el dato no se pierde). */
-export function historialInforme(ninoId: string, anio: number, mes: number, informes: ChildReport[] = leerInformesMensuales()): ChildReport[] {
+export function historialInforme(ninoId: string, anio: number, mes: number, informes: ChildReport<ContenidoInformeMensual>[] = leerInformesMensuales()): ChildReport<ContenidoInformeMensual>[] {
   return informes.filter((i) => i.ninoId === ninoId && enMes(i.periodoInicio, anio, mes)).sort((a, b) => b.version - a.version);
 }
 
@@ -341,8 +358,8 @@ export function generarContenidoInforme(nino: Nino, anio: number, mes: number, o
 /* ── CICLO DE VIDA DEL INFORME ── */
 
 /** Crea el PRIMER borrador de un periodo — nunca se llama si ya existe un informe para ese periodo
- * (eso sería sobrescribir edición humana en silencio); la pantalla debe comprobar `informeVigente`
- * antes de ofrecer este botón. */
+ * (eso sería sobrescribir edición humana en silencio); la pantalla debe comprobar
+ * `informeMensualVigente` antes de ofrecer este botón. */
 export function prepararInformeBorrador(nino: Nino, anio: number, mes: number, observaciones: Observacion[], relaciones: ObservacionSkill[], eventosSkill: EventoSkill[], idioma = 'es'): ChildReport {
   const { inicio, fin } = primerYUltimoDiaDelMes(anio, mes);
   return {
@@ -365,7 +382,7 @@ export function prepararInformeBorrador(nino: Nino, anio: number, mes: number, o
  * ni `id`. */
 export function guardarEdicionBorrador(informe: ChildReport, contenidoEditado: ContenidoInformeMensual): ChildReport {
   const actualizado: ChildReport = { ...informe, contenidoSnapshot: contenidoEditado };
-  guardarUnInforme(actualizado);
+  guardarUnChildReport(actualizado);
   return actualizado;
 }
 
@@ -379,7 +396,7 @@ export function aprobarInforme(informe: ChildReport, observaciones: Observacion[
     aprobadoEn: FECHA_HOY,
     fingerprintEvidencia: fingerprintEvidenciaDelMes(informe.ninoId, informe.contenidoSnapshot.anio, informe.contenidoSnapshot.mes, observaciones, relaciones),
   };
-  guardarUnInforme(actualizado);
+  guardarUnChildReport(actualizado);
   return actualizado;
 }
 
@@ -410,6 +427,6 @@ export function crearNuevaVersionInforme(anterior: ChildReport, nino: Nino, obse
     fingerprintEvidencia: fingerprintEvidenciaDelMes(nino.id, anterior.contenidoSnapshot.anio, anterior.contenidoSnapshot.mes, observaciones, relaciones),
     contenidoSnapshot: generarContenidoInforme(nino, anterior.contenidoSnapshot.anio, anterior.contenidoSnapshot.mes, observaciones, relaciones, eventosSkill),
   };
-  guardarUnInforme(nueva);
+  guardarUnChildReport(nueva);
   return nueva;
 }

@@ -8,7 +8,7 @@
 // maestra puede agregar su propia meta para esa habilidad.
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, type Variants } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
@@ -22,8 +22,10 @@ import {
   leerObservaciones,
   leerProgramaConfig,
   ninoPorId,
+  planActivoDeNino,
   type Nino,
 } from '@/lib/seed-data';
+import { cicloPorId, marcarDecisionPlan } from '@/lib/ciclo-revision';
 import {
   DOMINIO_AREA_OPCIONES,
   construirPropuestaPlan,
@@ -216,6 +218,8 @@ function BloqueGrupo({
 function PropuestaContenido() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const busqueda = useSearchParams();
+  const cicloId = busqueda.get('ciclo');
   const [ninos, setNinos] = useState<Nino[]>([]);
   const [datos, setDatos] = useState<ContextoDatos | null>(null);
   const [decisiones, setDecisiones] = useState(() => leerDecisionesPrioridad());
@@ -254,6 +258,14 @@ function PropuestaContenido() {
 
   if (!nino || !datos) return null;
   const volver = `/ninos/${nino.id}/progreso`;
+  const volverAlCiclo = cicloId ? `/ninos/${nino.id}/revision-periodica?ciclo=${cicloId}` : volver;
+
+  function noNecesitaPlan() {
+    if (!cicloId) return;
+    const ciclo = cicloPorId(cicloId);
+    if (ciclo) marcarDecisionPlan(ciclo, 'no_necesita');
+    router.push(volverAlCiclo);
+  }
 
   function alternarMarca(metaId: string, meta: PropuestaMeta) {
     setMarcadas((s) => {
@@ -338,7 +350,29 @@ function PropuestaContenido() {
     // decisión ahora — es la aprobación final de la maestra, no el simple toggle de la UI.
     const areasParaSeguirObservando = areas.filter((a) => areasSeguirObservando.has(a.areaId));
 
-    const { nino: actualizado, skillIdsConMeta } = crearPlanDesdePropuesta(nino, areas, { metasSeleccionadas, metasManuales }, fechaRevision);
+    const metaIdsAntes = new Set(planActivoDeNino(nino)?.metas.map((m) => m.id) ?? []);
+    const { nino: actualizadoBase, skillIdsConMeta } = crearPlanDesdePropuesta(nino, areas, { metasSeleccionadas, metasManuales }, fechaRevision);
+    // Dentro del flujo 6f: una meta recién creada en este mismo paso ("Nuevas prioridades") no
+    // necesita pasar TAMBIÉN por "Revisión de metas" (Paso 3) — no existía antes de este ciclo, así
+    // que no hay nada previo que revisar. Se etiqueta su entrada de creación con el mismo
+    // `cicloRevisionId`, evitando que el ciclo rebote de vuelta al paso anterior.
+    const actualizado = cicloId
+      ? {
+          ...actualizadoBase,
+          planesIndividuales: (actualizadoBase.planesIndividuales ?? []).map((p) =>
+            p.id === planActivoDeNino(actualizadoBase)?.id
+              ? {
+                  ...p,
+                  metas: p.metas.map((m) =>
+                    metaIdsAntes.has(m.id) || !m.historial || m.historial.length === 0
+                      ? m
+                      : { ...m, historial: m.historial.map((h, i) => (i === m.historial!.length - 1 ? { ...h, cicloRevisionId: cicloId } : h)) }
+                  ),
+                }
+              : p
+          ),
+        }
+      : actualizadoBase;
     const todos = ninos.map((n) => (n.id === nino.id ? actualizado : n));
     guardarNinos(todos);
     setNinos(todos);
@@ -354,14 +388,22 @@ function PropuestaContenido() {
       }
     }
     setDecisiones(dec);
-    setCreado(metasSeleccionadas.length + metasManuales.length);
+    const total = metasSeleccionadas.length + metasManuales.length;
+    setCreado(total);
+    if (cicloId) {
+      const ciclo = cicloPorId(cicloId);
+      if (ciclo) {
+        const planNuevoId = total > 0 ? planActivoDeNino(actualizado)?.id : undefined;
+        marcarDecisionPlan(ciclo, total > 0 ? 'plan_nuevo' : 'sigue_observando', planNuevoId);
+      }
+    }
   }
 
   return (
     <AppShell>
       <motion.div variants={lista} initial="hidden" animate="visible">
         <motion.div variants={item} className="mb-2">
-          <Link href={volver} aria-label="Volver al progreso" className="flex size-9 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)]">
+          <Link href={volverAlCiclo} aria-label="Volver" className="flex size-9 items-center justify-center rounded-full text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)]">
             <ArrowLeft size={18} aria-hidden="true" />
           </Link>
         </motion.div>
@@ -388,8 +430,8 @@ function PropuestaContenido() {
               <Link href={`/ninos/${nino.id}/plan-individual`} className="flex min-h-11 items-center text-[14px] font-semibold text-[var(--accent)] underline">
                 Ver Plan Individual
               </Link>
-              <Link href={volver} className="flex min-h-11 items-center text-[14px] font-semibold text-[var(--text-secondary)] underline">
-                Volver al progreso
+              <Link href={volverAlCiclo} className="flex min-h-11 items-center text-[14px] font-semibold text-[var(--text-secondary)] underline">
+                {cicloId ? 'Volver a la revisión periódica' : 'Volver al progreso'}
               </Link>
             </div>
           </motion.section>
@@ -400,9 +442,15 @@ function PropuestaContenido() {
             <button type="button" onClick={() => setAgregandoArea(true)} className="mt-3 min-h-11 text-[14px] font-semibold text-[var(--accent)] underline">
               Agregar un área manualmente
             </button>
-            <Link href={volver} className="mt-3 block min-h-11 pt-3 text-[14px] font-semibold text-[var(--accent)] underline">
-              Volver al progreso
-            </Link>
+            {cicloId ? (
+              <button type="button" onClick={noNecesitaPlan} className="mt-3 block min-h-11 pt-3 text-[14px] font-semibold text-[var(--accent)] underline">
+                Continuar — por ahora no necesita un Plan Individual
+              </button>
+            ) : (
+              <Link href={volver} className="mt-3 block min-h-11 pt-3 text-[14px] font-semibold text-[var(--accent)] underline">
+                Volver al progreso
+              </Link>
+            )}
           </motion.section>
         ) : (
           <>
@@ -512,7 +560,7 @@ function PropuestaContenido() {
               >
                 {totalSeleccion > 0 ? `Crear Plan Individual (${totalSeleccion})` : 'Guardar decisión'}
               </motion.button>
-              <Link href={volver} className="flex min-h-11 items-center justify-center rounded-[var(--radius-button)] bg-[var(--surface-2)] px-3 text-[14px] font-semibold text-[var(--text-secondary)]">
+              <Link href={volverAlCiclo} className="flex min-h-11 items-center justify-center rounded-[var(--radius-button)] bg-[var(--surface-2)] px-3 text-[14px] font-semibold text-[var(--text-secondary)]">
                 No crear ahora
               </Link>
               <p className="text-[12px] leading-snug text-[var(--text-tertiary)]">“No crear ahora” no guarda nada. La propuesta se vuelve a calcular la próxima vez que entres.</p>

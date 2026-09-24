@@ -61,6 +61,7 @@ import {
   sugerirCheckpoint,
   sugiereMarcarCumplida,
 } from '@/lib/plan-seguimiento';
+import { cicloPorId, refrescarRevisionMetas, revisionMetasCompleta } from '@/lib/ciclo-revision';
 
 const lista: Variants = { hidden: {}, visible: { transition: { staggerChildren: 0.05 } } };
 const item: Variants = { hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] } } };
@@ -322,6 +323,7 @@ function TarjetaMeta({
   relaciones,
   abiertaInicial,
   soloLectura,
+  cicloId,
   onCambio,
 }: {
   nino: Nino;
@@ -332,6 +334,7 @@ function TarjetaMeta({
   relaciones: ObservacionSkill[];
   abiertaInicial: boolean;
   soloLectura: boolean;
+  cicloId?: string;
   onCambio: (n: Nino) => void;
 }) {
   const [revisando, setRevisando] = useState(abiertaInicial);
@@ -348,14 +351,14 @@ function TarjetaMeta({
   const sugiereCumplida = sugiereMarcarCumplida(meta);
 
   function confirmar() {
-    onCambio(cambiarEstadoMeta(nino, plan.id, meta.id, elegido, { nota, observacionIds: idsVigentes, motivoCierre: motivo }));
+    onCambio(cambiarEstadoMeta(nino, plan.id, meta.id, elegido, { nota, observacionIds: idsVigentes, motivoCierre: motivo, cicloRevisionId: cicloId }));
     setRevisando(false);
     setNota('');
     setMotivo('');
   }
 
   function dejarComoEsta() {
-    onCambio(mantenerMetaComoEsta(nino, plan.id, meta.id, idsVigentes, nota));
+    onCambio(mantenerMetaComoEsta(nino, plan.id, meta.id, idsVigentes, nota, cicloId));
     setRevisando(false);
     setNota('');
   }
@@ -495,6 +498,7 @@ function PlanContenido() {
   const router = useRouter();
   const busqueda = useSearchParams();
   const revisarId = busqueda.get('revisar');
+  const cicloId = busqueda.get('ciclo') ?? undefined;
   const [ninos, setNinos] = useState<Nino[]>([]);
   const [observaciones, setObservaciones] = useState<Observacion[]>([]);
   const [relaciones, setRelaciones] = useState<ObservacionSkill[]>([]);
@@ -520,6 +524,16 @@ function PlanContenido() {
     const actualizados = ninos.map((n) => (n.id === ninoActualizado.id ? ninoActualizado : n));
     setNinos(actualizados);
     guardarNinos(actualizados);
+    // El cache de "revisión completa" del ciclo se recalcula del historial real de las metas cada
+    // vez que algo cambia — nunca se guarda como un simple toggle aparte (6f corrección 2).
+    if (cicloId) {
+      const ciclo = cicloPorId(cicloId);
+      if (ciclo) refrescarRevisionMetas(ciclo, ninoActualizado);
+    }
+  }
+
+  function terminarRevisionDeMetas() {
+    router.push(`/ninos/${params.id}/revision-periodica?ciclo=${cicloId}`);
   }
 
   if (!cargado || !nino) return null;
@@ -630,6 +644,18 @@ function PlanContenido() {
               </Link>
             </div>
 
+            {cicloId && (
+              <div className="mt-4 rounded-[var(--radius-card)] bg-[color-mix(in_oklab,var(--accent)_10%,transparent)] p-4">
+                <p className="text-[13px] font-semibold text-[var(--text-primary)]">Revisión periódica en curso</p>
+                <p className="mt-0.5 text-[12px] leading-snug text-[var(--text-secondary)]">
+                  {revisionMetasCompleta(nino, cicloId) ? 'Ya revisaste todas las metas activas de este ciclo.' : 'Revisa cada meta activa antes de continuar — puedes dejarla como está si no hay cambios.'}
+                </p>
+                <button type="button" onClick={terminarRevisionDeMetas} className="mt-2 min-h-11 text-[13px] font-semibold text-[var(--accent)] underline">
+                  {revisionMetasCompleta(nino, cicloId) ? 'Continuar con la revisión periódica' : 'Volver a la revisión periódica'}
+                </button>
+              </div>
+            )}
+
             {areas.length === 0 ? (
               <p className="mt-4 text-[13px] text-[var(--text-tertiary)]">Sin metas todavía.</p>
             ) : (
@@ -648,6 +674,7 @@ function PlanContenido() {
                         relaciones={relaciones}
                         abiertaInicial={revisarId === m.id}
                         soloLectura={false}
+                        cicloId={cicloId}
                         onCambio={guardarCambioNino}
                       />
                     ))}

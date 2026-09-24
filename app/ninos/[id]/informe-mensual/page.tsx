@@ -20,9 +20,9 @@ import {
   aprobarInforme,
   crearNuevaVersionInforme,
   guardarEdicionBorrador,
-  guardarUnInforme,
+  guardarUnChildReport,
   hayEvidenciaNuevaTrasAprobar,
-  informeVigente,
+  informeMensualVigente,
   prepararInformeBorrador,
   type ChildReport,
   type ContenidoInformeMensual,
@@ -133,7 +133,7 @@ export default function InformeMensual() {
   const anio = Number(searchParams.get('anio')) || Number(FECHA_HOY.slice(0, 4));
   const mes = Number(searchParams.get('mes')) || Number(FECHA_HOY.slice(5, 7));
 
-  const vigente = informe ?? informeVigente(nino.id, anio, mes);
+  const vigente = informe ?? informeMensualVigente(nino.id, anio, mes);
 
   function irAMes(destino: { anio: number; mes: number }) {
     setModoEdicion(false);
@@ -145,7 +145,7 @@ export default function InformeMensual() {
 
   function preparar() {
     const nuevo = prepararInformeBorrador(nino!, anio, mes, observaciones, relaciones, eventosSkill);
-    guardarUnInforme(nuevo);
+    guardarUnChildReport(nuevo);
     setInforme(nuevo);
   }
 

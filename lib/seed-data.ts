@@ -68,6 +68,9 @@ export interface Skill {
   estadoDesarrollo: EstadoDesarrollo;
   estadoEvidencia: EstadoEvidencia;
   actualizado: string; // ISO
+  /** La maestra la marcó para que entre a la próxima evaluación periódica sin importar las demás
+   * reglas de filtro (Sesión 6, paso 7 / 6f) — se limpia sola cuando esa evaluación se genera. */
+  marcadaParaSeguimiento?: boolean;
 }
 
 /** Traduce los dos ejes a UNA etiqueta/tono para mostrar (badges, listas) — nunca se muestran los
@@ -204,6 +207,11 @@ export interface EvaluacionNino {
   edadAlMomentoMeses: number;
   etapaAlMomento: Etapa;
   resultados: ResultadoEvaluacion[];
+  /** Presente SOLO cuando esta evaluación nace dentro del flujo de Revisión Periódica (Sesión 6,
+   * paso 7 / 6f) — la liga inequívocamente a ese ciclo. Ausente = evaluación fuera de ciclo
+   * (manual/extraordinaria): actualiza skills y eventos igual que siempre, pero NUNCA mueve sola la
+   * fecha formal de la próxima revisión periódica (regla del usuario, 6f punto 2). */
+  cicloRevisionId?: string;
 }
 
 export type TipoEvaluacionExterna = 'ASQ-3' | 'IFSP' | 'IEP' | 'speech_language' | 'OT' | 'PT' | 'otro';
@@ -262,6 +270,11 @@ export interface CambioEstadoMeta {
   nota?: string;
   /** Observaciones aprobadas que la maestra tenía a la vista al decidir (trazabilidad). */
   observacionIds?: string[];
+  /** Presente SOLO si esta entrada se registró dentro del flujo de Revisión Periódica (6f) — permite
+   * saber, sin adivinar por fecha, si una meta YA fue revisada dentro de ESTE ciclo (una edición
+   * hecha fuera de 6f, por ejemplo desde el Plan Individual normal, deja este campo vacío y nunca
+   * cuenta como "revisada en el ciclo" — regla del usuario, 6f punto 2). */
+  cicloRevisionId?: string;
 }
 
 export type OrigenMeta = 'maestra' | 'raiz_sugerido_aprobado';
@@ -411,6 +424,10 @@ export interface Nino {
   /** Evaluación de RAÍZ — historial completo, cada una es un snapshot congelado tras aprobar.
    * "Próxima evaluación" se calcula (ver `calcularFechaProximaEvaluacion`), no se guarda fija. */
   fechaUltimaEvaluacionAprobada?: string;
+  /** Frecuencia propia de ESTE niño — si está ausente, se usa la del programa (Sesión 6, paso 7 /
+   * 6f, resolución override→programa). */
+  frecuenciaEvaluacionOverride?: FrecuenciaEvaluacion;
+  frecuenciaEvaluacionMesesPersonalizadaOverride?: number;
   evaluaciones: EvaluacionNino[];
   evaluacionesExternas: EvaluacionExterna[];
   /** Planes Individuales por periodo (6d). El campo singular `planIndividual` de datos guardados
@@ -1251,14 +1268,24 @@ export function aprobarEvaluacion(nino: Nino, evaluacion: EvaluacionNino, aproba
   };
 }
 
-/** "Última evaluación aprobada + frecuencia → próxima revisión" — regla técnica ya aprobada
- * (nunca configurable, evita exponerle a la maestra una decisión que no necesita tomar). */
-export function calcularFechaProximaEvaluacion(nino: Nino, frecuencia: FrecuenciaEvaluacion, mesesPersonalizados?: number): string {
-  const referencia = nino.fechaUltimaEvaluacionAprobada ?? nino.fechaIngreso;
+/** "Referencia + frecuencia → próxima revisión" — regla técnica ya aprobada (nunca configurable,
+ * evita exponerle a la maestra una decisión que no necesita tomar). `fechaReferenciaOverride`
+ * permite a quien llama fijar la referencia correcta (ej. el cierre PEDAGÓGICO del último ciclo de
+ * Revisión Periódica — ver `lib/ciclo-revision.ts`) en vez del default simple de aquí abajo, que
+ * cualquier evaluación aprobada (incluida una fuera de ciclo) puede mover — por eso el default es
+ * solo una estimación liviana para mostrar en el Perfil, nunca la fuente formal del ciclo 6f. */
+export function calcularFechaProximaEvaluacion(nino: Nino, frecuencia: FrecuenciaEvaluacion, mesesPersonalizados?: number, fechaReferenciaOverride?: string): string {
+  const referencia = fechaReferenciaOverride ?? nino.fechaUltimaEvaluacionAprobada ?? nino.fechaIngreso;
   const meses = frecuencia === 'trimestral' ? 3 : frecuencia === 'semestral' ? 6 : frecuencia === 'anual' ? 12 : (mesesPersonalizados ?? 3);
   const d = new Date(`${referencia}T00:00:00`);
   d.setMonth(d.getMonth() + meses);
   return d.toISOString().slice(0, 10);
+}
+
+/** Resuelve override del niño → frecuencia del programa (Sesión 6, paso 7 / 6f, punto 5). */
+export function frecuenciaEvaluacionEfectiva(nino: Nino, config: ProgramaConfig): { frecuencia: FrecuenciaEvaluacion; meses?: number } {
+  if (nino.frecuenciaEvaluacionOverride) return { frecuencia: nino.frecuenciaEvaluacionOverride, meses: nino.frecuenciaEvaluacionMesesPersonalizadaOverride };
+  return { frecuencia: config.frecuenciaEvaluacion, meses: config.frecuenciaEvaluacionMesesPersonalizada };
 }
 
 export const TINT_HEX: Record<Nino['colorTint'], string> = {

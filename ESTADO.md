@@ -10,10 +10,12 @@ cerradas — ver "Decisión arquitectónica: mes ≠ 4 semanas fijas" y las secc
 (después de "Sesión 6, paso 7 / 6d — AMPLIACIÓN"). Conectar IA real queda **explícitamente
 pendiente** hasta que el usuario lo pida.
 
-**Sesión 6 — 6e-1 (Registro Mensual de Observaciones) y 6e-2 (Informe Mensual de Observaciones)**
-(ver esas secciones, después de Parte E) — AMBAS CONSTRUIDAS, VERIFICADAS Y CERRADAS. Siguiente en
-la fila, sin empezar: 6f (evaluación periódica + Reporte de Resultados) — no avanzar sin
-aprobación explícita del usuario.
+**Sesión 6 — 6e-1 (Registro Mensual), 6e-2 (Informe Mensual) y 6f (Revisión Periódica: Evaluación
+→ Plan Individual → Reporte de Resultados)** (ver esas secciones, después de Parte E) — LAS TRES
+CONSTRUIDAS, VERIFICADAS Y CERRADAS. Con esto, el núcleo funcional completo de Progreso/Reportes
+(paso 7 de la secuencia oficial) queda cerrado. Siguiente, sin empezar: fase posterior a definir
+con el usuario (Supabase + Auth real es el paso 8 de la secuencia oficial, más abajo) — no avanzar
+sin aprobación explícita.
 
 Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRADA** (detalle abajo).
 Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
@@ -2300,6 +2302,132 @@ aprobación explícita del usuario (instrucción textual: "Al terminar valida to
 - V1: solo texto (planeación, reformulación de observaciones) — servidor/BFF, nunca API key en
   el navegador. No se envía apellido/dirección/teléfono del niño al modelo — primer nombre o ID
   interno únicamente (doc maestro sec. 58).
+
+## Sesión 6, paso 7 / 6f — Revisión Periódica: Evaluación → Plan Individual → Reporte de Resultados (CONSTRUIDO, VERIFICADO CON LAS 21 VALIDACIONES DEL USUARIO, CERRADO)
+Orquesta lo que YA existía (Evaluación, historial de habilidades, Plan Individual, propuesta
+multi-área, `ChildReport` de 6e-2) en un ciclo con ANCLA EXPLÍCITA — casi nada de la lógica
+pedagógica es nueva; este trabajo es principalmente **orquestación** (confirmado el propio usuario
+al aprobar el plan). Responde, al cierre de un periodo: qué sabemos ahora del niño, qué cambió, qué
+metas se cumplieron/continúan, y qué se comunica en un Reporte de Resultados — sin inventar nada
+que la evidencia no sostenga.
+
+**Archivos:** `lib/ciclo-revision.ts` (nuevo — el ancla del ciclo, el filtro de skills, la
+generación del Reporte de Resultados), `app/ninos/[id]/revision-periodica/page.tsx` (nuevo — el
+hub que muestra los 7 pasos visibles y manda a la pantalla correcta), `app/ninos/[id]/reporte-resultados/[reporteId]/page.tsx`
+(nuevo — mismo patrón borrador→edición→aprobación→versión que 6e-2). Modificados (aditivo, ningún
+comportamiento existente cambia si no hay `?ciclo=` en la URL): `lib/seed-data.ts`
+(`Skill.marcadaParaSeguimiento?`, `EvaluacionNino.cicloRevisionId?`, `CambioEstadoMeta.cicloRevisionId?`,
+`Nino.frecuenciaEvaluacionOverride?`/`frecuenciaEvaluacionMesesPersonalizadaOverride?`,
+`calcularFechaProximaEvaluacion` con referencia opcional, `frecuenciaEvaluacionEfectiva`),
+`lib/prioridades.ts` (`cambiarEstadoMeta`/`mantenerMetaComoEsta` con `cicloRevisionId?` opcional),
+`lib/informe-mensual.ts` (`ChildReport<C>` ahora genérico — mismo storage que 6e-2, compartido por
+tipo — `TipoReporte` amplía a `'period_results_report'`, funciones renombradas a
+`leerChildReports`/`guardarUnChildReport`/`informeMensualVigente` sin romper 6e-2),
+`app/ninos/[id]/evaluacion/[evalId]/page.tsx`, `app/ninos/[id]/plan-individual/page.tsx`,
+`app/ninos/[id]/plan-individual/propuesta/page.tsx`, `app/ninos/[id]/page.tsx` (todos leen
+`?ciclo=` opcional).
+
+**El ancla — `CicloRevisionPeriodica`:** entidad ligera e independiente (`raiz_ciclos_revision`),
+exactamente como el usuario la pidió: `periodoInicio`, `periodoFin?` (fecha PEDAGÓGICA — la
+aprobación de la evaluación de este ciclo, nunca se mueve después), `evaluacionAnteriorId?`,
+`evaluacionActualId?`, `revisionMetasCompletada` (cache, SIEMPRE derivado en vivo de
+`revisionMetasCompleta()` para las decisiones reales — nunca se confía ciegamente en el cache),
+`decisionSiguientePlan?`, `planNuevoId?`, `reporteResultadosId?`, `estado`, `creadoEn`,
+`cerradoEn?` (fecha del TRÁMITE, distinta de `periodoFin`). El paso actual (`pasoActualDeCiclo`)
+se deriva 100% de estos campos — nunca se guarda aparte, así que reanudar el ciclo tras días de
+pausa siempre cae exactamente donde quedó.
+
+**Traza sin duplicar listas** (corrección 2 del usuario): `EvaluacionNino.cicloRevisionId` liga la
+evaluación a su ciclo; `CambioEstadoMeta.cicloRevisionId` (en el historial de CADA meta) marca
+inequívocamente qué decisión se tomó DENTRO de este ciclo — una edición normal fuera de 6f deja
+ese campo vacío y nunca cuenta como "revisada en el ciclo". Una meta recién creada en el Paso 4
+(nuevas prioridades) se estampa con el mismo `cicloRevisionId` en su entrada de creación — si no,
+el ciclo rebotaría de vuelta al Paso 3 a pedir "revisar" una meta que acaba de nacer (bug real
+encontrado y corregido durante la verificación, ver abajo).
+
+**Filtro de la evaluación periódica** (`skillsParaRevisionPeriodica`): nunca todo el catálogo —
+entra por cualquiera de: nueva por edad, en desarrollo, evidencia aprobada nueva desde la
+referencia, `politicaRevision` de seguimiento periódico/continuo, ligada a meta activa, marcada a
+mano (`marcadaParaSeguimiento`), o `estadoEvidencia==='contradictoria'` (el ÚNICO camino que puede
+volver a traer una `una_vez_dominado` ya dominada — nunca la degrada sola, solo la vuelve a poner
+sobre la mesa). La evaluación de INGRESO sigue viendo el catálogo completo sin filtrar — tiene
+sentido solo ahí.
+
+**Qué evaluación define el periodo** (corrección 2/3): `calcularProximaRevisionFormal` NUNCA usa
+"la última evaluación aprobada" genérica — usa `periodoFin` del último ciclo CERRADO; si no hay,
+la evaluación de INGRESO aprobada; si no hay ninguna, `fechaIngreso`. Una evaluación fuera de
+ciclo (el link "Generar una evaluación fuera de ciclo" en Perfil, sin `cicloRevisionId`) actualiza
+skills y `child_skill_events` con toda su utilidad pedagógica de siempre, pero JAMÁS mueve esta
+fecha formal — verificado en vivo: se aprobó una evaluación fuera de ciclo y "revisión prevista"
+se mantuvo exactamente igual.
+
+**Reporte de Resultados:** `ContenidoReporteResultados` (fortalezas, cambiosConfirmados,
+areasEnDesarrollo, metasCumplidas/queContinuan/Cerradas, resumenPeriodo, proximosPasos) —
+plantillas conservadoras iguales en espíritu a 6e-2 (D.2): "Se confirmó la adquisición de X",
+"N cambios confirmados", nunca prosa fingida. Cambios de habilidad SOLO se citan si hay
+`EventoSkill` confirmado dentro del periodo — nunca inferidos de la sola cantidad de
+observaciones (misma regla dura que 6e-2). El Plan que describe es el que tiene metas con
+`cicloRevisionId` de ESTE ciclo (`planDelCiclo`, busca en planes activos Y archivados) — nunca el
+Plan nuevo que ya pueda existir para cuando se genera el reporte (punto 7 del usuario). Para
+`audiencia:'family'` (default), `filtrarParaFamilia` quita toda meta sin
+`compartibleConFamilia===true` — verificado en vivo: una meta sin marcar quedó fuera del reporte
+familiar y apareció completa al marcarla compartible. `assessmentIds`/`checkpointIds` agregados a
+`InformeAssertion` (reservados, el Informe Mensual de 6e-2 nunca los usa). Mismo ciclo de vida que
+6e-2: borrador → edición → aprobación (congela fingerprint) → nueva versión si hay evidencia nueva
+(nunca sobrescribe la anterior — verificado v1/v2 en vivo, v1 quedó intacto).
+
+**Verificado en navegador — las 21 validaciones pedidas, todas confirmadas** (Luca sin Plan, Zayne
+con Plan activo real, Mateo para el caso de evaluación de ingreso; ciclos completos de punta a
+punta incluyendo reinicios de servidor entre pasos para probar reanudación real): ciclo se reanuda
+exacto tras interrupción ✓ · no se puede empezar dos veces el mismo ciclo (uno cerrado nunca se
+reabre, siempre ofrece uno nuevo) ✓ · evaluación fuera de ciclo no mueve la fecha formal (probado
+en vivo, antes/después idénticos) ✓ · `una_vez_dominado` dominada no aparece normalmente ✓ ·
+evidencia contradictoria la vuelve a traer sin degradarla sola (probado con "Reconoce colores") ✓ ·
+comparaciones nunca inferidas de la cantidad de observaciones ✓ · override individual (`anual`)
+prevalece sobre la frecuencia del programa (`trimestral`) — probado con Zayne, dio 12 meses exactos
+✓ · niño sin Plan (Luca) saltó correctamente la revisión de metas ✓ · niño con Plan (Zayne) revisó
+su meta real sin crear ninguna automáticamente ✓ · meta continuada conserva
+`continuaDeMetaId`/trazabilidad (mecanismo verificado por código + en vivo) ✓ · Reporte del
+periodo viejo no cambia al haber Plan nuevo (lee del Plan vía `cicloRevisionId`, nunca del activo
+en vivo) ✓ · "no necesita Plan" es salida válida y registrada (Zayne) ✓ · reporte familiar nunca
+incluyó una meta no compartible (verificado con y sin el flag) ✓ · nueva versión de reporte no
+sobrescribió la v1 aprobada ✓ · cerrar el periodo deja evaluación/Plan/reporte/eventos intactos y
+abre un punto limpio (verificado: ciclo nuevo para Luca no heredó nada del cerrado) ✓ ·
+`periodoFin` (evaluación) y `cerradoEn` (trámite) son campos separados que nunca se confunden
+(probado con fechas distintas a propósito) ✓ · próxima evaluación se calcula desde `periodoFin`,
+nunca `cerradoEn` (mismo experimento, confirmado) ✓ · meta modificada fuera de 6f no cuenta como
+revisada en el ciclo (mecanismo de `cicloRevisionId` verificado) ✓ · meta revisada dentro de 6f
+guarda `cicloRevisionId` (inspeccionado en el historial real) ✓ · evaluación fuera de ciclo antes
+del primer ciclo formal no mueve la fecha (Mateo, sin ciclo previo) ✓ · `ChildReport` de resultados
+queda ligado al `cicloRevisionId` correcto (inspeccionado en el storage real) ✓. tsc ✓ · build ✓
+(42 rutas).
+
+**3 bugs reales encontrados y corregidos durante la propia verificación** (no solo datos de
+prueba — errores de código): (1) el hub mostraba "Aprobado" en Reporte de Resultados antes de
+tiempo por un `else` mal encadenado en la descripción del paso — corregido a comprobar
+`ordenPaso(paso) > 3`. (2) `pasoActualDeCiclo` confiaba en el cache `revisionMetasCompletada`
+guardado en vez de derivarlo en vivo — un niño sin Plan (o con Plan recién creado) podía quedar
+atascado para siempre en "revisar metas" sin ningún botón visible; corregido para llamar siempre
+`revisionMetasCompleta()` en vivo. (3) el hub nunca llamaba `guardarUnChildReport` después de
+`prepararReporteResultadosBorrador` (que, como su par de 6e-2, no se autoguarda) — el Reporte se
+generaba pero se perdía, mostrando "No encontramos este reporte"; corregido agregando el guardado
+explícito. Los tres se detectaron probando el flujo real en el navegador, no por inspección de
+código — confirma el valor de la Regla de Oro 7 (verificar renderizado, no solo que compile).
+
+**Explícitamente NO construido en 6f (fases posteriores o fuera de alcance de esta ronda):** copy
+específico "Hay nueva evidencia que podría justificar revisar esta habilidad" para la skill
+`contradictoria` en la pantalla de evaluación (el MECANISMO de inclusión sí está y quedó
+verificado — falta solo el matiz de copy, no bloqueante); `archivarPlanYEmpezarNuevo` no está
+todavía conectado al flujo 6f (el Paso 4 usa `crearPlanDesdePropuesta`, que agrega al plan activo
+o crea uno si no existe — archivar-y-reemplazar manual sigue siendo una acción aparte en
+`/plan-individual`); PDF, fotos/evidencia visual real (arquitectura reservada, sin storage real
+conectado todavía); reporte para familia con permisos/consentimiento real (por ahora la regla de
+"solo compartible" es la única protección). Todos los datos de prueba inyectados durante la
+verificación (evaluaciones, planes, ciclos, reportes, overrides, la observación de septiembre
+inyectada) se revirtieron por completo — el estado queda exactamente como antes de empezar 6f.
+**Siguiente, sin empezar: fase posterior a definir con el usuario — no avanzar sin su aprobación
+explícita** (instrucción textual: "Al terminar, valida todas las pruebas y detente antes de
+cualquier fase nueva").
 
 ## Decisiones técnicas (para el agente, no se discuten con el usuario)
 - Registradas arriba (Sesión 1): Next.js, esquema de datos, RLS por programa, Supabase Auth
