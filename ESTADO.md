@@ -12,10 +12,22 @@ pendiente** hasta que el usuario lo pida.
 
 **Sesión 6 — 6e-1 (Registro Mensual), 6e-2 (Informe Mensual) y 6f (Revisión Periódica: Evaluación
 → Plan Individual → Reporte de Resultados)** (ver esas secciones, después de Parte E) — LAS TRES
-CONSTRUIDAS, VERIFICADAS Y CERRADAS. Con esto, el núcleo funcional completo de Progreso/Reportes
-(paso 7 de la secuencia oficial) queda cerrado. Siguiente, sin empezar: fase posterior a definir
-con el usuario (Supabase + Auth real es el paso 8 de la secuencia oficial, más abajo) — no avanzar
-sin aprobación explícita.
+CONSTRUIDAS, VERIFICADAS Y CERRADAS.
+
+**⚠️ CICLO PEDAGÓGICO PRINCIPAL DE RAÍZ — CERRADO POR COMPLETO (aprobado explícitamente por el
+usuario tras cerrar 6f).** De punta a punta: Configuración/Currículo → Planeación → Observación →
+Registro/Informe Mensual → Revisión Periódica → Reporte de Resultados. Esto cierra el paso 7 de la
+secuencia oficial (Progreso/Reportes) — es el núcleo funcional completo del producto.
+
+**Siguiente bloque anunciado por el usuario — PREPARACIÓN PARA PRODUCCIÓN, en este orden:**
+1. Catálogo Pedagógico Oficial RAÍZ (revisar/oficializar el contenido pedagógico — hasta ahora
+   `SKILLS_CATALOG`/plantillas/rutas son datos de ejemplo para probar el mecanismo, documentado así
+   desde Sesión 6 paso 4: "el usuario confirmó explícitamente que el contenido pedagógico oficial
+   se revisa en una ronda aparte más adelante" — ESA ronda es la que sigue).
+2. Arquitectura multi-tenant, privacidad, seguridad, Supabase/Auth/Storage (pasos 8+ de la
+   secuencia oficial).
+**NO empezar ninguno de los dos sin la especificación del usuario primero — instrucción textual:
+"Espera mi especificación antes de escribir código."** No avanzar código todavía.
 
 Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRADA** (detalle abajo).
 Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
