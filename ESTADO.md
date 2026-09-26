@@ -2460,6 +2460,12 @@ cualquier fase nueva").
 - **Riesgos de duplicar lógica (a vigilar):** (1) `RUTAS_DEMO` (estrategias/oportunidades/queObservar/pasos) y los nuevos `andamiajes`/`oportunidadesObservacion`/`progresion` del catálogo son EL MISMO contenido → al oficializar, `RUTAS_DEMO` debe MIGRAR al catálogo y quedar como lectura del catálogo, no coexistir dos fuentes. (2) `PreguntaObservable` vs `indicadores[]`: unificar, no duplicar. (3) `ApoyoNino.estrategia` (del niño, texto libre) vs `andamiajes[]` (del catálogo, genérico): el del niño manda/se confirma; el del catálogo solo sugiere. (4) `prerrequisitos` plano vs `progresion`: definir cuál es la fuente. (5) No crear un "nivel de apoyo" en `EventoSkill`/`MetaIndividual` paralelo al de la observación. (6) Metadatos de fuente van en el catálogo (una vez), nunca copiados a observaciones/reportes.
 - **NO se refactoriza ni implementa nada** de lo anterior hasta revisar juntos la especificación del Catálogo Pedagógico Oficial.
 
+### Precisiones del usuario al diseño del Catálogo Oficial (2026-09-26, aprobadas — cosa juzgada)
+1. `IndicadorObservable` (descripción objetiva de algo visible) y `PreguntaObservable` (ayuda para saber qué mirar/ofrecer) son entidades DISTINTAS: relacionables, nunca fusionadas ni derivadas una de la otra automáticamente.
+2. `progresión` (qué suele aparecer antes/después, posible siguiente paso) ≠ `prerrequisito` (dependencia pedagógica REAL, solo cuando existe). Una secuencia típica nunca se convierte en prerrequisito rígido.
+3. TIPO DE APOYO (modelado, gesto, pista verbal, apoyo visual, adaptación de ambiente/material, apoyo físico, otro) ≠ GRADO DE INDEPENDENCIA (independiente / con apoyo / apoyo significativo / no determinado). Nunca una escala universal "visual < verbal < físico".
+Estado: la especificación técnica del Catálogo se entregó al usuario para revisión; NO se escribe código hasta que la apruebe.
+
 ## Decisiones técnicas (para el agente, no se discuten con el usuario)
 - Registradas arriba (Sesión 1): Next.js, esquema de datos, RLS por programa, Supabase Auth
   email+Google, IA solo texto en V1 vía servidor.
