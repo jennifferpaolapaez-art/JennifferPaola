@@ -2476,6 +2476,80 @@ Estado: la especificación técnica del Catálogo se entregó al usuario para re
 - **Versionado confirmado sin cambios:** el mecanismo de `CatalogVersion` ya especificado (letra E de la especificación técnica) cubre esto tal cual — una evaluación histórica queda fija a su versión, el programa actualiza explícito.
 - **No rompe nada cerrado:** Planeación, Observaciones, Progreso, Plan Individual y 6f no cambian de arquitectura — esta decisión es de contenido/criterio editorial y de dirección de UX futura de Evaluación/Reporte familiar, aditiva sobre lo ya construido.
 
+## Catálogo Pedagógico Oficial RAÍZ — SLICE DE VALIDACIÓN (2026-09-27, CONSTRUIDO, VERIFICADO CON LAS 20 VALIDACIONES DEL USUARIO — NO ES CONTENIDO OFICIAL PUBLICADO)
+**Es un borrador editorial RAÍZ para probar la arquitectura, no el Catálogo Oficial completo.**
+Cosa juzgada aprobada: 6 habilidades (`pinza`, `tijeras`, `palabras`, `interaccion-social`,
+`autonomia-alimentacion`, `nombre-propio`) con el modelo completo — versión, dominios, indicadores,
+preguntas (reutilizadas de `PREGUNTAS_OBSERVABLES_DEMO`), relaciones (progresión ≠ prerrequisito),
+oportunidades, andamiajes, señales para reducir apoyo, fuentes/procedencia. Antes de publicarse
+como oficial falta: revisión pedagógica del contenido de estas 6 (redactado por mí, no por un
+experto en desarrollo infantil), y llenar el resto del catálogo — ninguna de las dos cosas se hizo
+en esta ronda, por instrucción explícita del usuario ("detente" al cerrar el slice).
+
+**Archivo nuevo:** `lib/catalogo-oficial.ts` — 100% aditivo, no borra nada de `seed-data.ts` ni
+`prioridades.ts`. Modificados (aditivo, cero regresión — confirmado en vivo, ver abajo):
+`lib/seed-data.ts` (`EvaluacionNino.catalogVersionId?`), `lib/ciclo-revision.ts` (estampa esa
+versión en `generarBorradorEvaluacionPeriodica`), `lib/prioridades.ts` (helper `rutaDeSkill()`
+reemplaza las 3 lecturas directas de `RUTAS_DEMO[skillId]` — para las 6 skills migradas
+[`SKILLS_MIGRADAS_IDS`] lee el catálogo oficial vía el adaptador `rutaDemoDesdeOficial()`; para
+todo lo demás sigue leyendo `RUTAS_DEMO` exactamente igual que antes).
+
+**Guardrails del usuario, todos aplicados:**
+1. "Nueva por edad" = relevante para revisar, nunca "debería dominarla ya" — `rangoEdadRaiz` es
+   metadata de referencia, el filtro de 6f (`skillsParaRevisionPeriodica`) nunca la usa para
+   EXCLUIR una skill con historia/meta/evidencia real (age nunca fue un criterio de exclusión ahí
+   para empezar — confirmado por inspección).
+2. "Evidencia suficiente" respeta `politicaEvidencia` de cada skill (`evidenciaSuficientePara()`),
+   nunca un conteo universal — y sigue siendo SUGERENCIA: ninguna función de este módulo escribe
+   `Nino`/`EventoSkill`, todas devuelven texto o booleano.
+3. Las 6 skills llevan `vigenteDesde: CATALOGO_VERSION_DEMO.id` y `CATALOGO_VERSION_DEMO.esDemo:
+   true` / `estado:'borrador'` — imposible confundirlas con contenido oficial.
+
+**Precisiones previas también aplicadas en el modelo:** `IndicadorObservable` y `PreguntaObservable`
+son tipos distintos, nunca derivados uno del otro. `SkillRelation` es una unión discriminada:
+TypeScript EXIGE `justificacion` en tiempo de compilación para cualquier relación `tipo:'prerrequisito'`
+— estructuralmente imposible crear una sin justificarla. `TipoApoyo` y `GradoIndependencia` son ejes
+separados, sin jerarquía entre tipos de apoyo.
+
+**Verificado — las 20 validaciones pedidas, todas confirmadas** (17 con una página de verificación
+temporal en `app/dev/catalogo-check` que corrió aserciones puras contra el módulo — creada, usada y
+BORRADA antes de cerrar, nunca llegó a `git`; 3 con datos reales de Luca en modo SOLO LECTURA, sin
+guardar nada):
+1. `/planeacion` renderiza igual que siempre, sin niños ni observaciones nuevas ✓ · 2. la propuesta
+de Plan Individual de Luca (real) mostró estrategias/oportunidades/qué-observar del catálogo NUEVO
+citando su actividad real de esta semana, sin que exista ninguna Evaluación de Luca ✓ · 3. con
+`ApoyoNino` específico, `sugerenciaDeApoyo()` prioriza ese apoyo sobre el andamiaje genérico ✓ ·
+3b. sin apoyo específico, cae al andamiaje del catálogo ✓ · 4. ninguna función del módulo cambia un
+estado sola (solo devuelven texto/booleano) ✓ · 5. `rangoEdadRaiz` nunca se usa para excluir una
+skill con historia ✓ · 6. confirmado por inspección: el filtro de 6f no usa edad como criterio de
+exclusión ✓ · 7. `evidenciaSuficientePara('autonomia-alimentacion', …)` alcanza con 1 evidencia
+(`una_demostracion_clara`) ✓ · 8. la misma función NO alcanza para `tijeras` con 1 sola evidencia
+(`consistencia_repetida`, mínimo 3) ✓ · 9. indicadores y preguntas coexisten como listas separadas
+✓ · 10. `tijeras` tiene 2 relaciones de progresión/prerrequisito simultáneas, no una línea rígida ✓
+· 11. la única relación `prerrequisito` (tijeras→pinza) lleva justificación real, exigida por el
+tipo ✓ · 12. `nombre-propio` aparece en el track `kindergarten_readiness` sin duplicar su id (sigue
+existiendo una sola vez en `SKILLS_OFICIALES`) ✓ · 13. 5 de las 6 skills son CORE (sin tracks) y
+funcionan igual ✓ · 14. `CATALOGO_VERSION_DEMO.esDemo`/`estado` marcan el borrador sin ambigüedad ✓
+· 15. las 6 skills citan `vigenteDesde`, y `generarBorradorEvaluacionPeriodica` estampa
+`catalogVersionId` en la evaluación ✓ · 16. verificado POR CONSTRUCCIÓN (solo existe una versión
+todavía — nada reescribe `catalogVersionId` de una evaluación ya creada; la prueba real de
+migración multi-versión queda pendiente para cuando exista una v2) · 17. **`evaluarRaices('tijeras')`
+sobre Luca real devolvió `pinza` como única raíz (el catálogo oficial), no las 2 raíces de
+`RUTAS_DEMO` legado** — confirmado en vivo, no solo con el adaptador aislado ✓ · 18. cero dato
+DEMO tocó `raiz_ninos`: la verificación usó únicamente objetos `Nino` en memoria, nunca
+`guardarNinos` ✓ · 19. tsc ✓ build ✓ en cada corte ✓ · 20. regresión en vivo sobre Luca (real) y
+`/planeacion`: sin errores de consola, contenido correcto ✓.
+
+**Explícitamente NO construido en este slice (instrucción del usuario):** el resto del catálogo
+(solo 6 skills); pantalla administrativa del catálogo; grado/tipo de apoyo dentro de
+`Observacion`/`ObservacionSkill` (reservado, `GradoIndependencia` existe como tipo pero nada lo
+escribe todavía); conexión de `sugerenciaDeApoyo()`/sección "andamiaje" a la generación EN VIVO de
+`calcularPersonalizacionSemana` (existe y se probó aislada — conectarla a la Actividad real es un
+paso posterior, no pedido en este slice); `catalogVersionId` en la evaluación de INGRESO (solo se
+estampa en la periódica, que es la que realmente consulta el catálogo nuevo); importación real de
+CDC/Head Start/Creative Curriculum; IA real; Supabase. **Siguiente: el usuario revisa este slice —
+no se publica como oficial ni se agregan más habilidades hasta su aprobación explícita.**
+
 ## Decisiones técnicas (para el agente, no se discuten con el usuario)
 - Registradas arriba (Sesión 1): Next.js, esquema de datos, RLS por programa, Supabase Auth
   email+Google, IA solo texto en V1 vía servidor.

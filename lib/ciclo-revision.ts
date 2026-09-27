@@ -39,6 +39,7 @@ import {
 import { habilidadesAceptadasDeObservacion, prettyDominio } from './registro-mensual';
 import { fechaCorta } from './prioridades';
 import { type ChildReport, type InformeAssertion, guardarUnChildReport, leerChildReports } from './informe-mensual';
+import { CATALOGO_VERSION_DEMO } from './catalogo-oficial';
 
 /* ── EL ANCLA DEL CICLO ── */
 
@@ -320,6 +321,10 @@ export function generarBorradorEvaluacionPeriodica(
     etapaAlMomento: nino.etapa,
     resultados,
     cicloRevisionId: cicloId,
+    // Preparación para producción: el filtro de arriba (skillsParaRevisionPeriodica) SÍ consulta
+    // el Catálogo Pedagógico Oficial (politicaRevision de las skills migradas) — esta evaluación
+    // queda anclada a esa versión para siempre, aunque el catálogo se actualice después.
+    catalogVersionId: CATALOGO_VERSION_DEMO.id,
   };
 }
 

@@ -36,6 +36,7 @@ import {
   type PlanIndividual,
   type Skill,
 } from './seed-data';
+import { rutaDemoDesdeOficial, SKILLS_MIGRADAS_IDS } from './catalogo-oficial';
 
 /* ── utilidades de fecha (ISO, sin zona) ── */
 
@@ -183,6 +184,16 @@ export const RUTAS_DEMO: Record<string, RutaDemo> = {
   },
 };
 
+/** Punto único de lectura de "ruta" de una skill (Sesión 6+ preparación para producción): las
+ * skills ya migradas al Catálogo Pedagógico Oficial (`SKILLS_MIGRADAS_IDS`) leen su andamiaje,
+ * oportunidades y progresión de ahí — `RUTAS_DEMO` deja de ser su fuente de verdad. Las skills que
+ * todavía NO están en el catálogo oficial siguen usando `RUTAS_DEMO` exactamente como antes (cero
+ * regresión). Nunca leer `RUTAS_DEMO[skillId]` directamente fuera de aquí. */
+function rutaDeSkill(skillId: string) {
+  if (SKILLS_MIGRADAS_IDS.has(skillId)) return rutaDemoDesdeOficial(skillId);
+  return RUTAS_DEMO[skillId];
+}
+
 /* ── CONTEXTO DE UNA OBSERVACIÓN ── */
 
 const CONTEXTO_GENERAL = 'Sin actividad asociada';
@@ -262,7 +273,7 @@ function pasoActualEnRuta(ruta: RutaDemo | undefined, evidencia: EvidenciaDeSkil
 /** Evalúa las raíces de una habilidad: relevantes SOLO cuando hay evidencia de que siguen en
  * desarrollo — el primer prerrequisito no dominado NO se vuelve meta automáticamente. */
 export function evaluarRaices(nino: Nino, skillId: string): RaizEvaluada[] {
-  const ruta = RUTAS_DEMO[skillId];
+  const ruta = rutaDeSkill(skillId);
   const catalogo = SKILLS_CATALOG.find((c) => c.id === skillId);
   const fuente: RaizRutaDemo[] = ruta
     ? ruta.raices
@@ -314,7 +325,7 @@ function actividadesDeLaSemana(skillId: string): string[] {
  * ya documentado en el perfil. */
 export function calcularPrioridadDeSkill(nino: Nino, skill: Skill, datos: ContextoDatos): PrioridadSugerida {
   const catalogo = SKILLS_CATALOG.find((c) => c.id === skill.id);
-  const ruta = RUTAS_DEMO[skill.id];
+  const ruta = rutaDeSkill(skill.id);
   const evidencia = evidenciaDeSkill(nino.id, skill.id, datos.observaciones, datos.relaciones);
   const senales: SenalPrioridad[] = [];
 
@@ -662,7 +673,7 @@ export function construirPropuestaPlan(nino: Nino, datos: ContextoDatos, decisio
   for (const p of candidatas) {
     const areaId = p.dominio || 'sin-area';
     areaLabelPorId.set(areaId, p.area);
-    const ruta = RUTAS_DEMO[p.skillId];
+    const ruta = rutaDeSkill(p.skillId);
     const evidencia = evidenciaDeSkill(nino.id, p.skillId, datos.observaciones, datos.relaciones);
     const raices = evaluarRaices(nino, p.skillId);
     // Hasta 2 metas candidatas: el siguiente paso de la ruta y el que le sigue — no una sola meta

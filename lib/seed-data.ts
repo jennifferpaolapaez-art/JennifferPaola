@@ -212,6 +212,11 @@ export interface EvaluacionNino {
    * (manual/extraordinaria): actualiza skills y eventos igual que siempre, pero NUNCA mueve sola la
    * fecha formal de la próxima revisión periódica (regla del usuario, 6f punto 2). */
   cicloRevisionId?: string;
+  /** Versión del Catálogo Pedagógico Oficial (`CatalogVersion.id`, ver `lib/catalogo-oficial.ts`)
+   * con la que se generó esta evaluación — congelada para siempre, aunque el catálogo se actualice
+   * después (preparación para producción, versionado). Ausente = generada antes de que existiera
+   * el catálogo oficial versionado. */
+  catalogVersionId?: string;
 }
 
 export type TipoEvaluacionExterna = 'ASQ-3' | 'IFSP' | 'IEP' | 'speech_language' | 'OT' | 'PT' | 'otro';
