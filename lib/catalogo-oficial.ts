@@ -274,6 +274,7 @@ export const SKILLS_OFICIALES: SkillOficial[] = [
     estado: 'activa',
     vigenteDesde: CATALOGO_VERSION_DEMO.id,
     nombre: { es: 'Uso de tijeras', en: 'Scissor use' },
+    descripcion: { es: 'Sostiene y controla las tijeras con una mano para cortar papel de forma intencional.' },
     rangoEdadRaiz: { min: 36, max: 60 },
     politicaRevision: 'seguimiento_periodico',
     politicaEvidencia: { perfil: 'consistencia_repetida', vecesMinimas: 3, consideraApoyo: 'con_apoyo_cuenta_como_emergente', orientacion: { es: 'Repetido en distintos momentos antes de considerarse consistente — un solo corte no basta.' } },
@@ -284,6 +285,7 @@ export const SKILLS_OFICIALES: SkillOficial[] = [
     estado: 'activa',
     vigenteDesde: CATALOGO_VERSION_DEMO.id,
     nombre: { es: 'Vocabulario de 2 palabras', en: '2-word vocabulary' },
+    descripcion: { es: 'Combina dos palabras con intención comunicativa clara, más allá de una palabra suelta.' },
     rangoEdadRaiz: { min: 12, max: 36 },
     politicaRevision: 'seguimiento_periodico',
     politicaEvidencia: { perfil: 'multiples_contextos', consideraApoyo: 'indiferente', orientacion: { es: 'Distintos contextos y personas — no solo con la maestra, no solo en un tipo de juego.' } },
@@ -294,6 +296,7 @@ export const SKILLS_OFICIALES: SkillOficial[] = [
     estado: 'activa',
     vigenteDesde: CATALOGO_VERSION_DEMO.id,
     nombre: { es: 'Interacción con pares', en: 'Peer interaction' },
+    descripcion: { es: 'Se relaciona con otros niños de forma cada vez más recíproca durante el juego.' },
     rangoEdadRaiz: { min: 18, max: 60 },
     politicaRevision: 'desarrollo_continuo',
     politicaEvidencia: { perfil: 'multiples_contextos', consideraApoyo: 'indiferente', orientacion: { es: 'El desarrollo social sigue moviéndose siempre — no hay un punto final de "dominado".' } },
@@ -305,6 +308,7 @@ export const SKILLS_OFICIALES: SkillOficial[] = [
     estado: 'activa',
     vigenteDesde: CATALOGO_VERSION_DEMO.id,
     nombre: { es: 'Come solo con cuchara', en: 'Self-feeding with a spoon' },
+    descripcion: { es: 'Lleva comida a la boca con cuchara de forma independiente durante la comida.' },
     rangoEdadRaiz: { min: 18, max: 36 },
     politicaRevision: 'una_vez_dominado',
     politicaEvidencia: { perfil: 'una_demostracion_clara', consideraApoyo: 'independiente_requerido', orientacion: { es: 'Una demostración clara de manera independiente es suficiente — no hace falta repetirlo muchas veces.' } },
@@ -315,6 +319,7 @@ export const SKILLS_OFICIALES: SkillOficial[] = [
     estado: 'activa',
     vigenteDesde: CATALOGO_VERSION_DEMO.id,
     nombre: { es: 'Escritura de nombre propio', en: 'Writing own name' },
+    descripcion: { es: 'Escribe su nombre de forma reconocible, cada vez con menos apoyo de un modelo.' },
     rangoEdadRaiz: { min: 48, max: 60 },
     politicaRevision: 'una_vez_dominado',
     politicaEvidencia: { perfil: 'una_demostracion_clara', consideraApoyo: 'con_apoyo_cuenta_como_emergente', orientacion: { es: 'Con apoyo (copiando un modelo) cuenta como emergente, no como dominado — independiente es lo que confirma dominio.' } },
@@ -424,9 +429,12 @@ export const ANDAMIAJES_OFICIALES: Andamiaje[] = [
 ];
 
 export const SENALES_REDUCIR_APOYO_OFICIALES: SenalReducirApoyo[] = [
+  { id: 'sen-pinza-1', skillId: 'pinza', texto: { es: 'Toma el objeto con índice y pulgar sin que se le muestre antes.' }, andamiajeId: 'and-pinza-1' },
   { id: 'sen-tijeras-1', skillId: 'tijeras', texto: { es: 'Empieza a cortar sin esperar el modelo de la maestra.' }, andamiajeId: 'and-tijeras-1' },
+  { id: 'sen-palabras-1', skillId: 'palabras', texto: { es: 'Combina las dos palabras sin que un adulto las verbalice primero.' }, andamiajeId: 'and-palabras-1' },
   { id: 'sen-social-1', skillId: 'interaccion-social', texto: { es: 'Resuelve el intercambio con el otro niño antes de que un adulto intervenga.' }, andamiajeId: 'and-social-1' },
   { id: 'sen-autonomia-1', skillId: 'autonomia-alimentacion', texto: { es: 'Llena la cuchara sin que se le recuerde el movimiento.' }, andamiajeId: 'and-autonomia-2' },
+  { id: 'sen-nombre-1', skillId: 'nombre-propio', texto: { es: 'Escribe su nombre sin mirar el modelo.' }, andamiajeId: 'and-nombre-1' },
 ];
 
 export function andamiajesDeSkill(skillId: string): Andamiaje[] {
