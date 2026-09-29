@@ -295,7 +295,7 @@ export const SKILLS_OFICIALES: SkillOficial[] = [
     descripcion: { es: 'Sostiene y controla las tijeras con una mano para cortar papel de forma intencional.' },
     rangoEdadRaiz: { min: 36, max: 60 },
     politicaRevision: 'seguimiento_periodico',
-    politicaEvidencia: { perfil: 'consistencia_repetida', vecesMinimas: 3, consideraApoyo: 'con_apoyo_evidencia_parcial', orientacion: { es: 'Repetido en distintos momentos antes de considerarse consistente — un solo corte no basta. Con apoyo cuenta como evidencia parcial, nunca como un estado nuevo por sí sola.' } },
+    politicaEvidencia: { perfil: 'consistencia_repetida', vecesMinimas: 3, consideraApoyo: 'indiferente', orientacion: { es: 'Repetido en distintos momentos antes de considerarse consistente — un solo corte no basta. El tipo y grado de apoyo quedan registrados como contexto de la evidencia; no determinan automáticamente si es parcial o fuerte — la maestra interpreta y confirma el estado.' } },
   },
   {
     id: 'palabras',
@@ -359,7 +359,7 @@ export function skillsOficialesDeTrack(track: TrackOpcional): SkillOficial[] {
 /* ── INDICADORES DE LAS 6 SKILLS (borrador editorial) ── */
 
 export const INDICADORES_OFICIALES: IndicadorObservable[] = [
-  { id: 'ind-pinza-1', skillId: 'pinza', texto: { es: 'Toma un objeto pequeño (una pasa, un cereal) usando el índice y el pulgar.' }, alcance: 'fuerte', orden: 1 },
+  { id: 'ind-pinza-1', skillId: 'pinza', texto: { es: 'Toma un objeto pequeño y seguro para su edad usando el índice y el pulgar (ej. un material de motricidad fina diseñado para bebés, o un trozo de comida blanda durante la comida supervisada).' }, alcance: 'fuerte', orden: 1 },
   { id: 'ind-pinza-2', skillId: 'pinza', texto: { es: 'Suelta el objeto de forma intencional dentro de un recipiente.' }, alcance: 'parcial', orden: 2 },
 
   { id: 'ind-tijeras-1', skillId: 'tijeras', texto: { es: 'Abre y cierra las tijeras con ayuda de un adulto.' }, alcance: 'parcial', orden: 1 },
@@ -410,8 +410,8 @@ export function relacionesHaciaSkill(skillId: string): SkillRelation[] {
 /* ── OPORTUNIDADES ── */
 
 export const OPORTUNIDADES_OFICIALES: OportunidadObservacion[] = [
-  { skillId: 'pinza', bloque: 'centros', nota: { es: 'Materiales pequeños en la mesa de centros (cuentas, cereal).' } },
-  { skillId: 'pinza', momento: { es: 'Comidas' }, nota: { es: 'Tomar trozos pequeños de comida con los dedos.' } },
+  { skillId: 'pinza', bloque: 'centros', nota: { es: 'Materiales de motricidad fina diseñados específicamente para bebés (ej. fichas grandes de encastre, juguetes de agarre seguros) — nunca objetos sueltos pequeños de riesgo.' } },
+  { skillId: 'pinza', momento: { es: 'Comidas' }, nota: { es: 'Alimentos blandos y apropiados para su edad (ej. trozos de banana o aguacate), siempre bajo supervisión directa — nunca alimentos duros o redondos que sean riesgo de atragantamiento.' } },
   { skillId: 'tijeras', bloque: 'centros' },
   { skillId: 'tijeras', bloque: 'principal', nota: { es: 'Cuando la actividad principal incluya recortar.' } },
   { skillId: 'palabras', bloque: 'circle' },
@@ -419,7 +419,10 @@ export const OPORTUNIDADES_OFICIALES: OportunidadObservacion[] = [
   { skillId: 'interaccion-social', bloque: 'centros' },
   { skillId: 'interaccion-social', bloque: 'outdoor' },
   { skillId: 'autonomia-alimentacion', momento: { es: 'Comidas' } },
-  { skillId: 'nombre-propio', bloque: 'prek', nota: { es: 'Mesa de Pre-K al llegar, firmando su trabajo.' } },
+  { skillId: 'nombre-propio', bloque: 'prek', nota: { es: 'Mesa de Pre-K, como un ejemplo entre varios — no la única forma de observarla.' } },
+  { skillId: 'nombre-propio', bloque: 'centros', nota: { es: 'Centro de escritura, si el programa lo tiene.' } },
+  { skillId: 'nombre-propio', momento: { es: 'Asistencia' }, nota: { es: 'Al llegar, firmando o marcando su propia asistencia.' } },
+  { skillId: 'nombre-propio', momento: { es: 'Cualquier trabajo terminado' }, nota: { es: 'Firmando un dibujo, una ficha u otro trabajo — cualquier oportunidad natural del día, sin imponer una rutina específica.' } },
 ];
 
 export function oportunidadesDeSkill(skillId: string): OportunidadObservacion[] {
@@ -430,7 +433,7 @@ export function oportunidadesDeSkill(skillId: string): OportunidadObservacion[] 
 
 export const ANDAMIAJES_OFICIALES: Andamiaje[] = [
   { id: 'and-pinza-1', skillId: 'pinza', tipoApoyo: 'modelado', texto: { es: 'Modelar cómo tomar el objeto con índice y pulgar antes de que lo intente.' } },
-  { id: 'and-pinza-2', skillId: 'pinza', tipoApoyo: 'adaptacion_ambiente_material', texto: { es: 'Ofrecer objetos apenas más grandes que un cereal, no diminutos, para bajar la dificultad sin eliminar el reto.' } },
+  { id: 'and-pinza-2', skillId: 'pinza', tipoApoyo: 'adaptacion_ambiente_material', texto: { es: 'Ofrecer materiales de agarre diseñados para bebés, de tamaño seguro y siempre supervisados — nunca objetos sueltos pequeños que representen riesgo de atragantamiento.' } },
 
   { id: 'and-tijeras-1', skillId: 'tijeras', tipoApoyo: 'modelado', texto: { es: 'Modelar el primer corte y esperar antes de intervenir de nuevo.' } },
   { id: 'and-tijeras-2', skillId: 'tijeras', tipoApoyo: 'apoyo_visual', texto: { es: 'Marcar una línea gruesa y de alto contraste para seguir al cortar.' } },
