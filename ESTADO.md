@@ -2550,6 +2550,78 @@ estampa en la periódica, que es la que realmente consulta el catálogo nuevo); 
 CDC/Head Start/Creative Curriculum; IA real; Supabase. **Siguiente: el usuario revisa este slice —
 no se publica como oficial ni se agregan más habilidades hasta su aprobación explícita.**
 
+## Definición ampliada del módulo existente Centros + Inventario (2026-09-28, aprobada — cosa juzgada; SOLO documentación, nada construido)
+**No es un módulo nuevo.** Centros/Inventario ya estaba reservado desde el diseño original (ver
+"Centros/Inventario, imprimibles, PDF, paquete semanal y 'Preparar mi semana' NO se eliminan —
+siguen como fase posterior ya decidida en la Constitución del Producto", y el esquema de Sesión 1
+que ya contemplaba `activities.materiales[]`). Lo que existe HOY en código es solo contenido de
+planeación por actividad — `CentroDisponible` (`lib/seed-data.ts`: `nombre`, `material` en texto
+libre, `provocacion`, `intencion`, `pregunta?`) y `Printable` (`id`, `titulo`, `tipo`) — NINGUNO es
+todavía una entidad real de inventario (sin id de material, sin cantidad, sin disponibilidad, sin
+fotos). Esta sesión solo AMPLÍA la definición de ese módulo reservado; no se tocó ningún campo ni
+módulo cerrado.
+
+**Principio:** "Planea con lo que ya tienes." Antes de sugerir comprar algo, el orden es: usar
+material disponible → buscar sustituto existente → adaptar la actividad → solo si hace falta,
+sugerir algo adicional. Planeación NUNCA depende de tener inventario configurado para funcionar
+(confirmado sin conflicto: `Actividad`/`CentroDisponible` ya funcionan hoy sin ningún inventario
+real detrás).
+
+**Cadena conceptual a respetar cuando se construya:** Centros → Inventario permanente ("¿qué tiene
+el programa?") → Rotación/disponibilidad ("¿qué está accesible AHORA?", distinto de lo que existe
+pero está guardado) → Planeación (consulta primero qué hay disponible antes de crear la actividad).
+Centros son configurables por programa (Arte, Bloques, Lectura, Dramático, Ciencia, Sensorial,
+Matemáticas, Escritura, Música/Movimiento, Puzzles, Bebés, u otros — nunca una lista fija universal
+igual para todos los programas).
+
+**Fotos como forma de alimentar el módulo (futuro, con IA de visión real):**
+- **Foto de un centro real → detección propuesta → la maestra confirma → RECIÉN AHÍ se actualiza
+  el inventario.** La foto NUNCA actualiza inventario sola.
+- **Foto ANTES** de preparar un mes/rotación: RAÍZ (con tema/edades/planeación/inventario ya
+  conocidos) puede PROPONER qué dejar/guardar/rotar/traer de otro centro — la maestra decide, RAÍZ
+  nunca reorganiza el ambiente sola.
+- **Foto DESPUÉS**: el ambiente real ya organizado, guardado como referencia de esa rotación/
+  periodo — nunca una imagen inventada por IA.
+- La foto DESPUÉS puede alimentar un visual imprimible de clean-up/organización (plantilla +
+  foto real + título bilingüe, formato Template-First ya usado en el resto de RAÍZ — nunca "generar
+  toda la tarjeta como imagen de IA").
+
+**Visuales/imprimibles** tampoco son módulo nuevo — ya estaban reservados desde Currículo → Diseño
+del Mes → Calendario (vocabulario, Circle Time, tema/subtemas, fechas culturales, personaje,
+rutinas, materiales). Se agrega: algunos visuales pueden usar FOTOS REALES del programa (centros,
+rutinas, ambientes, clean-up), no solo ilustraciones genéricas. **Orden para buscar imagen de un
+visual:** (1) foto privada del programa si la maestra quiere usarla, (2) banco oficial de imágenes
+RAÍZ (para conceptos genéricos — "feliz", "compartir" — sin generar con IA cada vez), (3)
+generación por IA solo si de verdad hace falta. **Formato bilingüe ya definido:** idioma principal
+arriba en negro, idioma secundario debajo en un tono terracota — lo decide la configuración del
+programa, no se hardcodea inglés/español.
+
+**Privacidad de fotos (aplica directo a la fase de seguridad/multi-tenant que sigue):** una foto
+subida por una maestra es privada de SU programa — nunca pasa automáticamente al banco global, a
+otras cuentas, a entrenamiento de modelos ni a publicidad. Especialmente sensible cuando aparecen
+niños. En producción esto exige Storage privado con controles reales (Supabase Storage con RLS por
+`program_id`, no un bucket público) — anotado para cuando se diseñe esa fase.
+
+**Implicación para el AI Router (antes de conectar cualquier API):** RAÍZ va a necesitar
+capacidades DISTINTAS por tarea — texto (planeación/observaciones/informes), voz (transcribir
+notas), visión (analizar fotos de centros/materiales, detectar materiales), generación de imagen
+(solo cuando de verdad haga falta crear una imagen nueva). Nunca diseñar "todo visual = generación
+de imagen". Mantener una capa de abstracción (ej. `organizar_observacion`→texto,
+`transcribir_observacion`→audio, `analizar_centro`/`detectar_materiales`→visión,
+`generar_visual_especifico`→generación de imagen) para que ningún módulo quede amarrado a un
+proveedor específico — se diseña en profundidad cuando llegue la integración real de IA.
+
+**Conexión reservada con "Preparar mi mes/semana"** (ya existía como fase posterior, sin cambios):
+en el futuro reuniría Planeación + qué materiales hacen falta + qué ya se tiene + qué sacar del
+storage + rotaciones + centros + visuales + printables + libros. No se construye ahora, solo se
+conserva la conexión conceptual.
+
+**Explícitamente NO construido en esta sesión (instrucción del usuario):** inventario completo,
+análisis real de fotos, banco de imágenes RAÍZ, Storage, visuales, IA de visión, "Preparar mi mes".
+Cero cambios de código — solo esta documentación. La fase actual sigue siendo el Catálogo
+Pedagógico Oficial (el usuario está revisando el contenido pedagógico de las 6 skills del slice);
+esto no la reemplaza ni la reordena.
+
 ## Decisiones técnicas (para el agente, no se discuten con el usuario)
 - Registradas arriba (Sesión 1): Next.js, esquema de datos, RLS por programa, Supabase Auth
   email+Google, IA solo texto en V1 vía servidor.
