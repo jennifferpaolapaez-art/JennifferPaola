@@ -19,15 +19,15 @@ usuario tras cerrar 6f).** De punta a punta: Configuración/Currículo → Plane
 Registro/Informe Mensual → Revisión Periódica → Reporte de Resultados. Esto cierra el paso 7 de la
 secuencia oficial (Progreso/Reportes) — es el núcleo funcional completo del producto.
 
-**Siguiente bloque anunciado por el usuario — PREPARACIÓN PARA PRODUCCIÓN, en este orden:**
-1. Catálogo Pedagógico Oficial RAÍZ (revisar/oficializar el contenido pedagógico — hasta ahora
-   `SKILLS_CATALOG`/plantillas/rutas son datos de ejemplo para probar el mecanismo, documentado así
-   desde Sesión 6 paso 4: "el usuario confirmó explícitamente que el contenido pedagógico oficial
-   se revisa en una ronda aparte más adelante" — ESA ronda es la que sigue).
-2. Arquitectura multi-tenant, privacidad, seguridad, Supabase/Auth/Storage (pasos 8+ de la
-   secuencia oficial).
-**NO empezar ninguno de los dos sin la especificación del usuario primero — instrucción textual:
-"Espera mi especificación antes de escribir código."** No avanzar código todavía.
+**Catálogo Pedagógico Oficial RAÍZ — slice vertical de 6 skills: ARQUITECTURA Y MOLDE EDITORIAL DE
+VALIDACIÓN APROBADOS (2026-09-29)** — ver sección propia más abajo. Sigue siendo contenido DE
+VALIDACIÓN, no el Catálogo Oficial completo publicado — **NO expandir el catálogo** todavía.
+
+**Siguiente bloque anunciado por el usuario — PREPARACIÓN PARA PRODUCCIÓN:**
+Arquitectura multi-tenant, privacidad, seguridad, Supabase/Auth/Storage (pasos 8+ de la secuencia
+oficial). **El usuario decide el siguiente paso exacto antes de autorizar cualquier construcción
+nueva — instrucción textual: "El siguiente paso lo voy a decidir antes de autorizar nuevas
+construcciones."** No avanzar código todavía, de ningún tipo, sin esa autorización explícita.
 
 Sesión 1 CERRADA. Sesión 3 (landing) v2 — **APROBADA por el usuario y CERRADA** (detalle abajo).
 Sesión 4 (onboarding → paywall → login) — **APROBADA por el usuario y CERRADA**: 3 rondas de
@@ -2476,7 +2476,34 @@ Estado: la especificación técnica del Catálogo se entregó al usuario para re
 - **Versionado confirmado sin cambios:** el mecanismo de `CatalogVersion` ya especificado (letra E de la especificación técnica) cubre esto tal cual — una evaluación histórica queda fija a su versión, el programa actualiza explícito.
 - **No rompe nada cerrado:** Planeación, Observaciones, Progreso, Plan Individual y 6f no cambian de arquitectura — esta decisión es de contenido/criterio editorial y de dirección de UX futura de Evaluación/Reporte familiar, aditiva sobre lo ya construido.
 
-## Catálogo Pedagógico Oficial RAÍZ — SLICE DE VALIDACIÓN (2026-09-27, CONSTRUIDO, VERIFICADO CON LAS 20 VALIDACIONES DEL USUARIO — NO ES CONTENIDO OFICIAL PUBLICADO)
+## Catálogo Pedagógico Oficial RAÍZ — SLICE DE VALIDACIÓN (CONSTRUIDO 2026-09-27, CORREGIDO EN 2 RONDAS DE REVISIÓN PEDAGÓGICA, APROBADO 2026-09-29)
+
+**⚠️ "Slice vertical de 6 skills del Catálogo Pedagógico RAÍZ: APROBADO como arquitectura y molde
+editorial de validación" (palabras textuales del usuario al aprobar) — cosa juzgada.** Queda
+aprobado explícitamente: el modelo de skill · ventanas de edad como prioridad, nunca exclusión ·
+indicadores observables · políticas de evidencia · oportunidades de observación · andamiajes ·
+señales para reducir apoyo · relaciones conservadoras (progresión ≠ prerrequisito) · tracks sin
+duplicar skills · separación entre apoyo/evidencia/estado · confirmación final siempre de la
+maestra. **Estas 6 habilidades siguen siendo contenido editorial DE VALIDACIÓN — NO constituyen
+todavía el Catálogo Pedagógico Oficial completo publicado** (`CATALOGO_VERSION_DEMO.esDemo: true`,
+`estado: 'borrador'` se mantienen sin cambios a propósito). **NO expandir el catálogo** — el
+siguiente paso lo decide el usuario antes de autorizar cualquier construcción nueva.
+
+Contenido corregido en 2 rondas antes de esta aprobación (ver commits): ronda 1 — quitó la
+dependencia formal tijeras→pinza y la progresión automática tijeras→nombre-propio (ambas pasan a
+`relacionada`), subió el rango de "palabras" a 18–36 meses, reescribió los indicadores de
+"interacción con pares" para que fueran neutrales por edad, cambió la política de evidencia de
+"come solo con cuchara" a evidencia funcional (sin exigir ausencia de derrames), corrigió la regla
+de "nombre propio" que hacía que el apoyo determinara el estado, renombró `alcance:
+'representativo'`→`'fuerte'` y `consideraApoyo: 'con_apoyo_cuenta_como_emergente'`→
+`'con_apoyo_evidencia_parcial'`. Ronda 2 (seguridad + alcance) — en "agarre de pinza" quitó toda
+referencia a objetos pequeños de riesgo (cuentas, cereal) de indicador/oportunidades/andamiajes,
+reemplazándolos por materiales de motricidad fina diseñados para bebés y alimentos blandos
+supervisados; en "uso de tijeras" quitó "con apoyo cuenta como evidencia parcial" (`consideraApoyo`
+pasó a `'indiferente'` — el apoyo queda como contexto, nunca determina automáticamente
+parcial/fuerte); en "escritura de nombre propio" amplió dónde observarla más allá de la mesa de
+Pre-K (centro de escritura, asistencia, cualquier trabajo terminado).
+
 **Es un borrador editorial RAÍZ para probar la arquitectura, no el Catálogo Oficial completo.**
 Cosa juzgada aprobada: 6 habilidades (`pinza`, `tijeras`, `palabras`, `interaccion-social`,
 `autonomia-alimentacion`, `nombre-propio`) con el modelo completo — versión, dominios, indicadores,
