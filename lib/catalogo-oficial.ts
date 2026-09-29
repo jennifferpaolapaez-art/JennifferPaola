@@ -167,10 +167,11 @@ export interface IndicadorObservable {
   id: string;
   skillId: string;
   texto: TextoLocalizado;
-  /** Un indicador puede describir una demostración PARCIAL (no implica dominio completo de la
-   * skill) o REPRESENTATIVA (si aparece de forma consistente, sí es evidencia fuerte). Nunca se
-   * infiere solo: la política de evidencia decide cuánto pesa. */
-  alcance: 'parcial' | 'representativo';
+  /** REGLA TRANSVERSAL (guardrail del usuario): `alcance` es SOLO peso/orientación de la
+   * evidencia — "parcial" pesa menos, "fuerte" pesa más. NINGUNO de los dos valores es un estado
+   * automático, ni "emergente/adquirido", ni un puntaje, ni dominio. La maestra SIEMPRE confirma
+   * el estado final; ver `evidenciaSuficientePara()`, que nunca escribe nada, solo sugiere. */
+  alcance: 'parcial' | 'fuerte';
   /** Orden sugerido dentro de la skill — reemplaza los "pasos" de `RUTAS_DEMO`, sin volverlo una
    * secuencia obligatoria (es solo UN posible orden, ver `SkillRelation` para relaciones reales). */
   orden: number;
@@ -178,7 +179,14 @@ export interface IndicadorObservable {
 
 /* ── RELACIONES ENTRE SKILLS — progresión ≠ prerrequisito (regla del usuario, precisión 2). Unión
    discriminada: TypeScript exige `justificacion` en tiempo de compilación para cualquier relación
-   `prerrequisito` — es estructuralmente imposible crear una sin justificar la dependencia real. ── */
+   `prerrequisito` — es estructuralmente imposible crear una sin justificar la dependencia real.
+
+   REGLA TRANSVERSAL (guardrail del usuario) — ser CONSERVADOR: nunca agregar una relación solo
+   porque dos skills comparten dominio. `relacionada` = hay una conexión útil de observar, SIN
+   dependencia. `prerrequisito` exige una justificación pedagógica FUERTE (no "normalmente aparece
+   antes"). `posible_siguiente` debe representar una progresión REAL, nunca "otra habilidad más
+   avanzada" inventada solo para llenar la relación — si no hay una progresión genuina, la relación
+   correcta es `relacionada` o simplemente no crear ninguna. ── */
 
 export type SkillRelation =
   | { tipo: 'posible_siguiente'; desdeSkillId: string; haciaSkillId: string; nota?: string }
@@ -224,7 +232,11 @@ export interface PoliticaEvidenciaOficial {
   perfil: EvidenciaRequerida;
   /** Si `consistencia_repetida`, cuántas veces (mismo campo que `vecesMinimas` de hoy). */
   vecesMinimas?: number;
-  consideraApoyo: 'independiente_requerido' | 'con_apoyo_cuenta_como_emergente' | 'indiferente';
+  /** Cuánto pesa una demostración CON apoyo como evidencia — nunca un cambio de estado (regla del
+   * usuario: "el apoyo y el grado de independencia se registran como contexto de evidencia... nunca
+   * auto-adquisición"). `con_apoyo_evidencia_parcial` = pesa menos que independiente, pero SIGUE
+   * siendo evidencia real, nunca "cuenta como [estado]" — la maestra decide qué significa. */
+  consideraApoyo: 'independiente_requerido' | 'con_apoyo_evidencia_parcial' | 'indiferente';
   orientacion?: TextoLocalizado;
 }
 
@@ -242,9 +254,15 @@ export interface SkillOficial {
   vigenteDesde: string; // CatalogVersion.id
   nombre: TextoLocalizado;
   descripcion?: TextoLocalizado;
-  /** Ventana editorial de RAÍZ — "puede ser relevante observar/revisar aquí", NUNCA "debería
-   * dominarla ya" ni "aún no = retraso" (regla del usuario, guardrail 1). Separado a propósito de
-   * cualquier `edadReferenciaMeses` de una fuente externa (ver `FUENTES_LINK`, guardrail H). */
+  /** REGLA TRANSVERSAL (guardrail del usuario) — es una VENTANA DE RELEVANCIA, no un límite
+   * rígido: sirve para priorizar, ordenar y sugerir qué revisar. NUNCA sirve para ocultar
+   * rígidamente, diagnosticar, etiquetar retraso ni cambiar un estado. Una skill con historia,
+   * evidencia, meta o selección manual de la maestra SIGUE VISIBLE aunque esté fuera de este rango
+   * (confirmado por diseño: `skillsParaRevisionPeriodica()` en `lib/ciclo-revision.ts` nunca usa
+   * este campo para EXCLUIR — solo lo consulta `comoSkillCatalogEntry()` como referencia). Separado
+   * a propósito de cualquier `edadReferenciaMeses` de una fuente externa (ver `FUENTES_LINK`,
+   * guardrail H) — "nueva por edad" significa SOLO "puede ser relevante observar/revisar aquí",
+   * nunca "debería dominarla ya" ni "aún no = retraso" (guardrail 1). */
   rangoEdadRaiz: { min: number; max: number };
   politicaRevision: PoliticaRevision;
   politicaEvidencia: PoliticaEvidenciaOficial;
@@ -266,7 +284,7 @@ export const SKILLS_OFICIALES: SkillOficial[] = [
     descripcion: { es: 'Usa el dedo índice y el pulgar para tomar objetos pequeños.' },
     rangoEdadRaiz: { min: 8, max: 14 },
     politicaRevision: 'seguimiento_periodico',
-    politicaEvidencia: { perfil: 'multiples_contextos', consideraApoyo: 'indiferente', orientacion: { es: 'Observar en más de un momento del día (comidas, centros) — no basta un solo intento.' } },
+    politicaEvidencia: { perfil: 'multiples_contextos', consideraApoyo: 'indiferente', orientacion: { es: 'Se observa de manera consistente en más de una oportunidad natural — una sola demostración aislada no es dominio.' } },
   },
   {
     id: 'tijeras',
@@ -277,7 +295,7 @@ export const SKILLS_OFICIALES: SkillOficial[] = [
     descripcion: { es: 'Sostiene y controla las tijeras con una mano para cortar papel de forma intencional.' },
     rangoEdadRaiz: { min: 36, max: 60 },
     politicaRevision: 'seguimiento_periodico',
-    politicaEvidencia: { perfil: 'consistencia_repetida', vecesMinimas: 3, consideraApoyo: 'con_apoyo_cuenta_como_emergente', orientacion: { es: 'Repetido en distintos momentos antes de considerarse consistente — un solo corte no basta.' } },
+    politicaEvidencia: { perfil: 'consistencia_repetida', vecesMinimas: 3, consideraApoyo: 'con_apoyo_evidencia_parcial', orientacion: { es: 'Repetido en distintos momentos antes de considerarse consistente — un solo corte no basta. Con apoyo cuenta como evidencia parcial, nunca como un estado nuevo por sí sola.' } },
   },
   {
     id: 'palabras',
@@ -286,9 +304,9 @@ export const SKILLS_OFICIALES: SkillOficial[] = [
     vigenteDesde: CATALOGO_VERSION_DEMO.id,
     nombre: { es: 'Vocabulario de 2 palabras', en: '2-word vocabulary' },
     descripcion: { es: 'Combina dos palabras con intención comunicativa clara, más allá de una palabra suelta.' },
-    rangoEdadRaiz: { min: 12, max: 36 },
+    rangoEdadRaiz: { min: 18, max: 36 },
     politicaRevision: 'seguimiento_periodico',
-    politicaEvidencia: { perfil: 'multiples_contextos', consideraApoyo: 'indiferente', orientacion: { es: 'Distintos contextos y personas — no solo con la maestra, no solo en un tipo de juego.' } },
+    politicaEvidencia: { perfil: 'multiples_contextos', consideraApoyo: 'indiferente', orientacion: { es: 'Distintos contextos y personas — no solo con la maestra, no solo en un tipo de juego. Cada niño desarrolla el lenguaje a su propio ritmo; uso funcional/comunicativo, nunca repetición obligatoria.' } },
   },
   {
     id: 'interaccion-social',
@@ -311,7 +329,7 @@ export const SKILLS_OFICIALES: SkillOficial[] = [
     descripcion: { es: 'Lleva comida a la boca con cuchara de forma independiente durante la comida.' },
     rangoEdadRaiz: { min: 18, max: 36 },
     politicaRevision: 'una_vez_dominado',
-    politicaEvidencia: { perfil: 'una_demostracion_clara', consideraApoyo: 'independiente_requerido', orientacion: { es: 'Una demostración clara de manera independiente es suficiente — no hace falta repetirlo muchas veces.' } },
+    politicaEvidencia: { perfil: 'multiples_contextos', consideraApoyo: 'independiente_requerido', orientacion: { es: 'Evidencia funcional consistente en más de una oportunidad natural/comida — la autonomía funcional importa más que la perfección del movimiento.' } },
   },
   {
     id: 'nombre-propio',
@@ -322,7 +340,7 @@ export const SKILLS_OFICIALES: SkillOficial[] = [
     descripcion: { es: 'Escribe su nombre de forma reconocible, cada vez con menos apoyo de un modelo.' },
     rangoEdadRaiz: { min: 48, max: 60 },
     politicaRevision: 'una_vez_dominado',
-    politicaEvidencia: { perfil: 'una_demostracion_clara', consideraApoyo: 'con_apoyo_cuenta_como_emergente', orientacion: { es: 'Con apoyo (copiando un modelo) cuenta como emergente, no como dominado — independiente es lo que confirma dominio.' } },
+    politicaEvidencia: { perfil: 'una_demostracion_clara', consideraApoyo: 'con_apoyo_evidencia_parcial', orientacion: { es: 'El apoyo (copiar un modelo) y la independencia se registran como contexto de la evidencia — ninguno cambia el estado por sí solo, la maestra confirma. Independencia puede ser evidencia fuerte, pero nunca una adquisición automática.' } },
     // Agregada a un track sin duplicar la skill (validación 12): hoy sigue siendo CORE en las
     // plantillas legado de evaluación (Sesión 6 paso 4) — este trackId es metadata adicional del
     // catálogo, no mueve su pertenencia legado.
@@ -341,26 +359,27 @@ export function skillsOficialesDeTrack(track: TrackOpcional): SkillOficial[] {
 /* ── INDICADORES DE LAS 6 SKILLS (borrador editorial) ── */
 
 export const INDICADORES_OFICIALES: IndicadorObservable[] = [
-  { id: 'ind-pinza-1', skillId: 'pinza', texto: { es: 'Toma un objeto pequeño (una pasa, un cereal) usando el índice y el pulgar.' }, alcance: 'representativo', orden: 1 },
+  { id: 'ind-pinza-1', skillId: 'pinza', texto: { es: 'Toma un objeto pequeño (una pasa, un cereal) usando el índice y el pulgar.' }, alcance: 'fuerte', orden: 1 },
   { id: 'ind-pinza-2', skillId: 'pinza', texto: { es: 'Suelta el objeto de forma intencional dentro de un recipiente.' }, alcance: 'parcial', orden: 2 },
 
   { id: 'ind-tijeras-1', skillId: 'tijeras', texto: { es: 'Abre y cierra las tijeras con ayuda de un adulto.' }, alcance: 'parcial', orden: 1 },
   { id: 'ind-tijeras-2', skillId: 'tijeras', texto: { es: 'Realiza pequeños recortes sin seguir una línea.' }, alcance: 'parcial', orden: 2 },
-  { id: 'ind-tijeras-3', skillId: 'tijeras', texto: { es: 'Realiza cortes consecutivos sin ayuda.' }, alcance: 'representativo', orden: 3 },
-  { id: 'ind-tijeras-4', skillId: 'tijeras', texto: { es: 'Sigue una línea recta marcada al cortar.' }, alcance: 'representativo', orden: 4 },
+  { id: 'ind-tijeras-3', skillId: 'tijeras', texto: { es: 'Realiza cortes consecutivos sin ayuda.' }, alcance: 'fuerte', orden: 3 },
+  { id: 'ind-tijeras-4', skillId: 'tijeras', texto: { es: 'Sigue una línea recta marcada al cortar.' }, alcance: 'fuerte', orden: 4 },
 
-  { id: 'ind-palabras-1', skillId: 'palabras', texto: { es: 'Combina dos palabras con intención comunicativa ("más agua", "no quiero").' }, alcance: 'representativo', orden: 1 },
-  { id: 'ind-palabras-2', skillId: 'palabras', texto: { es: 'Usa la combinación en más de un contexto durante la semana.' }, alcance: 'representativo', orden: 2 },
+  { id: 'ind-palabras-1', skillId: 'palabras', texto: { es: 'Combina dos palabras con intención comunicativa ("más agua", "no quiero").' }, alcance: 'fuerte', orden: 1 },
+  { id: 'ind-palabras-2', skillId: 'palabras', texto: { es: 'Usa la combinación en más de un contexto durante la semana.' }, alcance: 'fuerte', orden: 2 },
 
-  { id: 'ind-social-1', skillId: 'interaccion-social', texto: { es: 'Se queda jugando cerca de otro niño por un rato, aunque sea con materiales propios.' }, alcance: 'parcial', orden: 1 },
-  { id: 'ind-social-2', skillId: 'interaccion-social', texto: { es: 'Comparte un material o una actividad con otro niño sin que un adulto lo pida.' }, alcance: 'representativo', orden: 2 },
-  { id: 'ind-social-3', skillId: 'interaccion-social', texto: { es: 'Mantiene un juego en común aceptando turnos o ideas de otro niño.' }, alcance: 'representativo', orden: 3 },
+  { id: 'ind-social-1', skillId: 'interaccion-social', texto: { es: 'Permanece o interactúa cerca de otro niño durante el juego.' }, alcance: 'parcial', orden: 1 },
+  { id: 'ind-social-2', skillId: 'interaccion-social', texto: { es: 'Inicia o responde a una interacción de otro niño.' }, alcance: 'parcial', orden: 2 },
+  { id: 'ind-social-3', skillId: 'interaccion-social', texto: { es: 'Participa en una actividad compartida con otro niño.' }, alcance: 'fuerte', orden: 3 },
+  { id: 'ind-social-4', skillId: 'interaccion-social', texto: { es: 'Sostiene breves intercambios o turnos apropiados a su etapa de desarrollo.' }, alcance: 'fuerte', orden: 4 },
 
   { id: 'ind-autonomia-1', skillId: 'autonomia-alimentacion', texto: { es: 'Sostiene la cuchara y se lleva comida a la boca solo, con derrames frecuentes.' }, alcance: 'parcial', orden: 1 },
-  { id: 'ind-autonomia-2', skillId: 'autonomia-alimentacion', texto: { es: 'Come solo de forma consistente, con pocos o ningún derrame.' }, alcance: 'representativo', orden: 2 },
+  { id: 'ind-autonomia-2', skillId: 'autonomia-alimentacion', texto: { es: 'Come solo la mayor parte de la comida de forma independiente, sin importar algún derrame ocasional.' }, alcance: 'fuerte', orden: 2 },
 
   { id: 'ind-nombre-1', skillId: 'nombre-propio', texto: { es: 'Copia algunas letras de su nombre mirando un modelo.' }, alcance: 'parcial', orden: 1 },
-  { id: 'ind-nombre-2', skillId: 'nombre-propio', texto: { es: 'Escribe su nombre completo de manera independiente, sin mirar un modelo.' }, alcance: 'representativo', orden: 2 },
+  { id: 'ind-nombre-2', skillId: 'nombre-propio', texto: { es: 'Escribe su nombre completo de manera independiente, sin mirar un modelo.' }, alcance: 'fuerte', orden: 2 },
 ];
 
 export function indicadoresDeSkill(skillId: string): IndicadorObservable[] {
@@ -370,11 +389,13 @@ export function indicadoresDeSkill(skillId: string): IndicadorObservable[] {
 /* ── RELACIONES ── */
 
 export const RELACIONES_OFICIALES: SkillRelation[] = [
-  { tipo: 'prerrequisito', desdeSkillId: 'tijeras', haciaSkillId: 'pinza', justificacion: 'Sostener y controlar las tijeras con una mano depende del agarre de pinza — sin esa fuerza/coordinación, el uso funcional de tijeras no es posible todavía (dependencia motriz real, no solo secuencia típica).' },
-  // Ejemplo intencional de "posible_siguiente" MULTIPLE (validación 10: más de un siguiente paso
-  // posible desde la misma skill, sin forzar una única línea recta) — ninguna de las dos es
-  // obligatoria ni excluyente.
-  { tipo: 'posible_siguiente', desdeSkillId: 'tijeras', haciaSkillId: 'nombre-propio', nota: 'Ambas involucran control fino de la mano y del lápiz/tijera — un posible siguiente foco de motricidad fina, nunca automático.' },
+  // Sin dependencia formal: comparten control/coordinación fina de la mano, pero tijeras NO es
+  // imposible sin pinza — es una conexión útil, no una jerarquía (corrección del usuario: "no
+  // digas que sin esa skill no es posible usar tijeras").
+  { tipo: 'relacionada', desdeSkillId: 'tijeras', haciaSkillId: 'pinza', nota: 'Ambas involucran control y coordinación fina de la mano — una conexión útil de observar, sin que una dependa formalmente de la otra.' },
+  // Ya no es "posible_siguiente" (progresión automática): queda como conexión sin dependencia,
+  // nunca un siguiente paso inventado solo para llenar la relación.
+  { tipo: 'relacionada', desdeSkillId: 'tijeras', haciaSkillId: 'nombre-propio', nota: 'Ambas involucran control fino de la mano y del lápiz/tijera — sin que una sea progresión automática de la otra.' },
   { tipo: 'relacionada', desdeSkillId: 'palabras', haciaSkillId: 'interaccion-social', nota: 'El vocabulario emergente suele apoyar la interacción con pares y viceversa — se desarrollan en paralelo, ninguna depende de la otra.' },
 ];
 
@@ -417,6 +438,7 @@ export const ANDAMIAJES_OFICIALES: Andamiaje[] = [
 
   { id: 'and-palabras-1', skillId: 'palabras', tipoApoyo: 'pista_verbal', texto: { es: 'Verbalizar la acción del niño en el momento ("estás pidiendo más agua").' } },
   { id: 'and-palabras-2', skillId: 'palabras', tipoApoyo: 'gesto', texto: { es: 'Acompañar la palabra con un gesto o señal para reforzar el significado.' } },
+  { id: 'and-palabras-3', skillId: 'palabras', tipoApoyo: 'pista_verbal', texto: { es: 'Modelado expansivo: si el niño dice "agua", el adulto responde ampliando ("más agua"), sin exigir que la repita.' } },
 
   { id: 'and-social-1', skillId: 'interaccion-social', tipoApoyo: 'otro', texto: { es: 'Esperar unos segundos antes de mediar un conflicto o intercambio entre niños.' } },
   { id: 'and-social-2', skillId: 'interaccion-social', tipoApoyo: 'modelado', texto: { es: 'Modelar una frase simple para pedir turno o unirse al juego.' } },
@@ -432,7 +454,7 @@ export const SENALES_REDUCIR_APOYO_OFICIALES: SenalReducirApoyo[] = [
   { id: 'sen-pinza-1', skillId: 'pinza', texto: { es: 'Toma el objeto con índice y pulgar sin que se le muestre antes.' }, andamiajeId: 'and-pinza-1' },
   { id: 'sen-tijeras-1', skillId: 'tijeras', texto: { es: 'Empieza a cortar sin esperar el modelo de la maestra.' }, andamiajeId: 'and-tijeras-1' },
   { id: 'sen-palabras-1', skillId: 'palabras', texto: { es: 'Combina las dos palabras sin que un adulto las verbalice primero.' }, andamiajeId: 'and-palabras-1' },
-  { id: 'sen-social-1', skillId: 'interaccion-social', texto: { es: 'Resuelve el intercambio con el otro niño antes de que un adulto intervenga.' }, andamiajeId: 'and-social-1' },
+  { id: 'sen-social-1', skillId: 'interaccion-social', texto: { es: 'Se sostiene un momento más en la interacción antes de buscar a un adulto — no una medida de éxito, solo una señal para pausar antes de mediar.' }, andamiajeId: 'and-social-1' },
   { id: 'sen-autonomia-1', skillId: 'autonomia-alimentacion', texto: { es: 'Llena la cuchara sin que se le recuerde el movimiento.' }, andamiajeId: 'and-autonomia-2' },
   { id: 'sen-nombre-1', skillId: 'nombre-propio', texto: { es: 'Escribe su nombre sin mirar el modelo.' }, andamiajeId: 'and-nombre-1' },
 ];
